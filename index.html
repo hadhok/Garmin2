@@ -188,6 +188,22 @@
     .profile-table tr:last-child td { border-bottom:none; }
     .profile-table tr:hover td { background:var(--surface2); }
 
+    /* ── Profile granularity selector ── */
+    .pgran { display:flex; gap:6px; }
+    .pgran-btn { background:var(--surface); border:1px solid var(--border); color:var(--muted); border-radius:8px; padding:4px 12px; font-size:12px; cursor:pointer; transition:all .15s; }
+    .pgran-btn:hover { color:var(--text); }
+    .pgran-btn.active { background:var(--surface2); border-color:var(--accent); color:var(--accent); }
+    /* ── Month accordion ── */
+    .month-row { cursor:pointer; }
+    .month-row:hover td { background:var(--surface2) !important; }
+    .month-row td:first-child::before { content:'▶'; font-size:9px; color:var(--muted); margin-right:7px; transition:transform .2s; display:inline-block; }
+    .month-row.open td:first-child::before { transform:rotate(90deg); }
+    .month-detail-row { display:none; }
+    .month-detail-row.open { display:table-row; }
+    .month-acts-list { display:flex; flex-direction:column; gap:6px; padding:12px 8px; }
+    .month-act-item { display:grid; grid-template-columns:30px 1fr auto; align-items:center; gap:8px; padding:8px 10px; background:var(--surface2); border-radius:8px; cursor:pointer; border:1px solid transparent; }
+    .month-act-item:hover { border-color:var(--accent); }
+
     /* ── Year activity list ── */
     .year-all-list { max-height: 600px; overflow-y: auto; padding-right: 4px; }
     .year-all-list::-webkit-scrollbar { width: 4px; }
@@ -452,7 +468,15 @@
     <div class="records-grid" id="profile-records"></div>
 
     <!-- Charts mensuels -->
-    <div class="section-header">Évolution mensuelle (12 derniers mois)</div>
+    <div class="section-header" style="display:flex;align-items:center;justify-content:space-between">
+      <span>Évolution</span>
+      <div class="pgran">
+        <button class="pgran-btn active" onclick="setProfileGranularity('month',this)">Mois</button>
+        <button class="pgran-btn" onclick="setProfileGranularity('quarter',this)">Trimestre</button>
+        <button class="pgran-btn" onclick="setProfileGranularity('semester',this)">Semestre</button>
+        <button class="pgran-btn" onclick="setProfileGranularity('year',this)">Année</button>
+      </div>
+    </div>
     <div class="content-grid">
       <div class="card">
         <div class="card-title">Charge d'entraînement <span style="font-size:11px;text-transform:none">pts</span></div>
@@ -525,12 +549,13 @@
 const ACT_MAP = {};
 
 const state = {
-  tab:        'week',
-  offset:     0,
-  filter:     'all',
-  data:       null,
-  wellness:   null,
-  healthDays: 30,
+  tab:               'week',
+  offset:            0,
+  filter:            'all',
+  data:              null,
+  wellness:          null,
+  healthDays:        30,
+  profileGranularity:'month',
 };
 
 const TODAY = new Date();
@@ -1084,7 +1109,7 @@ function computeProfileData() {
   });
 
   const byLoad = [...all].filter(a=>a.training_load>0).sort((a,b)=>b.training_load-a.training_load);
-  const byDist = [...all].filter(a=>a.distance_km>0).sort((a,b)=>b.distance_km-a.distance_km);
+  const byDist = [...all].filter(a=>a.distance_km>0 && a.type==='run').sort((a,b)=>b.distance_km-a.distance_km);
   const byDur  = [...all].sort((a,b)=>(b.duration_min||0)-(a.duration_min||0));
   const byVo2  = [...all].filter(a=>a.vo2max).sort((a,b)=>b.vo2max-a.vo2max);
   const mEntries = Object.entries(monthly);
@@ -1147,7 +1172,7 @@ function renderProfile() {
   const recItems = [];
   const fmt_date = d => d ? new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}) : '';
   if(d.records.load) { const a=d.records.load; recItems.push({i:'⚡',l:'Charge max',      v:`${Math.round(a.training_load)} pts`, s:a.name, d:fmt_date(a.date)}); }
-  if(d.records.dist) { const a=d.records.dist; recItems.push({i:'📍',l:'Distance max',    v:`${a.distance_km} km`,              s:a.name, d:fmt_date(a.date)}); }
+  if(d.records.dist) { const a=d.records.dist; recItems.push({i:'📍',l:'Distance max 🏃',  v:`${a.distance_km} km`,              s:a.name, d:fmt_date(a.date)}); }
   if(d.records.dur)  { const a=d.records.dur;  recItems.push({i:'⏱',l:'Séance la + longue',v:fmt_dur(a.duration_min),           s:a.name, d:fmt_date(a.date)}); }
   if(d.records.vo2)  { const a=d.records.vo2;  recItems.push({i:'❤️',l:'VO2max record',   v:`${a.vo2max}`,                      s:a.name, d:fmt_date(a.date)}); }
   if(d.records.bestActs){ const[k,m]=d.records.bestActs; const[y,mo]=k.split('-');
@@ -1164,16 +1189,14 @@ function renderProfile() {
       ${r.d?`<div style="font-size:10px;color:var(--border);margin-top:2px">${r.d}</div>`:''}
     </div>`).join('');
 
-  // ── Charts mensuels ───────────────────────────────────────────────────────
-  const monthKeys   = Object.keys(d.monthly).sort().slice(-12);
-  const monthLabels = monthKeys.map(k=>{ const[y,m]=k.split('-'); return `${MSHORT[+m-1]} ${y.slice(2)}`; });
+  // ── Charts avec granularité ──────────────────────────────────────────────
+  const agg = aggregateProfile(d.monthly, state.profileGranularity, MSHORT);
 
   mkChart('chart-profile-load',{
     type:'bar',
-    data:{ labels:monthLabels, datasets:[{
-      data: monthKeys.map(k=>Math.round(d.monthly[k].load)),
-      backgroundColor: monthKeys.map(k=>{ const l=d.monthly[k].load;
-        return l>500?'#ef4444bb':l>300?'#f97316bb':l>150?'#f59e0bbb':'#22c55ebb'; }),
+    data:{ labels:agg.labels, datasets:[{
+      data: agg.loads,
+      backgroundColor: agg.loads.map(l=>l>500?'#ef4444bb':l>300?'#f97316bb':l>150?'#f59e0bbb':'#22c55ebb'),
       borderRadius:6
     }]},
     options:{responsive:true,maintainAspectRatio:false,
@@ -1183,8 +1206,8 @@ function renderProfile() {
 
   mkChart('chart-profile-acts',{
     type:'bar',
-    data:{ labels:monthLabels, datasets:[{
-      data: monthKeys.map(k=>d.monthly[k].acts),
+    data:{ labels:agg.labels, datasets:[{
+      data: agg.acts,
       backgroundColor:'#00b4d8bb', borderRadius:6
     }]},
     options:{responsive:true,maintainAspectRatio:false,
@@ -1192,7 +1215,7 @@ function renderProfile() {
       scales:{x:{grid:{display:false}},y:{ticks:{stepSize:1},grid:{color:'#2d3148'}}}}
   });
 
-  // ── Table mensuelle ───────────────────────────────────────────────────────
+  // ── Table mensuelle avec accordion ───────────────────────────────────────
   const w = state.wellness?.days||{};
   const allMonths = Object.keys(d.monthly).sort().reverse();
 
@@ -1208,8 +1231,9 @@ function renderProfile() {
     const avgRHR  = rhrVals.length ? Math.round(rhrVals.reduce((a,b)=>a+b,0)/rhrVals.length) : null;
     const avgSlp  = sleepV.length  ? Math.round(sleepV.reduce((a,b)=>a+b,0)/sleepV.length)   : null;
     const sleepFmt= avgSlp ? `${Math.floor(avgSlp/60)}h${(avgSlp%60).toString().padStart(2,'0')}` : '–';
+    const safeKey = key.replace('-','_');
 
-    return `<tr>
+    return `<tr class="month-row" onclick="toggleMonth('${key}','${safeKey}')">
       <td style="font-weight:600;white-space:nowrap">${MLONG[+mo-1]} ${y}</td>
       <td style="text-align:center">${m.acts}</td>
       <td style="text-align:center">${fmt_dur(m.dur)}</td>
@@ -1218,8 +1242,81 @@ function renderProfile() {
       <td style="text-align:center">${domMeta?`${domMeta.icon} ${domMeta.label}`:'–'}</td>
       <td style="text-align:center;color:var(--run)">${avgRHR?avgRHR+' bpm':'–'}</td>
       <td style="text-align:center">${sleepFmt}</td>
+    </tr>
+    <tr class="month-detail-row" id="mdetail_${safeKey}">
+      <td colspan="8" style="padding:0 8px 8px"><div class="month-acts-list" id="macts_${safeKey}"></div></td>
     </tr>`;
   }).join('');
+}
+
+function aggregateProfile(monthly, granularity, MSHORT) {
+  const allKeys = Object.keys(monthly).sort();
+  const groups = {};
+  const order  = [];
+  allKeys.forEach(k=>{
+    const[y,m]=k.split('-');
+    let gk, label;
+    if(granularity==='month')    { gk=k;                label=`${MSHORT[+m-1]} ${y.slice(2)}`; }
+    else if(granularity==='quarter') { const q=Math.ceil(+m/3); gk=`${y}-Q${q}`; label=`Q${q} ${y}`; }
+    else if(granularity==='semester'){ const s=+m<=6?1:2;        gk=`${y}-S${s}`; label=`S${s} ${y}`; }
+    else                             { gk=y;             label=y; }
+    if(!groups[gk]){ groups[gk]={label,load:0,acts:0}; order.push(gk); }
+    groups[gk].load+=monthly[k].load;
+    groups[gk].acts+=monthly[k].acts;
+  });
+  return {
+    labels: order.map(k=>groups[k].label),
+    loads:  order.map(k=>Math.round(groups[k].load)),
+    acts:   order.map(k=>groups[k].acts),
+  };
+}
+
+function setProfileGranularity(g, btn) {
+  state.profileGranularity = g;
+  document.querySelectorAll('.pgran-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  renderProfile();
+}
+
+function toggleMonth(key, safeKey) {
+  const row    = document.querySelector(`.month-row[onclick*="'${key}'"]`);
+  const detail = document.getElementById(`mdetail_${safeKey}`);
+  const list   = document.getElementById(`macts_${safeKey}`);
+  if(!detail) return;
+
+  const isOpen = detail.classList.contains('open');
+  if(isOpen) {
+    detail.classList.remove('open');
+    row.classList.remove('open');
+    return;
+  }
+
+  // Populate if empty
+  if(!list.children.length) {
+    const acts = getAll().filter(a=>(a.date||'').startsWith(key))
+                         .sort((a,b)=>b.start_time.localeCompare(a.start_time));
+    if(!acts.length) { list.innerHTML='<div style="padding:10px;color:var(--muted);font-size:13px">Aucune activité</div>'; }
+    else list.innerHTML = acts.map(a=>{
+      ACT_MAP[a.id]=a;
+      const main = a.distance_km>0?`${a.distance_km} km`:fmt_dur(a.duration_min);
+      const sub  = [fmt_dur(a.duration_min), a.calories?`${Math.round(a.calories)} kcal`:'', a.training_load>0?`⚡${Math.round(a.training_load)}`:''].filter(Boolean).join(' · ');
+      const ds   = a.date?new Date(a.date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'}):'';
+      return `<div class="month-act-item" onclick="event.stopPropagation();openDetail(${a.id})">
+        <div class="act-icon ${a.type||'other'}" style="width:30px;height:30px;font-size:15px">${a.icon||'⚡'}</div>
+        <div>
+          <div style="font-size:13px;font-weight:600">${a.name}</div>
+          <div style="font-size:11px;color:var(--muted)">${ds}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:13px;font-weight:600">${main}</div>
+          <div style="font-size:11px;color:var(--muted)">${sub}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  detail.classList.add('open');
+  row.classList.add('open');
 }
 
 /* ═══════════════════════════════════════════════════════════
