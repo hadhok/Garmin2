@@ -172,6 +172,22 @@
     .toast.ok  { border-color: var(--run);      color: var(--run); }
     .toast.err { border-color: var(--strength); color: var(--strength); }
 
+    /* ── Profile tab ── */
+    .profile-hero { display:grid; grid-template-columns:180px 1fr 1fr; gap:16px; margin-bottom:20px; }
+    @media(max-width:900px){ .profile-hero { grid-template-columns:1fr; } }
+    .profile-badge-icon { font-size:52px; margin-bottom:10px; line-height:1; }
+    .level-bar { display:flex; gap:4px; margin-top:8px; justify-content:center; }
+    .level-pip { width:22px; height:6px; border-radius:3px; }
+    .records-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; margin-bottom:20px; }
+    .record-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 14px; }
+    .record-card:hover { border-color:var(--accent); }
+    .profile-table { width:100%; border-collapse:collapse; font-size:13px; }
+    .profile-table th { text-align:left; padding:8px 12px; font-size:10px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); border-bottom:2px solid var(--border); }
+    .profile-table th:not(:first-child) { text-align:center; }
+    .profile-table td { padding:9px 12px; border-bottom:1px solid var(--border); }
+    .profile-table tr:last-child td { border-bottom:none; }
+    .profile-table tr:hover td { background:var(--surface2); }
+
     /* ── Year activity list ── */
     .year-all-list { max-height: 600px; overflow-y: auto; padding-right: 4px; }
     .year-all-list::-webkit-scrollbar { width: 4px; }
@@ -240,6 +256,7 @@
   <button class="tab" onclick="switchTab('month',event)">Mois</button>
   <button class="tab" onclick="switchTab('year',event)">Année</button>
   <button class="tab" onclick="switchTab('health',event)">Santé</button>
+  <button class="tab" onclick="switchTab('profile',event)">Profil</button>
 </div>
 
 <main>
@@ -403,6 +420,69 @@
       <div class="card">
         <div class="card-title">Minutes d'intensité<span id="badge-imin" class="stat-badge"></span></div>
         <div class="chart-wrap"><canvas id="chart-intensity-min"></canvas></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- VIEW : PROFIL -->
+  <div id="view-profile" class="view">
+
+    <!-- Hero : badge niveau + sports + totaux -->
+    <div class="profile-hero">
+      <div class="card" style="text-align:center;padding:24px 16px">
+        <div class="profile-badge-icon" id="profile-main-icon">🏅</div>
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:6px">Niveau</div>
+        <div id="profile-level-name" style="font-size:18px;font-weight:800"></div>
+        <div class="level-bar" id="profile-level-pips"></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:10px" id="profile-weekly-load"></div>
+      </div>
+      <div class="card" style="padding:16px 18px">
+        <div class="card-title">Sports pratiqués</div>
+        <div id="profile-sports-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Depuis le début</div>
+        <div id="profile-totals" style="display:grid;grid-template-columns:1fr 1fr;gap:0"></div>
+      </div>
+    </div>
+
+    <!-- Records -->
+    <div class="section-header">Records personnels</div>
+    <div class="records-grid" id="profile-records"></div>
+
+    <!-- Charts mensuels -->
+    <div class="section-header">Évolution mensuelle (12 derniers mois)</div>
+    <div class="content-grid">
+      <div class="card">
+        <div class="card-title">Charge d'entraînement <span style="font-size:11px;text-transform:none">pts</span></div>
+        <div class="chart-wrap" style="height:220px"><canvas id="chart-profile-load"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Nombre d'activités</div>
+        <div class="chart-wrap" style="height:220px"><canvas id="chart-profile-acts"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Table bilan mensuel -->
+    <div class="section-header" style="margin-top:8px">Bilan mensuel détaillé</div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="overflow-x:auto">
+        <table class="profile-table">
+          <thead>
+            <tr>
+              <th>Mois</th>
+              <th>Activités</th>
+              <th>Durée</th>
+              <th>Distance</th>
+              <th>Charge</th>
+              <th>Sport dominant</th>
+              <th>FC repos</th>
+              <th>Sommeil moy.</th>
+            </tr>
+          </thead>
+          <tbody id="profile-table-body"></tbody>
+        </table>
       </div>
     </div>
 
@@ -968,14 +1048,191 @@ function renderYearCharts(acts) {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   PROFIL SPORTIF
+═══════════════════════════════════════════════════════════ */
+function computeProfileData() {
+  const all = getAll();
+  const typeMeta = {};
+  all.forEach(a => { if (a.type && !typeMeta[a.type]) typeMeta[a.type] = { label: a.type_label||a.type, icon: a.icon||'⚡' }; });
+
+  const totals = {
+    acts: all.length,
+    dur:  all.reduce((s,a)=>s+(a.duration_min||0),0),
+    dist: all.reduce((s,a)=>s+(a.distance_km||0),0),
+    cal:  all.reduce((s,a)=>s+(a.calories||0),0),
+    load: all.reduce((s,a)=>s+(a.training_load||0),0),
+  };
+
+  const cutoff8w = new Date(TODAY); cutoff8w.setDate(cutoff8w.getDate()-56);
+  const weeklyLoad = all.filter(a=>new Date(a.start_time||a.date)>=cutoff8w)
+                        .reduce((s,a)=>s+(a.training_load||0),0)/8;
+
+  const typeTime = {};
+  all.forEach(a=>{ if(a.type) typeTime[a.type]=(typeTime[a.type]||0)+(a.duration_min||0); });
+  const topTypes = Object.entries(typeTime).sort((a,b)=>b[1]-a[1]).slice(0,5)
+    .map(([t,mins])=>({ type:t, mins, pct:totals.dur?Math.round(mins/totals.dur*100):0, ...typeMeta[t] }));
+
+  const monthly = {};
+  all.forEach(a=>{
+    const key=(a.date||'').slice(0,7);
+    if(!key||key.length<7) return;
+    if(!monthly[key]) monthly[key]={acts:0,dur:0,dist:0,load:0,cal:0,typeTime:{}};
+    const m=monthly[key];
+    m.acts++; m.dur+=(a.duration_min||0); m.dist+=(a.distance_km||0);
+    m.load+=(a.training_load||0); m.cal+=(a.calories||0);
+    m.typeTime[a.type]=(m.typeTime[a.type]||0)+(a.duration_min||0);
+  });
+
+  const byLoad = [...all].filter(a=>a.training_load>0).sort((a,b)=>b.training_load-a.training_load);
+  const byDist = [...all].filter(a=>a.distance_km>0).sort((a,b)=>b.distance_km-a.distance_km);
+  const byDur  = [...all].sort((a,b)=>(b.duration_min||0)-(a.duration_min||0));
+  const byVo2  = [...all].filter(a=>a.vo2max).sort((a,b)=>b.vo2max-a.vo2max);
+  const mEntries = Object.entries(monthly);
+
+  return { all, totals, weeklyLoad, topTypes, monthly, typeMeta,
+    records:{
+      load:     byLoad[0],
+      dist:     byDist[0],
+      dur:      byDur[0],
+      vo2:      byVo2[0],
+      bestActs: mEntries.sort((a,b)=>b[1].acts-a[1].acts)[0],
+      bestLoad: [...mEntries].sort((a,b)=>b[1].load-a[1].load)[0],
+    }
+  };
+}
+
+function athleteLevel(wl) {
+  if (wl<10)  return {label:'Débutant',  color:'#22c55e', bar:1};
+  if (wl<30)  return {label:'Actif',     color:'#3b82f6', bar:2};
+  if (wl<60)  return {label:'Sportif',   color:'#f59e0b', bar:3};
+  if (wl<110) return {label:'Athlète',   color:'#f97316', bar:4};
+  return             {label:'Expert',    color:'#ef4444', bar:5};
+}
+
+function renderProfile() {
+  const d  = computeProfileData();
+  const lv = athleteLevel(d.weeklyLoad);
+  const MLONG = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const MSHORT = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+
+  // ── Badge niveau ─────────────────────────────────────────────────────────
+  document.getElementById('profile-main-icon').textContent = d.topTypes[0]?.icon||'🏅';
+  document.getElementById('profile-level-name').innerHTML = `<span style="color:${lv.color}">${lv.label}</span>`;
+  document.getElementById('profile-level-pips').innerHTML = [1,2,3,4,5].map(i=>
+    `<div class="level-pip" style="background:${i<=lv.bar?lv.color:'var(--border)'}"></div>`).join('');
+  document.getElementById('profile-weekly-load').textContent = `~${Math.round(d.weeklyLoad)} pts / semaine (8 sem.)`;
+
+  // ── Sports ────────────────────────────────────────────────────────────────
+  document.getElementById('profile-sports-list').innerHTML = d.topTypes.map(t=>
+    `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:18px">${t.icon||'⚡'}</span>
+      <span style="flex:1;font-size:13px;font-weight:500">${t.label||t.type}</span>
+      <span style="font-size:11px;color:var(--muted)">${fmt_dur(t.mins)}</span>
+      <span style="font-size:13px;font-weight:700;color:${TYPE_COLOR[t.type]||'var(--accent)'};min-width:32px;text-align:right">${t.pct}%</span>
+    </div>`).join('');
+
+  // ── Totaux ────────────────────────────────────────────────────────────────
+  document.getElementById('profile-totals').innerHTML = [
+    ['Activités',   d.totals.acts.toLocaleString('fr-FR'),       ''],
+    ['Heures',      Math.round(d.totals.dur/60).toLocaleString('fr-FR'), 'h'],
+    ['Distance',    Math.round(d.totals.dist).toLocaleString('fr-FR'),   'km'],
+    ['Charge tot.', Math.round(d.totals.load).toLocaleString('fr-FR'),   'pts'],
+  ].map(([l,v,u])=>
+    `<div style="padding:14px 12px;border-bottom:1px solid var(--border);border-right:1px solid var(--border)">
+      <div style="font-size:20px;font-weight:800">${v}<span style="font-size:11px;color:var(--muted);font-weight:400"> ${u}</span></div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-top:3px">${l}</div>
+    </div>`).join('');
+
+  // ── Records ───────────────────────────────────────────────────────────────
+  const recItems = [];
+  const fmt_date = d => d ? new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}) : '';
+  if(d.records.load) { const a=d.records.load; recItems.push({i:'⚡',l:'Charge max',      v:`${Math.round(a.training_load)} pts`, s:a.name, d:fmt_date(a.date)}); }
+  if(d.records.dist) { const a=d.records.dist; recItems.push({i:'📍',l:'Distance max',    v:`${a.distance_km} km`,              s:a.name, d:fmt_date(a.date)}); }
+  if(d.records.dur)  { const a=d.records.dur;  recItems.push({i:'⏱',l:'Séance la + longue',v:fmt_dur(a.duration_min),           s:a.name, d:fmt_date(a.date)}); }
+  if(d.records.vo2)  { const a=d.records.vo2;  recItems.push({i:'❤️',l:'VO2max record',   v:`${a.vo2max}`,                      s:a.name, d:fmt_date(a.date)}); }
+  if(d.records.bestActs){ const[k,m]=d.records.bestActs; const[y,mo]=k.split('-');
+    recItems.push({i:'🏆',l:'Mois le + actif',  v:`${m.acts} séances`, s:`${MLONG[+mo-1]} ${y}`, d:''}); }
+  if(d.records.bestLoad){ const[k,m]=d.records.bestLoad; const[y,mo]=k.split('-');
+    recItems.push({i:'🔥',l:'Mois le + chargé', v:`${Math.round(m.load)} pts`, s:`${MLONG[+mo-1]} ${y}`, d:''}); }
+
+  document.getElementById('profile-records').innerHTML = recItems.map(r=>
+    `<div class="record-card">
+      <div style="font-size:26px;margin-bottom:8px">${r.i}</div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:4px">${r.l}</div>
+      <div style="font-size:20px;font-weight:800;color:var(--accent)">${r.v}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:5px;line-height:1.4">${r.s}</div>
+      ${r.d?`<div style="font-size:10px;color:var(--border);margin-top:2px">${r.d}</div>`:''}
+    </div>`).join('');
+
+  // ── Charts mensuels ───────────────────────────────────────────────────────
+  const monthKeys   = Object.keys(d.monthly).sort().slice(-12);
+  const monthLabels = monthKeys.map(k=>{ const[y,m]=k.split('-'); return `${MSHORT[+m-1]} ${y.slice(2)}`; });
+
+  mkChart('chart-profile-load',{
+    type:'bar',
+    data:{ labels:monthLabels, datasets:[{
+      data: monthKeys.map(k=>Math.round(d.monthly[k].load)),
+      backgroundColor: monthKeys.map(k=>{ const l=d.monthly[k].load;
+        return l>500?'#ef4444bb':l>300?'#f97316bb':l>150?'#f59e0bbb':'#22c55ebb'; }),
+      borderRadius:6
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw} pts`}}},
+      scales:{x:{grid:{display:false}},y:{grid:{color:'#2d3148'}}}}
+  });
+
+  mkChart('chart-profile-acts',{
+    type:'bar',
+    data:{ labels:monthLabels, datasets:[{
+      data: monthKeys.map(k=>d.monthly[k].acts),
+      backgroundColor:'#00b4d8bb', borderRadius:6
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false}},y:{ticks:{stepSize:1},grid:{color:'#2d3148'}}}}
+  });
+
+  // ── Table mensuelle ───────────────────────────────────────────────────────
+  const w = state.wellness?.days||{};
+  const allMonths = Object.keys(d.monthly).sort().reverse();
+
+  document.getElementById('profile-table-body').innerHTML = allMonths.map(key=>{
+    const m=d.monthly[key];
+    const[y,mo]=key.split('-');
+    const dom = Object.entries(m.typeTime||{}).sort((a,b)=>b[1]-a[1])[0];
+    const domMeta = dom ? d.typeMeta[dom[0]] : null;
+
+    const wDays   = Object.entries(w).filter(([dk])=>dk.startsWith(key)).map(([,v])=>v);
+    const rhrVals = wDays.map(v=>v.resting_hr).filter(Boolean);
+    const sleepV  = wDays.map(v=>v.sleep_total_min).filter(Boolean);
+    const avgRHR  = rhrVals.length ? Math.round(rhrVals.reduce((a,b)=>a+b,0)/rhrVals.length) : null;
+    const avgSlp  = sleepV.length  ? Math.round(sleepV.reduce((a,b)=>a+b,0)/sleepV.length)   : null;
+    const sleepFmt= avgSlp ? `${Math.floor(avgSlp/60)}h${(avgSlp%60).toString().padStart(2,'0')}` : '–';
+
+    return `<tr>
+      <td style="font-weight:600;white-space:nowrap">${MLONG[+mo-1]} ${y}</td>
+      <td style="text-align:center">${m.acts}</td>
+      <td style="text-align:center">${fmt_dur(m.dur)}</td>
+      <td style="text-align:center">${Math.round(m.dist)||'–'} ${m.dist>0?'km':''}</td>
+      <td style="text-align:center;color:var(--accent);font-weight:700">${Math.round(m.load)||'–'}</td>
+      <td style="text-align:center">${domMeta?`${domMeta.icon} ${domMeta.label}`:'–'}</td>
+      <td style="text-align:center;color:var(--run)">${avgRHR?avgRHR+' bpm':'–'}</td>
+      <td style="text-align:center">${sleepFmt}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════
    RENDER ALL
 ═══════════════════════════════════════════════════════════ */
 function renderAll() {
-  const isHealth = state.tab === 'health';
-  document.querySelector('.period-bar').style.display  = isHealth ? 'none' : '';
-  document.querySelector('.filter-bar').style.display  = isHealth ? 'none' : '';
+  const isHealth  = state.tab === 'health';
+  const isProfile = state.tab === 'profile';
+  document.querySelector('.period-bar').style.display = (isHealth||isProfile) ? 'none' : '';
+  document.querySelector('.filter-bar').style.display = (isHealth||isProfile) ? 'none' : '';
 
-  if (isHealth) { renderHealth(); return; }
+  if (isHealth)  { renderHealth();  return; }
+  if (isProfile) { renderProfile(); return; }
 
   document.getElementById('period-label').textContent = formatPeriodLabel();
   const acts  = getFiltered();
