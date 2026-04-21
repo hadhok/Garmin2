@@ -1322,30 +1322,28 @@ function renderProfile() {
       scales:{x:{grid:{display:false}},y:{ticks:{stepSize:1},grid:{color:'#2d3148'}}}}
   });
 
-  // ── Table mensuelle avec accordion ───────────────────────────────────────
-  const w = state.wellness?.days||{};
-  const allMonths = Object.keys(d.monthly).sort().reverse();
+  // ── Table avec même granularité que les graphiques ───────────────────────
+  const w       = state.wellness?.days||{};
+  const periods = aggregateProfileTable(d.monthly, state.profileGranularity, MLONG, MSHORT).reverse();
 
-  document.getElementById('profile-table-body').innerHTML = allMonths.map(key=>{
-    const m=d.monthly[key];
-    const[y,mo]=key.split('-');
-    const dom = Object.entries(m.typeTime||{}).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('profile-table-body').innerHTML = periods.map(p=>{
+    const dom     = Object.entries(p.typeTime||{}).sort((a,b)=>b[1]-a[1])[0];
     const domMeta = dom ? d.typeMeta[dom[0]] : null;
+    const safeKey = p.id.replace(/[^a-z0-9]/gi,'_');
 
-    const wDays   = Object.entries(w).filter(([dk])=>dk.startsWith(key)).map(([,v])=>v);
+    const wDays   = Object.entries(w).filter(([dk])=>p.monthKeys.some(mk=>dk.startsWith(mk))).map(([,v])=>v);
     const rhrVals = wDays.map(v=>v.resting_hr).filter(Boolean);
     const sleepV  = wDays.map(v=>v.sleep_total_min).filter(Boolean);
     const avgRHR  = rhrVals.length ? Math.round(rhrVals.reduce((a,b)=>a+b,0)/rhrVals.length) : null;
     const avgSlp  = sleepV.length  ? Math.round(sleepV.reduce((a,b)=>a+b,0)/sleepV.length)   : null;
     const sleepFmt= avgSlp ? `${Math.floor(avgSlp/60)}h${(avgSlp%60).toString().padStart(2,'0')}` : '–';
-    const safeKey = key.replace('-','_');
 
-    return `<tr class="month-row" onclick="toggleMonth('${key}','${safeKey}')">
-      <td style="font-weight:600;white-space:nowrap">${MLONG[+mo-1]} ${y}</td>
-      <td style="text-align:center">${m.acts}</td>
-      <td style="text-align:center">${fmt_dur(m.dur)}</td>
-      <td style="text-align:center">${Math.round(m.dist)||'–'} ${m.dist>0?'km':''}</td>
-      <td style="text-align:center;color:var(--accent);font-weight:700">${Math.round(m.load)||'–'}</td>
+    return `<tr class="month-row" data-months="${p.monthKeys.join(',')}" onclick="togglePeriod(this,'${safeKey}')">
+      <td style="font-weight:600;white-space:nowrap">${p.label}</td>
+      <td style="text-align:center">${p.acts}</td>
+      <td style="text-align:center">${fmt_dur(p.dur)}</td>
+      <td style="text-align:center">${Math.round(p.dist)||'–'} ${p.dist>0?'km':''}</td>
+      <td style="text-align:center;color:var(--accent);font-weight:700">${Math.round(p.load)||'–'}</td>
       <td style="text-align:center">${domMeta?`${domMeta.icon} ${domMeta.label}`:'–'}</td>
       <td class="col-rhr" style="text-align:center;color:var(--run)">${avgRHR?avgRHR+' bpm':'–'}</td>
       <td class="col-sleep" style="text-align:center">${sleepFmt}</td>
@@ -1354,6 +1352,27 @@ function renderProfile() {
       <td colspan="8" style="padding:0 8px 8px"><div class="month-acts-list" id="macts_${safeKey}"></div></td>
     </tr>`;
   }).join('');
+}
+
+/* Agrège les données mensuelles selon la granularité pour le tableau */
+function aggregateProfileTable(monthly, granularity, MLONG, MSHORT) {
+  const allKeys = Object.keys(monthly).sort();
+  const groups  = {};
+  const order   = [];
+  allKeys.forEach(k=>{
+    const[y,m]=k.split('-');
+    let gk, label;
+    if(granularity==='month')     { gk=k;                          label=`${MLONG[+m-1]} ${y}`; }
+    else if(granularity==='quarter') { const q=Math.ceil(+m/3);   gk=`${y}-Q${q}`; label=`Q${q} ${y}`; }
+    else if(granularity==='semester'){ const s=+m<=6?1:2;          gk=`${y}-S${s}`; label=`S${s} ${y}`; }
+    else                             { gk=y;                       label=y; }
+    if(!groups[gk]){ groups[gk]={id:gk,label,acts:0,dur:0,dist:0,load:0,typeTime:{},monthKeys:[]}; order.push(gk); }
+    const g=groups[gk], mo=monthly[k];
+    g.acts+=mo.acts; g.dur+=mo.dur; g.dist+=mo.dist; g.load+=mo.load;
+    g.monthKeys.push(k);
+    Object.entries(mo.typeTime||{}).forEach(([t,mins])=>{ g.typeTime[t]=(g.typeTime[t]||0)+mins; });
+  });
+  return order.map(k=>groups[k]);
 }
 
 function aggregateProfile(monthly, granularity, MSHORT) {
@@ -1385,41 +1404,46 @@ function setProfileGranularity(g, btn) {
   renderProfile();
 }
 
-function toggleMonth(key, safeKey) {
-  const row    = document.querySelector(`.month-row[onclick*="'${key}'"]`);
+/* Accordion commun — fonctionne pour mois, trimestre, semestre, année */
+function togglePeriod(row, safeKey) {
   const detail = document.getElementById(`mdetail_${safeKey}`);
   const list   = document.getElementById(`macts_${safeKey}`);
-  if(!detail) return;
+  if (!detail) return;
 
   const isOpen = detail.classList.contains('open');
-  if(isOpen) {
+  if (isOpen) {
     detail.classList.remove('open');
     row.classList.remove('open');
     return;
   }
 
-  // Populate if empty
-  if(!list.children.length) {
-    const acts = getAll().filter(a=>(a.date||'').startsWith(key))
-                         .sort((a,b)=>b.start_time.localeCompare(a.start_time));
-    if(!acts.length) { list.innerHTML='<div style="padding:10px;color:var(--muted);font-size:13px">Aucune activité</div>'; }
-    else list.innerHTML = acts.map(a=>{
-      ACT_MAP[a.id]=a;
-      const main = a.distance_km>0?`${a.distance_km} km`:fmt_dur(a.duration_min);
-      const sub  = [fmt_dur(a.duration_min), a.calories?`${Math.round(a.calories)} kcal`:'', a.training_load>0?`⚡${Math.round(a.training_load)}`:''].filter(Boolean).join(' · ');
-      const ds   = a.date?new Date(a.date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'}):'';
-      return `<div class="month-act-item" onclick="event.stopPropagation();openDetail(${a.id})">
-        <div class="act-icon ${a.type||'other'}" style="width:30px;height:30px;font-size:15px">${a.icon||'⚡'}</div>
-        <div>
-          <div style="font-size:13px;font-weight:600">${a.name}</div>
-          <div style="font-size:11px;color:var(--muted)">${ds}</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:13px;font-weight:600">${main}</div>
-          <div style="font-size:11px;color:var(--muted)">${sub}</div>
-        </div>
-      </div>`;
-    }).join('');
+  if (!list.children.length) {
+    const monthKeys = (row.dataset.months || '').split(',').filter(Boolean);
+    const acts = getFilteredAllTime()
+      .filter(a => monthKeys.some(mk => (a.date||'').startsWith(mk)))
+      .sort((a,b) => (b.start_time||'').localeCompare(a.start_time||''));
+
+    if (!acts.length) {
+      list.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:13px">Aucune activité</div>';
+    } else {
+      list.innerHTML = acts.map(a => {
+        ACT_MAP[a.id] = a;
+        const main = a.distance_km > 0 ? `${a.distance_km} km` : fmt_dur(a.duration_min);
+        const sub  = [fmt_dur(a.duration_min), a.calories ? `${Math.round(a.calories)} kcal` : '', a.training_load > 0 ? `⚡${Math.round(a.training_load)}` : ''].filter(Boolean).join(' · ');
+        const ds   = a.date ? new Date(a.date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'}) : '';
+        return `<div class="month-act-item" onclick="event.stopPropagation();openDetail(${a.id})">
+          <div class="act-icon ${a.type||'other'}" style="width:30px;height:30px;font-size:15px">${a.icon||'⚡'}</div>
+          <div>
+            <div style="font-size:13px;font-weight:600">${a.name}</div>
+            <div style="font-size:11px;color:var(--muted)">${ds}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:13px;font-weight:600">${main}</div>
+            <div style="font-size:11px;color:var(--muted)">${sub}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
   }
 
   detail.classList.add('open');
