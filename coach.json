@@ -2,12 +2,15 @@
   "updated_at": "2026-04-21",
   "coach": "Claude",
   "stats_snapshot": {
+    "phase": "maintien",
+    "fatigue_level": "tired",
+    "garmin_status": null,
     "ctl": 31.9,
     "atl": 18.2,
     "tsb": 13.7,
-    "fatigue_level": "tired",
-    "garmin_status": null,
+    "effort_idx": 0.92,
     "body_battery": 25.0,
+    "training_readiness": null,
     "niveau": "Sportif",
     "total_activites": 200,
     "total_km": 416
@@ -15,27 +18,21 @@
   "items": [
     {
       "type": "warning",
-      "icon": "🔴",
-      "title": "Fatigue détectée — récupération prioritaire",
-      "text": "Ton corps envoie plusieurs signaux de fatigue, batterie à 25%, stress moyen 33%. TSB à +14 pts (ATL 18.2 vs CTL 31.9). Privilégie 2-3 jours de récupération active (marche, mobilité, sommeil +30 min). Repousse toute séance intense à la semaine prochaine."
+      "icon": "🟢",
+      "title": "En maintien — charge stable",
+      "text": "Effort pondéré 7j : 0.9× (1.0 = charge de base, >2 = intense). TSB +14 pts (CTL 31.9 / ATL 18.2). • HRV 36.9 ms (-4 ms vs S-1) • Sommeil 8.2h/nuit • Body Battery fin de journée : 25%"
     },
     {
       "type": "tip",
-      "icon": "✨",
-      "title": "Excellent sommeil — 8.2h/nuit",
-      "text": "Tu récupères bien. Maintiens cette régularité — c'est la base de toute progression."
+      "icon": "🔍",
+      "title": "Points de vigilance",
+      "text": "💛 HRV statut LOW — système nerveux sous pression\n✅ Structure d'entraînement polarisée (idéale) sur 8 séances analysées"
     },
     {
       "type": "goal",
-      "icon": "🎯",
-      "title": "Niveau Sportif — 28 pts pour le palier suivant",
-      "text": "CTL actuel : 31.9 pts. Augmente ta charge de 5-10%/semaine sur 3-4 semaines. Priorité : régularité sur HIIT."
-    },
-    {
-      "type": "congrats",
-      "icon": "🏃",
-      "title": "Record course — 10.6 km",
-      "text": "Record de distance : 10.6 km. Continue le volume de base pour allonger sans te blesser."
+      "icon": "📋",
+      "title": "Prescription : Récupération active",
+      "text": "20-30 min de marche, mobilité ou yoga. Pas de cardio. Objectif : ne pas aggraver la fatigue. — Z1 uniquement — FC < 120 bpm"
     }
   ]
 }
