@@ -1075,8 +1075,14 @@ function renderYearCharts(acts) {
 /* ═══════════════════════════════════════════════════════════
    PROFIL SPORTIF
 ═══════════════════════════════════════════════════════════ */
-function computeProfileData() {
+function getFilteredAllTime() {
   const all = getAll();
+  if (state.filter === 'all') return all;
+  return all.filter(a => a.type === state.filter);
+}
+
+function computeProfileData() {
+  const all = getFilteredAllTime();
   const typeMeta = {};
   all.forEach(a => { if (a.type && !typeMeta[a.type]) typeMeta[a.type] = { label: a.type_label||a.type, icon: a.icon||'⚡' }; });
 
@@ -1326,7 +1332,7 @@ function renderAll() {
   const isHealth  = state.tab === 'health';
   const isProfile = state.tab === 'profile';
   document.querySelector('.period-bar').style.display = (isHealth||isProfile) ? 'none' : '';
-  document.querySelector('.filter-bar').style.display = (isHealth||isProfile) ? 'none' : '';
+  document.querySelector('.filter-bar').style.display = isHealth ? 'none' : '';
 
   if (isHealth)  { renderHealth();  return; }
   if (isProfile) { renderProfile(); return; }
