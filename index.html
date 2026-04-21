@@ -6,6 +6,10 @@
   <title>Garmin Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#091929">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <style>
     :root {
       --bg: #091929; --surface: #0d2035; --surface2: #132840;
@@ -337,6 +341,55 @@
     .detail-row:last-child { border-bottom: none; }
     .detail-row-label { color: var(--muted); }
     .detail-row-value { font-weight: 600; }
+    /* ── Heatmap ── */
+    .heatmap-outer { display:flex; gap:6px; align-items:flex-start; }
+    .heatmap-ylabels { display:flex; flex-direction:column; padding-top:17px; gap:0; }
+    .heatmap-ylabel { height:14px; font-size:9px; color:var(--muted); display:flex; align-items:center; padding-right:4px; }
+    .heatmap-right { flex:1; min-width:0; overflow-x:auto; }
+    .heatmap-months { position:relative; height:16px; margin-bottom:2px; }
+    .heatmap-grid { display:flex; gap:3px; }
+    .heatmap-col { display:flex; flex-direction:column; gap:3px; }
+    .heatmap-cell { width:11px; height:11px; border-radius:2px; cursor:default; flex-shrink:0; transition:transform .1s; }
+    .heatmap-cell:hover { transform:scale(1.5); z-index:5; position:relative; }
+    .heatmap-legend { display:flex; align-items:center; gap:5px; margin-top:10px; font-size:10px; color:var(--muted); }
+
+    /* ── Badges ── */
+    .badges-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(100px,1fr)); gap:10px; margin-bottom:20px; }
+    .badge-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 10px; text-align:center; transition:all .2s; }
+    .badge-card.unlocked { border-color:rgba(56,189,248,0.45); }
+    .badge-card.unlocked:hover { transform:translateY(-2px); box-shadow:0 4px 18px rgba(56,189,248,0.15); }
+    .badge-card.locked { opacity:.28; filter:grayscale(.8); }
+    .badge-icon { font-size:26px; line-height:1; margin-bottom:5px; }
+    .badge-label { font-size:10px; font-weight:600; line-height:1.3; }
+    .badge-sub { font-size:9px; color:var(--muted); margin-top:2px; }
+
+    /* ── Recovery ── */
+    .recovery-card { display:flex; align-items:center; gap:20px; padding:20px 22px; }
+    .recovery-ring { position:relative; width:90px; height:90px; border-radius:50%; flex-shrink:0; }
+    .recovery-inner { position:absolute; inset:9px; background:var(--surface); border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    .recovery-val { font-size:22px; font-weight:800; line-height:1; }
+    .recovery-lbl { font-size:8px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin-top:1px; }
+    .rfactors { flex:1; }
+    .rfactor { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:11px; }
+    .rfactor-bg { flex:1; height:4px; background:var(--surface2); border-radius:2px; overflow:hidden; }
+    .rfactor-fill { height:100%; border-radius:2px; transition:width .5s; }
+    .rfactor-val { font-size:11px; font-weight:600; min-width:34px; text-align:right; color:var(--text); }
+
+    /* ── Form chart legend ── */
+    .form-legend { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:8px; font-size:11px; color:var(--muted); }
+    .fleg { display:flex; align-items:center; gap:5px; }
+    .fleg-line { width:18px; height:2px; border-radius:1px; flex-shrink:0; }
+    .fleg-dash { width:18px; height:0; border-top:2px dashed; flex-shrink:0; }
+
+    /* ── KPI delta ── */
+    .kpi-delta.up   { color:var(--run); }
+    .kpi-delta.down { color:var(--strength); }
+    .kpi-delta.flat { color:var(--muted); }
+
+    /* ── Day cell enriched ── */
+    .day-mini-acts { display:flex; flex-direction:column; gap:2px; margin-top:3px; }
+    .day-mini-act  { font-size:8px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; cursor:pointer; padding:1px 2px; border-radius:3px; }
+    .day-mini-act:hover { background:var(--surface2); color:var(--text); }
   </style>
 </head>
 <body>
@@ -474,6 +527,11 @@
   <!-- VIEW : SANTÉ -->
   <div id="view-health" class="view">
 
+    <!-- Carte Récupération du jour -->
+    <div id="recovery-section" style="display:none;margin-bottom:16px">
+      <div class="card recovery-card" id="recovery-card-inner"></div>
+    </div>
+
     <!-- Sélecteur de période -->
     <div class="health-period-bar">
       <button class="hpb" data-days="7"  onclick="setHealthPeriod(7)">7 jours</button>
@@ -490,6 +548,10 @@
       <div class="card health-full">
         <div class="card-title">Durée & phases <span style="font-size:11px;text-transform:none;color:var(--muted)">min</span><span id="badge-sleep" class="stat-badge"></span></div>
         <div class="chart-wrap" style="height:220px"><canvas id="chart-sleep"></canvas></div>
+      </div>
+      <div class="card health-full" id="sleep-score-section" style="display:none">
+        <div class="card-title">Score de sommeil <span style="font-size:11px;text-transform:none;color:var(--muted)">/100</span><span id="badge-sleep-score" class="stat-badge"></span></div>
+        <div class="chart-wrap" style="height:160px"><canvas id="chart-sleep-score"></canvas></div>
       </div>
     </div>
 
@@ -525,6 +587,15 @@
       <div class="card">
         <div class="card-title">Répartition <span style="font-size:11px;text-transform:none;color:var(--muted)">%</span></div>
         <div class="chart-wrap"><canvas id="chart-stress-pct"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Corrélation sommeil ↔ performance -->
+    <div class="section-header" id="corr-section-header" style="display:none">Corrélation Sommeil ↔ Performance</div>
+    <div class="health-grid" id="corr-section" style="display:none">
+      <div class="card health-full">
+        <div class="card-title">Score sommeil (veille) vs Charge entraînement</div>
+        <div class="chart-wrap" style="height:220px"><canvas id="chart-sleep-perf"></canvas></div>
       </div>
     </div>
 
@@ -624,6 +695,33 @@
         </table>
       </div>
     </div>
+
+    <!-- Heatmap annuelle -->
+    <div class="section-header" style="margin-top:20px">Activité sur 12 mois</div>
+    <div class="card">
+      <div id="heatmap-container"></div>
+    </div>
+
+    <!-- Forme & Fatigue CTL/ATL/TSB -->
+    <div class="section-header" style="margin-top:20px">Forme & Fatigue</div>
+    <div class="card">
+      <div class="form-legend">
+        <span class="fleg"><span class="fleg-line" style="background:#38bdf8"></span>CTL — Forme (42j)</span>
+        <span class="fleg"><span class="fleg-line" style="background:#f97316"></span>ATL — Fatigue (7j)</span>
+        <span class="fleg"><span class="fleg-dash" style="border-color:#22c55e"></span>TSB — Fraîcheur</span>
+      </div>
+      <div class="chart-wrap" style="height:240px"><canvas id="chart-form"></canvas></div>
+    </div>
+
+    <!-- Évolution VO2max -->
+    <div class="section-header" id="vo2max-section-header" style="display:none;margin-top:20px">Évolution VO2max</div>
+    <div class="card" id="vo2max-section" style="display:none">
+      <div class="chart-wrap" style="height:200px"><canvas id="chart-vo2max"></canvas></div>
+    </div>
+
+    <!-- Trophées -->
+    <div class="section-header" style="margin-top:20px">Trophées</div>
+    <div class="badges-grid" id="profile-badges"></div>
 
   </div>
 
@@ -793,14 +891,26 @@ function computeKPIs(acts) {
   };
 }
 
-function renderKPIs(containerId, acts) {
+function renderKPIs(containerId, acts, prevActs=null) {
   const k = computeKPIs(acts);
-  const h = (label, val, unit='', sub='') => `
+  const prevK = prevActs ? computeKPIs(prevActs) : null;
+
+  function delta(cur, prev) {
+    if (!prevK || !prev || prev === 0) return '';
+    const pct = ((cur - prev) / prev) * 100;
+    if (Math.abs(pct) < 1) return '<div class="kpi-delta flat">→ =</div>';
+    if (pct > 0) return `<div class="kpi-delta up">▲ +${pct.toFixed(0)}%</div>`;
+    return `<div class="kpi-delta down">▼ ${pct.toFixed(0)}%</div>`;
+  }
+
+  const h = (label, val, unit='', sub='', deltaHtml='') => `
     <div class="kpi-card">
       <div class="kpi-label">${label}</div>
       <div class="kpi-value">${val}<span class="kpi-unit">${unit}</span></div>
       ${sub ? `<div class="kpi-delta">${sub}</div>` : ''}
+      ${deltaHtml}
     </div>`;
+
   const dur = k.duration >= 60
     ? `${Math.floor(k.duration/60)}h${String(Math.round(k.duration%60)).padStart(2,'0')}`
     : `${Math.round(k.duration)}min`;
@@ -808,13 +918,13 @@ function renderKPIs(containerId, acts) {
   const iMin = k.intensity_min > 0 ? k.intensity_min : '–';
 
   document.getElementById(containerId).innerHTML =
-    h('Activités',      k.activities, '') +
-    h('Distance',       k.distance.toFixed(1), 'km') +
-    h('Temps actif',    dur, '') +
-    h('Calories',       Math.round(k.calories).toLocaleString('fr'), 'kcal') +
-    h('Charge totale',  load, 'pts') +
-    h('Min intensité',  iMin, 'min') +
-    h('Dénivelé +',     Math.round(k.elevation), 'm') +
+    h('Activités',      k.activities,                    '',    '', delta(k.activities, prevK?.activities)) +
+    h('Distance',       k.distance.toFixed(1),           'km',  '', delta(k.distance, prevK?.distance)) +
+    h('Temps actif',    dur,                              '',    '', delta(k.duration, prevK?.duration)) +
+    h('Calories',       Math.round(k.calories).toLocaleString('fr'), 'kcal', '', delta(k.calories, prevK?.calories)) +
+    h('Charge totale',  load,                             'pts', '', k.training_load > 0 ? delta(k.training_load, prevK?.training_load) : '') +
+    h('Min intensité',  iMin,                             'min', '', k.intensity_min > 0 ? delta(k.intensity_min, prevK?.intensity_min) : '') +
+    h('Dénivelé +',     Math.round(k.elevation),         'm',   '', delta(k.elevation, prevK?.elevation)) +
     (k.hr_avg  ? h('FC moy.',   k.hr_avg, 'bpm') : '') +
     (k.vo2max  ? h('VO2max',    k.vo2max, 'ml/kg') : '');
 }
@@ -1014,15 +1124,22 @@ function renderWeekCells(acts) {
   el.innerHTML = DAYS_FR.map((day, i) => {
     const cellDate = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
     const iso = cellDate.toISOString().slice(0,10);
-    const dayActs = acts.filter(a => a.date === iso && (state.filter === 'all' || a.type === state.filter));
+    const allDay  = acts.filter(a => a.date === iso);
+    const dayActs = allDay.filter(a => state.filter === 'all' || a.type === state.filter);
     const isToday = iso === TODAY.toISOString().slice(0,10);
     const numEl = isToday
       ? `<div class="day-num" style="background:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;margin:0 auto 3px;color:#000;font-weight:700;">${cellDate.getDate()}</div>`
       : `<div class="day-num">${cellDate.getDate()}</div>`;
     const dots = dayActs.map(a => `<div class="day-dot" style="background:${TYPE_COLOR[a.type]||'#888'}"></div>`).join('');
+    // Activités enrichies : icône + durée, cliquables
+    const miniActs = allDay.slice(0,3).map(a => {
+      ACT_MAP[a.id] = a;
+      return `<div class="day-mini-act" style="color:${TYPE_COLOR[a.type]||'var(--muted)'}" onclick="event.stopPropagation();openDetail(${a.id})" title="${a.name}">${a.icon||'⚡'} ${fmt_dur(a.duration_min)}</div>`;
+    }).join('');
     return `<div class="day-cell ${dayActs.length ? 'has-act' : ''} ${isToday ? 'today' : ''}">
       <div class="day-name">${day}</div>${numEl}
       <div class="day-dots">${dots}</div>
+      ${miniActs ? `<div class="day-mini-acts">${miniActs}</div>` : ''}
     </div>`;
   }).join('');
 }
@@ -1364,6 +1481,12 @@ function renderProfile() {
   const w       = state.wellness?.days||{};
   const periods = aggregateProfileTable(d.monthly, state.profileGranularity, MLONG, MSHORT).reverse();
 
+  // ── Nouvelles sections ───────────────────────────────────────────────────
+  renderHeatmap();
+  renderFormChart();
+  renderVo2maxChart();
+  renderBadges();
+
   document.getElementById('profile-table-body').innerHTML = periods.map(p=>{
     const dom     = Object.entries(p.typeTime||{}).sort((a,b)=>b[1]-a[1])[0];
     const domMeta = dom ? d.typeMeta[dom[0]] : null;
@@ -1489,6 +1612,478 @@ function togglePeriod(row, safeKey) {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   FEATURE 1 : FORME & FATIGUE — CTL / ATL / TSB
+═══════════════════════════════════════════════════════════ */
+function computeFormCurve() {
+  const all = getAll();
+  // Build date→load map
+  const loadMap = {};
+  all.forEach(a => {
+    if (!a.date) return;
+    loadMap[a.date] = (loadMap[a.date] || 0) + (a.training_load || 0);
+  });
+
+  const days = 180;
+  const result = [];
+  let ctl = 0, atl = 0;
+
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(TODAY);
+    d.setDate(d.getDate() - i);
+    const iso = d.toISOString().slice(0, 10);
+    const load = loadMap[iso] || 0;
+    ctl = ctl + (load - ctl) / 42;
+    atl = atl + (load - atl) / 7;
+    const tsb = ctl - atl;
+    if (i < 90) {
+      result.push({ date: iso, ctl: +ctl.toFixed(1), atl: +atl.toFixed(1), tsb: +tsb.toFixed(1), load });
+    }
+  }
+  return result;
+}
+
+function renderFormChart() {
+  const curve = computeFormCurve();
+  if (!curve.length) return;
+  const labels = curve.map(d => {
+    const dt = new Date(d.date + 'T12:00:00');
+    return dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  });
+  mkChart('chart-form', {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'CTL', data: curve.map(d => d.ctl), borderColor: '#38bdf8', backgroundColor: 'rgba(56,189,248,0.08)', fill: false, tension: 0.4, pointRadius: 0, borderWidth: 2 },
+        { label: 'ATL', data: curve.map(d => d.atl), borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.08)', fill: false, tension: 0.4, pointRadius: 0, borderWidth: 2 },
+        { label: 'TSB', data: curve.map(d => d.tsb), borderColor: '#22c55e', backgroundColor: d => d.raw >= 0 ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.1)', fill: 'origin', tension: 0.4, pointRadius: 0, borderWidth: 2, borderDash: [5, 3] },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        annotation: { annotations: { zero: { type: 'line', yMin: 0, yMax: 0, borderColor: 'rgba(255,255,255,0.15)', borderWidth: 1 } } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } },
+        y: { grid: { color: '#1a3352' } }
+      }
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FEATURE 2 : COMPARAISON DE PÉRIODES — getPrevFiltered
+═══════════════════════════════════════════════════════════ */
+function getPrevFiltered() {
+  const savedOffset = state.offset;
+  state.offset = savedOffset - 1;
+  const prev = getFiltered();
+  state.offset = savedOffset;
+  return prev;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FEATURE 3 : SCORE DE RÉCUPÉRATION
+═══════════════════════════════════════════════════════════ */
+function computeRecoveryScore() {
+  if (!state.wellness?.days) return null;
+  const days = Object.values(state.wellness.days).sort((a, b) => a.date.localeCompare(b.date));
+  if (!days.length) return null;
+
+  const todayIso = TODAY.toISOString().slice(0, 10);
+  const yesterday = new Date(TODAY); yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayIso = yesterday.toISOString().slice(0, 10);
+
+  let dayData = state.wellness.days[todayIso] || state.wellness.days[yesterdayIso];
+  if (!dayData) return null;
+
+  const last30 = days.slice(-30);
+  const avgHRV = avg(last30, 'hrv_overnight_avg');
+  const avgRHR = avg(last30, 'resting_hr');
+
+  let score = 50;
+
+  // HRV bonus/malus (max ±25)
+  const hrv = dayData.hrv_overnight_avg;
+  if (hrv && avgHRV) {
+    const delta = (hrv - avgHRV) / avgHRV;
+    score += Math.max(-25, Math.min(25, delta * 100));
+  }
+
+  // FC repos bonus/malus (max ±20)
+  const rhr = dayData.resting_hr;
+  if (rhr && avgRHR) {
+    const delta = (avgRHR - rhr) / avgRHR;
+    score += Math.max(-20, Math.min(20, delta * 100));
+  }
+
+  // Body Battery
+  const bb = dayData.body_battery_high;
+  if (bb != null) {
+    score += Math.max(-25, Math.min(25, (bb - 50) * 0.5));
+  }
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+  return { score, hrv: hrv || null, rhr: rhr || null, bb: bb || null, date: dayData.date };
+}
+
+function renderRecoveryCard() {
+  const rec = computeRecoveryScore();
+  const section = document.getElementById('recovery-section');
+  if (!rec) { section.style.display = 'none'; return; }
+
+  section.style.display = '';
+  const color = rec.score >= 70 ? '#22c55e' : rec.score >= 40 ? '#f97316' : '#ef4444';
+  const pct = rec.score / 100;
+  const deg = Math.round(pct * 360);
+
+  const last30 = state.wellness?.days ? Object.values(state.wellness.days).sort((a,b)=>a.date.localeCompare(b.date)).slice(-30) : [];
+  const avgHRV = avg(last30, 'hrv_overnight_avg') || 1;
+  const avgRHR = avg(last30, 'resting_hr') || 1;
+
+  const hrvPct  = rec.hrv ? Math.min(100, Math.round((rec.hrv / (avgHRV * 1.5)) * 100)) : 0;
+  const rhrPct  = rec.rhr ? Math.min(100, Math.round(((avgRHR * 1.2 - rec.rhr) / (avgRHR * 0.4)) * 100)) : 0;
+  const bbPct   = rec.bb  ? rec.bb : 0;
+
+  const bar = (label, pct, color, val) => `
+    <div class="rfactor">
+      <span style="min-width:72px;color:var(--muted)">${label}</span>
+      <div class="rfactor-bg"><div class="rfactor-fill" style="width:${Math.max(0,Math.min(100,pct))}%;background:${color}"></div></div>
+      <span class="rfactor-val">${val}</span>
+    </div>`;
+
+  document.getElementById('recovery-card-inner').innerHTML = `
+    <div class="recovery-ring" style="background:conic-gradient(${color} 0deg ${deg}deg, var(--surface2) ${deg}deg 360deg)">
+      <div class="recovery-inner">
+        <div class="recovery-val" style="color:${color}">${rec.score}</div>
+        <div class="recovery-lbl">Score</div>
+      </div>
+    </div>
+    <div class="rfactors">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px">Récupération du jour</div>
+      ${bar('HRV nocturne', hrvPct, '#7c3aed', rec.hrv ? Math.round(rec.hrv)+' ms' : '–')}
+      ${bar('FC repos', rhrPct, '#ef4444', rec.rhr ? Math.round(rec.rhr)+' bpm' : '–')}
+      ${bar('Body Battery', bbPct, '#22c55e', rec.bb != null ? Math.round(rec.bb) : '–')}
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FEATURE 4 : HEATMAP ANNUELLE
+═══════════════════════════════════════════════════════════ */
+function renderHeatmap() {
+  const container = document.getElementById('heatmap-container');
+  if (!container) return;
+
+  const all = getAll();
+  const loadMap = {};
+  all.forEach(a => {
+    if (!a.date) return;
+    loadMap[a.date] = (loadMap[a.date] || 0) + (a.training_load || 0);
+  });
+
+  // 52 semaines glissantes (364 jours) + jours jusqu'à fin de semaine
+  const endDate = new Date(TODAY);
+  // Aller jusqu'au dimanche de la semaine courante
+  const dow = endDate.getDay(); // 0=Sun
+  const daysToSun = dow === 0 ? 0 : 7 - dow;
+  endDate.setDate(endDate.getDate() + daysToSun);
+
+  const startDate = new Date(endDate);
+  startDate.setDate(startDate.getDate() - 52 * 7 + 1);
+  // Reculer jusqu'au lundi
+  const startDow = startDate.getDay();
+  const daysToMon = startDow === 0 ? 6 : startDow - 1;
+  startDate.setDate(startDate.getDate() - daysToMon);
+
+  // Collecter toutes les charges pour quartiles
+  const loads = Object.values(loadMap).filter(v => v > 0).sort((a, b) => a - b);
+  const q1 = loads[Math.floor(loads.length * 0.25)] || 50;
+  const q2 = loads[Math.floor(loads.length * 0.5)]  || 100;
+  const q3 = loads[Math.floor(loads.length * 0.75)] || 200;
+
+  function cellColor(load) {
+    if (!load) return 'var(--surface2)';
+    if (load <= q1) return 'rgba(56,189,248,0.15)';
+    if (load <= q2) return 'rgba(56,189,248,0.35)';
+    if (load <= q3) return 'rgba(56,189,248,0.6)';
+    return 'rgba(56,189,248,0.9)';
+  }
+
+  // Grouper par semaines (colonnes)
+  const cols = [];
+  let curDate = new Date(startDate);
+  const monthLabels = [];
+
+  while (curDate <= endDate) {
+    const col = [];
+    for (let d = 0; d < 7; d++) {
+      const iso = curDate.toISOString().slice(0, 10);
+      col.push({ iso, load: loadMap[iso] || 0 });
+      if (d === 0 && (cols.length === 0 || new Date(col[0].iso).getDate() <= 7)) {
+        // Enregistre le mois si c'est le 1er de la semaine ou si debut de mois
+      }
+      curDate.setDate(curDate.getDate() + 1);
+    }
+    cols.push(col);
+  }
+
+  // Labels de mois
+  const monthsHtml = [];
+  cols.forEach((col, ci) => {
+    const firstDay = new Date(col[0].iso + 'T12:00:00');
+    if (firstDay.getDate() <= 7) {
+      const left = ci * 14; // 11px cell + 3px gap
+      monthsHtml.push(`<span style="position:absolute;left:${left}px;font-size:9px;color:var(--muted);white-space:nowrap">${MONTHS_FR[firstDay.getMonth()]}</span>`);
+    }
+  });
+
+  const gridHtml = cols.map(col => {
+    const cells = col.map(cell => {
+      const title = `${cell.iso}${cell.load ? ' — ' + Math.round(cell.load) + ' pts' : ''}`;
+      return `<div class="heatmap-cell" style="background:${cellColor(cell.load)}" title="${title}"></div>`;
+    }).join('');
+    return `<div class="heatmap-col">${cells}</div>`;
+  }).join('');
+
+  // Légende
+  const legendCells = [
+    `<div style="width:11px;height:11px;border-radius:2px;background:var(--surface2)"></div>`,
+    `<div style="width:11px;height:11px;border-radius:2px;background:rgba(56,189,248,0.15)"></div>`,
+    `<div style="width:11px;height:11px;border-radius:2px;background:rgba(56,189,248,0.35)"></div>`,
+    `<div style="width:11px;height:11px;border-radius:2px;background:rgba(56,189,248,0.6)"></div>`,
+    `<div style="width:11px;height:11px;border-radius:2px;background:rgba(56,189,248,0.9)"></div>`,
+  ].join('');
+
+  const yLabels = ['Lun','','Mer','','Ven','',''].map((l,i) =>
+    `<div class="heatmap-ylabel">${l}</div>`).join('');
+
+  container.innerHTML = `
+    <div class="heatmap-outer">
+      <div class="heatmap-ylabels">${yLabels}</div>
+      <div class="heatmap-right">
+        <div class="heatmap-months" style="position:relative;height:16px;margin-bottom:2px">${monthsHtml.join('')}</div>
+        <div class="heatmap-grid">${gridHtml}</div>
+        <div class="heatmap-legend">Moins ${legendCells} Plus</div>
+      </div>
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FEATURE 7 : SCORE SOMMEIL COMPOSITE
+═══════════════════════════════════════════════════════════ */
+function sleepScore(day) {
+  if (!day) return null;
+  const dur   = day.sleep_total_min || 0;
+  const deep  = day.sleep_deep_min  || 0;
+  const rem   = day.sleep_rem_min   || 0;
+  const awake = day.sleep_awake_min || 0;
+  if (!dur) return null;
+
+  // Durée : optimal 420-510 min = 35 pts
+  let durPts;
+  if (dur >= 420 && dur <= 510) durPts = 35;
+  else if (dur < 420) durPts = Math.max(0, 35 * (dur / 420));
+  else durPts = Math.max(0, 35 * (1 - (dur - 510) / 120));
+
+  const deepPts  = Math.min(30, (deep / 90) * 30);
+  const remPts   = Math.min(20, (rem  / 90) * 20);
+  const awakePen = Math.min(20, awake / 5);
+
+  return Math.max(0, Math.min(100, Math.round(durPts + deepPts + remPts - awakePen)));
+}
+
+function renderSleepScoreChart(days) {
+  const scores = days.map(d => sleepScore(d));
+  const hasData = scores.some(s => s !== null);
+  const section = document.getElementById('sleep-score-section');
+  if (!section) return;
+
+  if (!hasData) { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  const validScores = scores.filter(s => s !== null);
+  const mean = validScores.length ? Math.round(validScores.reduce((a,b)=>a+b,0)/validScores.length) : null;
+  const badgeEl = document.getElementById('badge-sleep-score');
+  if (badgeEl && mean != null) badgeEl.textContent = `moy. ${mean}/100`;
+
+  mkChart('chart-sleep-score', {
+    type: 'line',
+    data: {
+      labels: hlabels(days),
+      datasets: [{
+        label: 'Score sommeil',
+        data: scores,
+        borderColor: '#7c3aed',
+        backgroundColor: 'rgba(124,58,237,0.12)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 3,
+        borderWidth: 2,
+        spanGaps: true,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxTicksLimit: days.length > 30 ? 8 : 12 } },
+        y: { min: 0, max: 100 }
+      }
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FEATURE 8 : CORRÉLATION SOMMEIL ↔ PERFORMANCE
+═══════════════════════════════════════════════════════════ */
+function renderCorrelationChart(days, acts) {
+  const section      = document.getElementById('corr-section');
+  const sectionHdr   = document.getElementById('corr-section-header');
+  if (!section || !sectionHdr) return;
+
+  const wellnessByDate = {};
+  days.forEach(d => { wellnessByDate[d.date] = d; });
+
+  const points = [];
+  acts.forEach(a => {
+    if (!a.training_load || a.training_load <= 0 || !a.date) return;
+    const prev = new Date(a.date + 'T12:00:00');
+    prev.setDate(prev.getDate() - 1);
+    const prevIso = prev.toISOString().slice(0, 10);
+    const wDay = wellnessByDate[prevIso];
+    if (!wDay) return;
+    const ss = sleepScore(wDay);
+    if (ss === null) return;
+    ACT_MAP[a.id] = a;
+    points.push({ x: ss, y: Math.round(a.training_load), label: a.name, type: a.type });
+  });
+
+  if (points.length < 5) { section.style.display = 'none'; sectionHdr.style.display = 'none'; return; }
+  section.style.display = '';
+  sectionHdr.style.display = '';
+
+  mkChart('chart-sleep-perf', {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        label: 'Activités',
+        data: points,
+        backgroundColor: points.map(p => (TYPE_COLOR[p.type] || '#888') + 'aa'),
+        pointRadius: 6,
+        pointHoverRadius: 9,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => `${c.raw.label} — Sommeil: ${c.raw.x} / Charge: ${c.raw.y} pts` } }
+      },
+      scales: {
+        x: { title: { display: true, text: 'Score sommeil (veille)' }, min: 0, max: 100 },
+        y: { title: { display: true, text: 'Charge (pts)' } }
+      }
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FEATURE 9 : ÉVOLUTION VO2MAX
+═══════════════════════════════════════════════════════════ */
+function renderVo2maxChart() {
+  const section    = document.getElementById('vo2max-section');
+  const sectionHdr = document.getElementById('vo2max-section-header');
+  if (!section || !sectionHdr) return;
+
+  const all = getAll().filter(a => a.vo2max > 0 && a.date);
+  const byMonth = {};
+  all.forEach(a => {
+    const key = a.date.slice(0, 7);
+    if (!byMonth[key] || a.vo2max > byMonth[key]) byMonth[key] = a.vo2max;
+  });
+
+  const sorted = Object.entries(byMonth).sort((a, b) => a[0].localeCompare(b[0]));
+  if (sorted.length < 2) { section.style.display = 'none'; sectionHdr.style.display = 'none'; return; }
+
+  section.style.display = '';
+  sectionHdr.style.display = '';
+
+  const labels = sorted.map(([k]) => { const [y, m] = k.split('-'); return `${MONTHS_FR[+m-1]} ${y.slice(2)}`; });
+  const data   = sorted.map(([, v]) => v);
+
+  mkChart('chart-vo2max', {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'VO2max',
+        data,
+        borderColor: '#ef4444',
+        backgroundColor: 'rgba(239,68,68,0.1)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 5,
+        borderWidth: 2,
+        pointBackgroundColor: '#ef4444',
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `VO2max : ${c.raw} ml/kg/min` } } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { title: { display: true, text: 'ml/kg/min' } }
+      }
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FEATURE 10 : BADGES DE PROGRESSION
+═══════════════════════════════════════════════════════════ */
+const BADGES_DEF = [
+  { id:'s50',   icon:'🎯', label:'50 séances',     sub:'50 activités',    check: (t)=>t.acts>=50 },
+  { id:'s100',  icon:'🏅', label:'100 séances',    sub:'100 activités',   check: (t)=>t.acts>=100 },
+  { id:'s500',  icon:'🥇', label:'500 séances',    sub:'500 activités',   check: (t)=>t.acts>=500 },
+  { id:'d500',  icon:'🛣️', label:'500 km',         sub:'Distance totale', check: (t)=>t.dist>=500 },
+  { id:'d1000', icon:'🌍', label:'1 000 km',        sub:'Distance totale', check: (t)=>t.dist>=1000 },
+  { id:'d5000', icon:'🚀', label:'5 000 km',        sub:'Distance totale', check: (t)=>t.dist>=5000 },
+  { id:'h100',  icon:'⏱️', label:'100h de sport',  sub:'Temps total',     check: (t)=>t.dur>=6000 },
+  { id:'h500',  icon:'🔥', label:'500h de sport',  sub:'Temps total',     check: (t)=>t.dur>=30000 },
+  { id:'l50k',  icon:'💪', label:'50k pts charge', sub:'Charge totale',   check: (t)=>t.load>=50000 },
+  { id:'r10',   icon:'🏃', label:'10 km course',   sub:'Run ≥ 10 km',     check: (t,r)=>r.maxRunDist>=10 },
+  { id:'r21',   icon:'🥈', label:'Semi-marathon',   sub:'Run ≥ 21 km',    check: (t,r)=>r.maxRunDist>=21 },
+  { id:'r42',   icon:'🥇', label:'Marathon',        sub:'Run ≥ 42 km',    check: (t,r)=>r.maxRunDist>=42 },
+];
+
+function renderBadges() {
+  const container = document.getElementById('profile-badges');
+  if (!container) return;
+
+  const all = getAll();
+  const totals = {
+    acts: all.length,
+    dur:  all.reduce((s,a)=>s+(a.duration_min||0),0),
+    dist: all.reduce((s,a)=>s+(a.distance_km||0),0),
+    load: all.reduce((s,a)=>s+(a.training_load||0),0),
+  };
+
+  const runs = all.filter(a => a.type === 'run' && a.distance_km > 0);
+  const records = { maxRunDist: runs.length ? Math.max(...runs.map(a=>a.distance_km)) : 0 };
+
+  container.innerHTML = BADGES_DEF.map(b => {
+    const unlocked = b.check(totals, records, all);
+    return `<div class="badge-card ${unlocked ? 'unlocked' : 'locked'}" title="${b.sub}">
+      <div class="badge-icon">${b.icon}</div>
+      <div class="badge-label">${b.label}</div>
+      <div class="badge-sub">${b.sub}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════
    RENDER ALL
 ═══════════════════════════════════════════════════════════ */
 function renderAll() {
@@ -1504,25 +2099,27 @@ function renderAll() {
   const acts  = getFiltered();
   const zones = computeZones(acts) || [8, 35, 30, 20, 7];
 
+  const prevActs = getPrevFiltered();
+
   if (state.tab === 'day') {
-    renderKPIs('kpi-day', acts);
+    renderKPIs('kpi-day', acts, prevActs);
     renderActivityList('list-day', acts, 5);
     renderZones('zones-day', zones);
   }
   if (state.tab === 'week') {
-    renderKPIs('kpi-week', acts);
+    renderKPIs('kpi-week', acts, prevActs);
     renderWeekCells(getAll());
     renderWeekCharts(acts);
     renderActivityList('list-week', acts, 6);
   }
   if (state.tab === 'month') {
-    renderKPIs('kpi-month', acts);
+    renderKPIs('kpi-month', acts, prevActs);
     renderMonthCharts(acts);
     renderZones('zones-month', zones);
     renderActivityList('list-month', acts, 8);
   }
   if (state.tab === 'year') {
-    renderKPIs('kpi-year', acts);
+    renderKPIs('kpi-year', acts, prevActs);
     renderYearCharts(acts);
     renderTopActivities('list-year', acts, 6);
     renderYearActivityList('list-year-all', acts);
@@ -1880,6 +2477,7 @@ function renderHealthCharts(days) {
 }
 
 function renderHealth() {
+  renderRecoveryCard();
   const days = getWellnessDays();
   if (!days.length) {
     document.getElementById('kpi-health').innerHTML =
@@ -1888,6 +2486,12 @@ function renderHealth() {
   }
   renderHealthKPIs(days);
   renderHealthCharts(days);
+  renderSleepScoreChart(days);
+  const allActs = getAll().filter(a => {
+    const cutoff = new Date(TODAY); cutoff.setDate(cutoff.getDate() - state.healthDays);
+    return new Date(a.start_time || a.date) >= cutoff;
+  });
+  renderCorrelationChart(days, allActs);
 }
 
 function setHealthPeriod(n) {
@@ -1915,6 +2519,10 @@ const MOCK_ACTIVITIES = [
 /* ═══════════════════════════════════════════════════════════
    INIT
 ═══════════════════════════════════════════════════════════ */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+}
+
 async function init() {
   await Promise.all([loadData(), loadWellness()]);
   renderAll();
