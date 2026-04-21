@@ -5,6 +5,9 @@
     "ctl": 31.9,
     "atl": 18.2,
     "tsb": 13.7,
+    "fatigue_level": "balanced",
+    "garmin_status": null,
+    "body_battery": 25.0,
     "niveau": "Sportif",
     "total_activites": 200,
     "total_km": 416
@@ -12,27 +15,27 @@
   "items": [
     {
       "type": "focus",
-      "icon": "🚀",
-      "title": "Forme optimale — moment idéal pour performer",
-      "text": "TSB à +14 pts avec une base solide (CTL 31.9). Tu es frais et entraîné — profite-en pour une séance de qualité ou un effort clé cette semaine."
+      "icon": "⚖️",
+      "title": "Bonne balance forme/fatigue — CTL 31.9",
+      "text": "TSB +14 pts : équilibre sain entre charge et récupération. Tu peux maintenir ton rythme et augmenter la charge de 5-10% max par semaine pour progresser."
     },
     {
       "type": "tip",
       "icon": "✨",
       "title": "Excellent sommeil — 8.2h/nuit",
-      "text": "Tu récupères bien. Associé à un bon CTL (31.9), c'est la combinaison idéale pour progresser. Continue ainsi."
+      "text": "Tu récupères bien. Maintiens cette régularité — c'est la base de toute progression."
     },
     {
       "type": "goal",
       "icon": "🎯",
-      "title": "Niveau Sportif — 28 pts pour progresser",
-      "text": "CTL actuel : 31.9 pts. Pour franchir le prochain palier, augmente ta charge hebdomadaire de 5 à 10% par semaine sur 3-4 semaines. Priorité : régularité sur HIIT."
+      "title": "Niveau Sportif — 28 pts pour le palier suivant",
+      "text": "CTL actuel : 31.9 pts. Augmente ta charge de 5-10%/semaine sur 3-4 semaines. Priorité : régularité sur HIIT."
     },
     {
       "type": "congrats",
       "icon": "🏃",
       "title": "Record course — 10.6 km",
-      "text": "Record de distance en course : 10.6 km. Continue à travailler le volume de base pour allonger encore la distance sans vous blesser."
+      "text": "Record de distance : 10.6 km. Continue le volume de base pour allonger sans te blesser."
     }
   ]
 }
