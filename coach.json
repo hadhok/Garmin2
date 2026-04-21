@@ -5,7 +5,7 @@
     "ctl": 31.9,
     "atl": 18.2,
     "tsb": 13.7,
-    "fatigue_level": "balanced",
+    "fatigue_level": "tired",
     "garmin_status": null,
     "body_battery": 25.0,
     "niveau": "Sportif",
@@ -14,10 +14,10 @@
   },
   "items": [
     {
-      "type": "focus",
-      "icon": "⚖️",
-      "title": "Bonne balance forme/fatigue — CTL 31.9",
-      "text": "TSB +14 pts : équilibre sain entre charge et récupération. Tu peux maintenir ton rythme et augmenter la charge de 5-10% max par semaine pour progresser."
+      "type": "warning",
+      "icon": "🔴",
+      "title": "Fatigue détectée — récupération prioritaire",
+      "text": "Ton corps envoie plusieurs signaux de fatigue, batterie à 25%, stress moyen 33%. TSB à +14 pts (ATL 18.2 vs CTL 31.9). Privilégie 2-3 jours de récupération active (marche, mobilité, sommeil +30 min). Repousse toute séance intense à la semaine prochaine."
     },
     {
       "type": "tip",
