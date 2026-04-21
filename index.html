@@ -662,6 +662,30 @@
       <div class="coach-items" id="coach-items"></div>
     </div>
 
+    <!-- Filtres temps + sport (dupliqués ici pour le profil) -->
+    <div class="period-bar" id="profile-period-bar" style="display:none">
+      <div class="period-nav">
+        <button class="btn-nav" onclick="movePeriod(-1)">&#8249;</button>
+        <span class="period-label" id="profile-period-label-nav"></span>
+        <button class="btn-nav" onclick="movePeriod(1)">&#8250;</button>
+      </div>
+      <button class="btn-today" onclick="resetPeriod()">Aujourd'hui</button>
+    </div>
+    <div class="filter-bar" id="profile-filter-bar">
+      <button class="filter-btn active" data-type="all"       onclick="setFilter('all')">Tous</button>
+      <button class="filter-btn" data-type="run"       onclick="setFilter('run')"><span class="filter-dot" style="background:var(--run)"></span>Course</button>
+      <button class="filter-btn" data-type="swim"      onclick="setFilter('swim')"><span class="filter-dot" style="background:var(--swim)"></span>Natation</button>
+      <button class="filter-btn" data-type="hiit"      onclick="setFilter('hiit')"><span class="filter-dot" style="background:var(--hiit)"></span>HIIT</button>
+      <button class="filter-btn" data-type="rowing"    onclick="setFilter('rowing')"><span class="filter-dot" style="background:var(--rowing)"></span>Rameur</button>
+      <button class="filter-btn" data-type="jump_rope" onclick="setFilter('jump_rope')"><span class="filter-dot" style="background:var(--jump_rope)"></span>Jump Rope</button>
+      <button class="filter-btn" data-type="strength"  onclick="setFilter('strength')"><span class="filter-dot" style="background:var(--strength)"></span>Muscu</button>
+      <button class="filter-btn" data-type="hockey"    onclick="setFilter('hockey')"><span class="filter-dot" style="background:var(--hockey)"></span>Hockey</button>
+      <button class="filter-btn" data-type="tennis"    onclick="setFilter('tennis')"><span class="filter-dot" style="background:var(--tennis)"></span>Tennis</button>
+      <button class="filter-btn" data-type="bike"      onclick="setFilter('bike')"><span class="filter-dot" style="background:var(--bike)"></span>Vélo</button>
+      <button class="filter-btn" data-type="walk"      onclick="setFilter('walk')"><span class="filter-dot" style="background:var(--walk)"></span>Marche</button>
+      <button class="filter-btn" data-type="pilates"   onclick="setFilter('pilates')"><span class="filter-dot" style="background:var(--pilates)"></span>Pilates</button>
+    </div>
+
     <!-- Hero : badge niveau + sports + totaux -->
     <div class="profile-hero">
       <div class="card" style="text-align:center;padding:24px 16px">
@@ -2122,7 +2146,12 @@ function renderAll() {
   const isHealth  = state.tab === 'health';
   const isProfile = state.tab === 'profile';
   document.querySelector('.period-bar').style.display = (isHealth||isProfile) ? 'none' : '';
-  document.querySelector('.filter-bar').style.display = isHealth ? 'none' : '';
+  document.querySelector('.filter-bar').style.display = (isHealth||isProfile) ? 'none' : '';
+  // Barre de filtres interne au profil
+  const profileNav = document.getElementById('profile-period-bar');
+  if (profileNav) profileNav.style.display = isProfile ? '' : 'none';
+  const profileNavLabel = document.getElementById('profile-period-label-nav');
+  if (profileNavLabel) profileNavLabel.textContent = formatPeriodLabel();
 
   if (isHealth)  { renderHealth();  return; }
   if (isProfile) { renderProfile(); return; }
