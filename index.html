@@ -528,6 +528,15 @@
       </div>
     </div>
 
+    <!-- Poids -->
+    <div class="section-header">Poids & Composition</div>
+    <div class="health-grid">
+      <div class="card health-full">
+        <div class="card-title">Évolution du poids <span style="font-size:11px;text-transform:none;color:var(--muted)">kg</span><span id="badge-weight" class="stat-badge"></span></div>
+        <div class="chart-wrap" style="height:200px"><canvas id="chart-weight"></canvas></div>
+      </div>
+    </div>
+
     <!-- Activité journalière -->
     <div class="section-header">Activité journalière</div>
     <div class="health-grid">
@@ -1646,7 +1655,15 @@ function renderHealthKPIs(days) {
   const rhr      = avg(days, 'resting_hr');
   const stepsA   = avg(days, 'steps');
 
+  // Poids : dernière valeur connue dans la période
+  const weightDays = days.filter(d => d.weight_kg);
+  const lastWeight = weightDays.length ? weightDays[weightDays.length-1].weight_kg : null;
+  const lastBmi    = weightDays.length ? weightDays[weightDays.length-1].bmi    : null;
+  const bmiColor   = lastBmi ? (lastBmi < 18.5 ? 'var(--swim)' : lastBmi < 25 ? 'var(--run)' : lastBmi < 30 ? 'var(--bike)' : 'var(--strength)') : '';
+
   document.getElementById('kpi-health').innerHTML =
+    (lastWeight ? h('Poids actuel', lastWeight, 'kg') : '') +
+    (lastBmi    ? h('IMC', lastBmi, '', bmiColor)      : '') +
     h('Sommeil moy.',   sleepStr) +
     h('Profond moy.',   deepAvg ? Math.round(deepAvg)+'min' : '–') +
     h('REM moy.',       remAvg  ? Math.round(remAvg)+'min'  : '–') +
@@ -1797,6 +1814,53 @@ function renderHealthCharts(days) {
       scales:{ x:xOpts, y:{} }
     }
   });
+
+  /* ── Poids ── */
+  const weightData = days.map(d => d.weight_kg || null);
+  const hasWeight  = weightData.some(v => v !== null);
+  if (hasWeight) {
+    const lastW = weightData.filter(Boolean);
+    const minW  = Math.min(...lastW) - 1;
+    const maxW  = Math.max(...lastW) + 1;
+    setBadge('badge-weight', lastW.length ? lastW[lastW.length-1] + ' kg' : '');
+    mkChart('chart-weight', {
+      type: 'line',
+      data: { labels: L, datasets: [{
+        label: 'Poids',
+        data:  weightData,
+        borderColor: '#38bdf8',
+        backgroundColor: 'rgba(56,189,248,0.12)',
+        fill: true,
+        tension: 0.3,
+        spanGaps: true,
+        pointRadius: weightData.map(v => v !== null ? 5 : 0),
+        pointBackgroundColor: '#38bdf8',
+        pointBorderColor: '#0d2035',
+        pointBorderWidth: 2,
+        borderWidth: 2,
+      }]},
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: c => c.raw !== null ? `${c.raw} kg` : null } }
+        },
+        scales: {
+          x: xOpts,
+          y: { min: minW, max: maxW, title: { display: true, text: 'kg' } }
+        }
+      }
+    });
+  } else {
+    setBadge('badge-weight', '');
+    const el = document.getElementById('chart-weight');
+    if (el) { const ctx = el.getContext('2d'); ctx.clearRect(0,0,el.width,el.height); }
+    if (CHARTS['chart-weight']) { CHARTS['chart-weight'].destroy(); delete CHARTS['chart-weight']; }
+    const wrap = el?.closest('.card');
+    if (wrap) wrap.style.display = 'none';
+  }
+  // Réaffiche la carte si elle a été masquée
+  { const el = document.getElementById('chart-weight'); const wrap = el?.closest('.card'); if (wrap && hasWeight) wrap.style.display = ''; }
 
   /* ── Minutes d'intensité ── */
   const iModAvg = avg(days,'intensity_min_moderate');

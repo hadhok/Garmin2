@@ -157,8 +157,25 @@ def _run_sync():
         for i in range(0, len(normalized), 50):
             sb.table('activities').upsert(normalized[i:i+50]).execute()
 
-    # ── Wellness : 7 derniers jours ──────────────────────────────────────────
+    # ── Poids / composition corporelle : 90 derniers jours (1 seul appel) ──────
     today = now.date()
+    weight_by_date = {}
+    try:
+        since_90 = (today - timedelta(days=90)).strftime('%Y-%m-%d')
+        comp = client.get_body_composition(since_90, today.strftime('%Y-%m-%d'))
+        for w in (comp.get('dateWeightList') or []):
+            cal   = w.get('calendarDate')
+            grams = w.get('weight') or 0
+            if cal and grams > 0:
+                weight_by_date[cal] = {
+                    'weight_kg': round(grams / 1000, 1),
+                    'bmi':       round(w['bmi'], 1) if w.get('bmi') else None,
+                    'body_fat':  round(w['bodyFat'], 1) if w.get('bodyFat') else None,
+                }
+    except Exception:
+        pass
+
+    # ── Wellness : 7 derniers jours ──────────────────────────────────────────
     wellness_records = []
     for i in range(7):
         date_str = (today - timedelta(days=i)).strftime('%Y-%m-%d')
@@ -166,6 +183,7 @@ def _run_sync():
             sleep_raw = client.get_sleep_data(date_str)
             stats_raw = client.get_stats(date_str)
             dto = sleep_raw.get('dailySleepDTO', {})
+            wdata = weight_by_date.get(date_str, {})
             day = {
                 'date': date_str,
                 'sleep_total_min':        round((dto.get('sleepTimeSeconds') or 0) / 60),
@@ -192,6 +210,10 @@ def _run_sync():
                 'resting_hr':             stats_raw.get('restingHeartRate'),
                 'intensity_min_moderate': stats_raw.get('moderateIntensityMinutes'),
                 'intensity_min_vigorous': stats_raw.get('vigorousIntensityMinutes'),
+                # ── Poids ────────────────────────────────────────────────────
+                'weight_kg':  wdata.get('weight_kg'),
+                'bmi':        wdata.get('bmi'),
+                'body_fat':   wdata.get('body_fat'),
             }
             wellness_records.append({'date': date_str, 'data': day})
         except Exception:
@@ -199,6 +221,24 @@ def _run_sync():
 
     if wellness_records:
         sb.table('wellness_days').upsert(wellness_records).execute()
+
+    # ── Backfill poids pour les jours > 7 jours déjà en DB ──────────────────
+    recent_dates = {(today - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(7)}
+    older_weight = {d: w for d, w in weight_by_date.items() if d not in recent_dates}
+    for date_old, wdata in older_weight.items():
+        try:
+            ex = sb.table('wellness_days').select('data').eq('date', date_old).limit(1).execute()
+            if ex.data:
+                merged = dict(ex.data[0].get('data') or {})
+                merged.update(wdata)
+                sb.table('wellness_days').update({'data': merged}).eq('date', date_old).execute()
+            else:
+                sb.table('wellness_days').upsert({
+                    'date': date_old,
+                    'data': {'date': date_old, **wdata},
+                }).execute()
+        except Exception:
+            pass
 
     # ── Sauvegarder les tokens rafraîchis ────────────────────────────────────
     try:
