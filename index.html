@@ -559,7 +559,7 @@
         <div id="profile-sports-list"></div>
       </div>
       <div class="card">
-        <div class="card-title">Depuis le début</div>
+        <div class="card-title" id="profile-period-label">Depuis le début</div>
         <div id="profile-totals" style="display:grid;grid-template-columns:1fr 1fr;gap:0"></div>
       </div>
     </div>
@@ -1176,14 +1176,33 @@ function renderYearCharts(acts) {
 /* ═══════════════════════════════════════════════════════════
    PROFIL SPORTIF
 ═══════════════════════════════════════════════════════════ */
+// Fenêtre temporelle par granularité (en mois, null = tout)
+const PROFILE_WINDOW = { month: 1, quarter: 3, semester: 6, year: 12 };
+const PROFILE_PERIOD_LABEL = {
+  month:    'Ce mois',
+  quarter:  'Ce trimestre (3 mois)',
+  semester: 'Ce semestre (6 mois)',
+  year:     'Cette année (12 mois)',
+};
+
 function getFilteredAllTime() {
   const all = getAll();
   if (state.filter === 'all') return all;
   return all.filter(a => a.type === state.filter);
 }
 
-function computeProfileData() {
+// Retourne les activités filtrées par type ET par fenêtre temporelle
+function getWindowedActivities() {
   const all = getFilteredAllTime();
+  const nMonths = PROFILE_WINDOW[state.profileGranularity];
+  if (!nMonths) return all;
+  const cutoff = new Date(TODAY);
+  cutoff.setMonth(cutoff.getMonth() - nMonths);
+  return all.filter(a => new Date((a.start_time || a.date+'T12:00:00')) >= cutoff);
+}
+
+function computeProfileData() {
+  const all = getWindowedActivities();
   const typeMeta = {};
   all.forEach(a => { if (a.type && !typeMeta[a.type]) typeMeta[a.type] = { label: a.type_label||a.type, icon: a.icon||'⚡' }; });
 
@@ -1247,12 +1266,17 @@ function renderProfile() {
   const MLONG = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
   const MSHORT = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 
+  // ── Label période & "Depuis le début" ────────────────────────────────────
+  document.getElementById('profile-period-label').textContent = PROFILE_PERIOD_LABEL[state.profileGranularity] || 'Depuis le début';
+
   // ── Badge niveau ─────────────────────────────────────────────────────────
   document.getElementById('profile-main-icon').textContent = d.topTypes[0]?.icon||'🏅';
   document.getElementById('profile-level-name').innerHTML = `<span style="color:${lv.color}">${lv.label}</span>`;
   document.getElementById('profile-level-pips').innerHTML = [1,2,3,4,5].map(i=>
     `<div class="level-pip" style="background:${i<=lv.bar?lv.color:'var(--border)'}"></div>`).join('');
-  document.getElementById('profile-weekly-load').textContent = `~${Math.round(d.weeklyLoad)} pts / semaine (8 sem.)`;
+  const wLabel = PROFILE_WINDOW[state.profileGranularity];
+  document.getElementById('profile-weekly-load').textContent =
+    `~${Math.round(d.weeklyLoad)} pts / semaine${wLabel ? ` (${wLabel} mois)` : ' (tout)'}`;
 
   // ── Sports ────────────────────────────────────────────────────────────────
   document.getElementById('profile-sports-list').innerHTML = d.topTypes.map(t=>
@@ -1283,9 +1307,9 @@ function renderProfile() {
   if(d.records.dur)  { const a=d.records.dur;  recItems.push({i:'⏱',l:'Séance la + longue',v:fmt_dur(a.duration_min),           s:a.name, d:fmt_date(a.date)}); }
   if(d.records.vo2)  { const a=d.records.vo2;  recItems.push({i:'❤️',l:'VO2max record',   v:`${a.vo2max}`,                      s:a.name, d:fmt_date(a.date)}); }
   if(d.records.bestActs){ const[k,m]=d.records.bestActs; const[y,mo]=k.split('-');
-    recItems.push({i:'🏆',l:'Mois le + actif',  v:`${m.acts} séances`, s:`${MLONG[+mo-1]} ${y}`, d:''}); }
+    recItems.push({i:'🏆',l:'Période la + active',  v:`${m.acts} séances`, s:`${MLONG[+mo-1]} ${y}`, d:''}); }
   if(d.records.bestLoad){ const[k,m]=d.records.bestLoad; const[y,mo]=k.split('-');
-    recItems.push({i:'🔥',l:'Mois le + chargé', v:`${Math.round(m.load)} pts`, s:`${MLONG[+mo-1]} ${y}`, d:''}); }
+    recItems.push({i:'🔥',l:'Période la + chargée', v:`${Math.round(m.load)} pts`, s:`${MLONG[+mo-1]} ${y}`, d:''}); }
 
   document.getElementById('profile-records').innerHTML = recItems.map(r=>
     `<div class="record-card">
