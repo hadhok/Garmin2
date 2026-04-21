@@ -18,8 +18,8 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Ne jamais mettre en cache les appels API
-  if (e.request.url.includes('/api/')) return;
+  // Ne jamais mettre en cache les appels API ni coach.json
+  if (e.request.url.includes('/api/') || e.request.url.includes('coach.json')) return;
   e.respondWith(
     caches.match(e.request).then(r => r || fetch(e.request).then(res => {
       if (res.ok && e.request.method === 'GET') {
