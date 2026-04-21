@@ -184,6 +184,13 @@ def _run_sync():
             stats_raw = client.get_stats(date_str)
             dto = sleep_raw.get('dailySleepDTO', {})
             wdata = weight_by_date.get(date_str, {})
+            # Training status & readiness (jour courant seulement)
+            tr_status = {}; tr_readiness = {}
+            if i == 0:
+                try: tr_status   = client.get_training_status(date_str) or {}
+                except Exception: pass
+                try: tr_readiness = client.get_training_readiness(date_str) or {}
+                except Exception: pass
             day = {
                 'date': date_str,
                 'sleep_total_min':        round((dto.get('sleepTimeSeconds') or 0) / 60),
@@ -214,6 +221,13 @@ def _run_sync():
                 'weight_kg':  wdata.get('weight_kg'),
                 'bmi':        wdata.get('bmi'),
                 'body_fat':   wdata.get('body_fat'),
+                # ── Statut d'entraînement Garmin ─────────────────────────────
+                'training_status':          (tr_status.get('trainingStatusPhrase')
+                                             or tr_status.get('latestTrainingStatus')
+                                             or tr_status.get('trainingStatus')),
+                'training_readiness_score': (tr_readiness.get('score')
+                                             or tr_readiness.get('trainingReadinessScore')),
+                'training_readiness_level': tr_readiness.get('level'),
             }
             wellness_records.append({'date': date_str, 'data': day})
         except Exception:
