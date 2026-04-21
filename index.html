@@ -386,6 +386,26 @@
     .kpi-delta.down { color:var(--strength); }
     .kpi-delta.flat { color:var(--muted); }
 
+    /* ── Coach card ── */
+    .coach-section { margin-bottom: 20px; }
+    .coach-header  { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+    .coach-title   { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--text); }
+    .coach-avatar  { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,#38bdf8,#7c3aed); display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+    .coach-date    { font-size:11px; color:var(--muted); }
+    .coach-items   { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+    .coach-item    { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; border-left:3px solid var(--border); transition:all .2s; }
+    .coach-item:hover { box-shadow:0 4px 16px rgba(0,0,0,0.25); }
+    .coach-item.focus    { border-left-color:#38bdf8; }
+    .coach-item.warning  { border-left-color:#f97316; }
+    .coach-item.goal     { border-left-color:#22c55e; }
+    .coach-item.tip      { border-left-color:#7c3aed; }
+    .coach-item.congrats { border-left-color:#f59e0b; }
+    .coach-item-header { display:flex; align-items:center; gap:7px; margin-bottom:7px; }
+    .coach-item-icon   { font-size:18px; line-height:1; }
+    .coach-item-title  { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); }
+    .coach-item-text   { font-size:13px; color:var(--text); line-height:1.55; }
+    @media(max-width:640px){ .coach-items { grid-template-columns:1fr; } }
+
     /* ── Day cell enriched ── */
     .day-mini-acts { display:flex; flex-direction:column; gap:2px; margin-top:3px; }
     .day-mini-act  { font-size:8px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; cursor:pointer; padding:1px 2px; border-radius:3px; }
@@ -629,6 +649,18 @@
 
   <!-- VIEW : PROFIL -->
   <div id="view-profile" class="view">
+
+    <!-- Conseil du Coach -->
+    <div class="coach-section" id="coach-section" style="display:none">
+      <div class="coach-header">
+        <div class="coach-title">
+          <div class="coach-avatar">🤖</div>
+          Conseil du Coach
+        </div>
+        <span class="coach-date" id="coach-date"></span>
+      </div>
+      <div class="coach-items" id="coach-items"></div>
+    </div>
 
     <!-- Hero : badge niveau + sports + totaux -->
     <div class="profile-hero">
@@ -2519,12 +2551,43 @@ const MOCK_ACTIVITIES = [
 /* ═══════════════════════════════════════════════════════════
    INIT
 ═══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════
+   COACH
+═══════════════════════════════════════════════════════════ */
+async function loadCoach() {
+  try {
+    const r = await fetch('/coach.json');
+    if (!r.ok) return;
+    const data = await r.json();
+    const section = document.getElementById('coach-section');
+    const dateEl  = document.getElementById('coach-date');
+    const itemsEl = document.getElementById('coach-items');
+    if (!section || !data.items?.length) return;
+
+    if (dateEl && data.updated_at) {
+      const d = new Date(data.updated_at + 'T12:00:00');
+      dateEl.textContent = 'Mis à jour le ' + d.toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' });
+    }
+
+    itemsEl.innerHTML = data.items.map(item => `
+      <div class="coach-item ${item.type||'tip'}">
+        <div class="coach-item-header">
+          <span class="coach-item-icon">${item.icon||'💬'}</span>
+          <span class="coach-item-title">${item.title||''}</span>
+        </div>
+        <div class="coach-item-text">${item.text||''}</div>
+      </div>`).join('');
+
+    section.style.display = '';
+  } catch {}
+}
+
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js').catch(() => {});
 }
 
 async function init() {
-  await Promise.all([loadData(), loadWellness()]);
+  await Promise.all([loadData(), loadWellness(), loadCoach()]);
   renderAll();
 }
 init();

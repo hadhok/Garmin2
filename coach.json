@@ -1,0 +1,24 @@
+{
+  "updated_at": "2026-04-21",
+  "coach": "Claude",
+  "items": [
+    {
+      "type": "focus",
+      "icon": "🎯",
+      "title": "Focus de la semaine",
+      "text": "Lance une première synchronisation pour que je puisse analyser tes données et personnaliser ces conseils. En attendant, pense à maintenir ta régularité d'entraînement !"
+    },
+    {
+      "type": "tip",
+      "icon": "💡",
+      "title": "Astuce récupération",
+      "text": "Surveille ton score de récupération dans l'onglet Santé chaque matin — si tu es sous 40, privilégie une séance légère ou du repos actif."
+    },
+    {
+      "type": "goal",
+      "icon": "🏆",
+      "title": "Objectif à définir",
+      "text": "Partage tes données avec moi dans Claude Code et je définirai ici tes objectifs personnalisés : charge hebdomadaire cible, distance mensuelle, progression VO2max."
+    }
+  ]
+}
