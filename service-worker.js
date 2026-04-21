@@ -1,4 +1,4 @@
-const CACHE_NAME = 'garmin-v1';
+const CACHE_NAME = 'garmin-v2';
 const PRECACHE = ['/', '/index.html'];
 
 self.addEventListener('install', e => {
