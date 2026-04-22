@@ -6,762 +6,579 @@
   <title>Garmin Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css" />
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#091929">
+  <meta name="theme-color" content="#111111">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <style>
-    :root {
-      --bg: #091929; --surface: #0d2035; --surface2: #132840;
-      --accent: #38bdf8; --border: #1a3352;
-      --run: #22c55e; --bike: #f59e0b; --swim: #60a5fa;
-      --strength: #ef4444; --hiit: #f97316; --cardio: #f43f5e;
-      --rowing: #22d3ee; --jump_rope: #a855f7;
-      --hockey: #64748b; --tennis: #84cc16; --padel: #10b981;
-      --ski: #bae6fd; --sup: #0ea5e9;
-      --pilates: #e879f9; --yoga: #7c3aed;
-      --hike: #84cc16; --walk: #22d3ee; --other: #64748b;
-      --text: #e2f0fb; --muted: #5b8cad; --radius: 12px;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-
-    /* ── Header ── */
-    header { background: linear-gradient(90deg, #071522 0%, var(--surface) 100%); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 60px; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(8px); }
-    .logo { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700; color: var(--accent); letter-spacing: 2px; text-transform: uppercase; }
-    .logo svg { width: 26px; height: 26px; }
-    .header-right { display: flex; align-items: center; gap: 14px; font-size: 13px; color: var(--muted); }
-    .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--run); display: inline-block; margin-right: 5px; }
-    .sync-dot.syncing { background: var(--bike); animation: pulse 0.8s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-    .btn-sync { background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); color: var(--accent); border-radius: 8px; padding: 6px 14px; font-size: 13px; cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 6px; letter-spacing: .4px; }
-    .btn-sync:hover { background: rgba(56,189,248,0.2); border-color: var(--accent); box-shadow: 0 0 14px rgba(56,189,248,0.2); }
-    .btn-sync:disabled { opacity: .5; cursor: default; }
-
-    /* ── Sync modal ── */
-    .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 200; align-items: center; justify-content: center; }
-    .modal-bg.open { display: flex; }
-    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; width: 360px; }
-    .modal h3 { margin-bottom: 18px; font-size: 16px; }
-    .modal label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; margin-top: 12px; }
-    .modal input { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 9px 12px; font-size: 14px; }
-    .modal input:focus { outline: none; border-color: var(--accent); }
-    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
-    .btn-primary { flex: 1; background: var(--accent); color: #071522; border: none; border-radius: 8px; padding: 10px; font-size: 14px; font-weight: 700; letter-spacing: .4px; cursor: pointer; transition: all .2s; }
-    .btn-primary:hover { background: #7dd3fc; box-shadow: 0 0 20px rgba(56,189,248,0.3); }
-    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; font-size: 14px; cursor: pointer; transition: all .2s; }
-    .btn-secondary:hover { border-color: rgba(56,189,248,0.3); }
-    .sync-log { background: var(--surface2); border-radius: 8px; padding: 10px 12px; font-size: 12px; font-family: monospace; color: var(--run); min-height: 40px; margin-top: 12px; white-space: pre-wrap; display: none; }
-
-    /* ── Tabs ── */
-    .nav-tabs { display: flex; gap: 0; padding: 0 24px; border-bottom: 1px solid var(--border); background: var(--bg); }
-    .tab { padding: 14px 20px; border-radius: 0; border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase; cursor: pointer; transition: all .2s; }
-    .tab:hover { color: var(--text); background: rgba(56,189,248,0.05); }
-    .tab.active { background: transparent; color: var(--accent); border-bottom: 2px solid var(--accent); }
-
-    /* ── Main ── */
-    main { max-width: 1200px; margin: 0 auto; padding: 24px; }
-    .period-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-    .period-nav { display: flex; align-items: center; gap: 12px; }
-    .btn-nav { background: var(--surface); border: 1px solid var(--border); color: var(--muted); border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; transition: all .2s; }
-    .btn-nav:hover { background: var(--surface2); color: var(--accent); border-color: rgba(56,189,248,0.3); }
-    .period-label { font-size: 14px; font-weight: 700; min-width: 160px; text-align: center; letter-spacing: .5px; text-transform: uppercase; }
-    .btn-today { background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); color: var(--accent); border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; letter-spacing: .4px; cursor: pointer; transition: all .2s; }
-    .btn-today:hover { background: rgba(56,189,248,0.2); box-shadow: 0 0 10px rgba(56,189,248,0.15); }
-
-    /* ── Filter bar ── */
-    .filter-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
-    .filter-btn { display: flex; align-items: center; gap: 5px; padding: 5px 13px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 12px; font-weight: 500; letter-spacing: .3px; cursor: pointer; transition: all .2s; user-select: none; }
-    .filter-btn:hover { border-color: rgba(56,189,248,0.4); color: var(--text); background: rgba(56,189,248,0.06); }
-    .filter-btn.active { color: var(--text); border-color: transparent; }
-    .filter-btn[data-type="all"].active        { background:#334155;              border-color:#475569;          color:var(--text); }
-    .filter-btn[data-type="run"].active        { background:rgba(34,197,94,.2);   border-color:var(--run);       color:var(--run); }
-    .filter-btn[data-type="swim"].active       { background:rgba(59,130,246,.2);  border-color:var(--swim);      color:var(--swim); }
-    .filter-btn[data-type="hiit"].active       { background:rgba(249,115,22,.2);  border-color:var(--hiit);      color:var(--hiit); }
-    .filter-btn[data-type="rowing"].active     { background:rgba(6,182,212,.2);   border-color:var(--rowing);    color:var(--rowing); }
-    .filter-btn[data-type="jump_rope"].active  { background:rgba(168,85,247,.2);  border-color:var(--jump_rope); color:var(--jump_rope); }
-    .filter-btn[data-type="strength"].active   { background:rgba(239,68,68,.2);   border-color:var(--strength);  color:var(--strength); }
-    .filter-btn[data-type="hockey"].active     { background:rgba(100,116,139,.2); border-color:var(--hockey);    color:var(--hockey); }
-    .filter-btn[data-type="tennis"].active     { background:rgba(132,204,22,.2);  border-color:var(--tennis);    color:var(--tennis); }
-    .filter-btn[data-type="bike"].active       { background:rgba(245,158,11,.2);  border-color:var(--bike);      color:var(--bike); }
-    .filter-btn[data-type="walk"].active       { background:rgba(6,182,212,.2);   border-color:var(--walk);      color:var(--walk); }
-    .filter-btn[data-type="pilates"].active    { background:rgba(232,121,249,.2); border-color:var(--pilates);   color:var(--pilates); }
-    .filter-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-
-    /* ── KPI cards ── */
-    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 12px; margin-bottom: 20px; }
-    .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; border-left: 3px solid var(--border); transition: border-color .2s, box-shadow .2s; }
-    .kpi-card:hover { border-left-color: var(--accent); box-shadow: 0 2px 16px rgba(0,0,0,0.2); }
-    .kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: .9px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
-    .kpi-value { font-size: 26px; font-weight: 800; line-height: 1; color: var(--text); }
-    .kpi-unit { font-size: 13px; color: var(--muted); margin-left: 3px; font-weight: 400; }
-    .kpi-delta { font-size: 11px; margin-top: 4px; color: var(--muted); }
-    .kpi-delta.up { color: var(--run); }
-
-    /* ── Content grid ── */
-    .content-grid { display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
-    @media (max-width:900px) { .content-grid { grid-template-columns: 1fr; } }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; transition: border-color .2s, box-shadow .2s; }
-    .card:hover { border-color: rgba(56,189,248,0.25); box-shadow: 0 4px 24px rgba(0,0,0,0.25); }
-    .card + .card { margin-top: 16px; }
-    .card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .9px; color: var(--muted); margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; }
-    .chart-wrap { position: relative; height: 200px; }
-
-    /* ── Activity list ── */
-    .activity-list { display: flex; flex-direction: column; gap: 8px; }
-    .activity-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 10px; cursor: pointer; transition: all .2s; }
-    .activity-item:hover { border-color: rgba(56,189,248,0.5); box-shadow: 0 2px 12px rgba(0,0,0,0.3); transform: translateY(-1px); }
-    .act-icon { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
-    .act-icon.run       { background: rgba(34,197,94,.15); }
-    .act-icon.swim      { background: rgba(59,130,246,.15); }
-    .act-icon.hiit      { background: rgba(249,115,22,.15); }
-    .act-icon.rowing    { background: rgba(6,182,212,.15); }
-    .act-icon.jump_rope { background: rgba(168,85,247,.15); }
-    .act-icon.strength  { background: rgba(239,68,68,.15); }
-    .act-icon.cardio    { background: rgba(244,63,94,.15); }
-    .act-icon.hockey    { background: rgba(100,116,139,.15); }
-    .act-icon.tennis    { background: rgba(132,204,22,.15); }
-    .act-icon.padel     { background: rgba(16,185,129,.15); }
-    .act-icon.bike      { background: rgba(245,158,11,.15); }
-    .act-icon.walk      { background: rgba(6,182,212,.15); }
-    .act-icon.pilates   { background: rgba(232,121,249,.15); }
-    .act-icon.yoga      { background: rgba(124,58,237,.15); }
-    .act-icon.hike      { background: rgba(132,204,22,.15); }
-    .act-icon.ski       { background: rgba(147,197,253,.15); }
-    .act-icon.sup       { background: rgba(14,165,233,.15); }
-    .act-icon.other     { background: rgba(100,116,139,.15); }
-    .act-name { font-size: 13px; font-weight: 600; }
-    .act-date { font-size: 11px; color: var(--muted); margin-top: 2px; }
-    .act-stats { text-align: right; }
-    .act-main { font-size: 13px; font-weight: 600; }
-    .act-sub  { font-size: 11px; color: var(--muted); margin-top: 2px; }
-    .empty { text-align: center; padding: 30px; color: var(--muted); font-size: 13px; }
-
-    /* ── Week cells ── */
-    .week-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 6px; }
-    .day-cell { text-align: center; padding: 6px 3px; border-radius: 8px; font-size: 11px; }
-    .day-cell.has-act { background: var(--surface2); }
-    .day-name { color: var(--muted); margin-bottom: 3px; }
-    .day-num { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
-    .day-cell.today .day-num { background: var(--accent); border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; margin: 0 auto 3px; color: #000; font-weight: 700; }
-    .day-dots { display: flex; justify-content: center; gap: 2px; min-height: 8px; }
-    .day-dot { width: 5px; height: 5px; border-radius: 50%; }
-
-    /* ── Zone bars ── */
-    .zone-row { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
-    .zone-label { font-size: 11px; width: 68px; color: var(--muted); }
-    .zone-bar-bg { flex: 1; height: 7px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
-    .zone-bar-fill { height: 100%; border-radius: 4px; transition: width .4s; }
-    .zone-pct { font-size: 11px; width: 30px; text-align: right; color: var(--muted); }
-
-    /* ── Views ── */
-    .view { display: none; }
-    .view.active { display: block; }
-
-    /* ── Santé : période selector ── */
-    .health-period-bar { display:flex; gap:6px; margin-bottom:18px; }
-    .hpb { background:var(--surface); border:1px solid var(--border); color:var(--muted); border-radius:8px; padding:6px 16px; font-size:12px; font-weight:600; letter-spacing:.4px; cursor:pointer; transition:all .2s; }
-    .hpb:hover { color:var(--text); border-color:rgba(56,189,248,0.3); }
-    .hpb.active { background:rgba(56,189,248,0.12); border-color:var(--accent); color:var(--accent); box-shadow: 0 0 12px rgba(56,189,248,0.15); }
-
-    /* ── Santé : grille de charts ── */
-    .health-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-    .health-full { grid-column:1/-1; }
-    @media(max-width:900px){ .health-grid { grid-template-columns:1fr; } .health-full { grid-column:1; } }
-
-    /* ── Section header ── */
-    .section-header { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1.2px; color:var(--muted); margin:20px 0 12px; padding-bottom:8px; border-bottom:1px solid var(--border); }
-
-    /* ── Stat badge (dans les cartes santé) ── */
-    .stat-badge { display:inline-block; background:var(--surface2); border-radius:6px; padding:2px 8px; font-size:11px; margin-left:6px; }
-
-    /* ── Toast ── */
-    .toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px; font-size: 13px; font-weight: 500; letter-spacing: .3px; z-index: 300; transform: translateY(80px); opacity: 0; transition: all .3s; backdrop-filter: blur(8px); }
-    .toast.show { transform: translateY(0); opacity: 1; }
-    .toast.ok  { border-color: var(--run);      color: var(--run);      box-shadow: 0 4px 20px rgba(34,197,94,0.2); }
-    .toast.err { border-color: var(--strength); color: var(--strength); box-shadow: 0 4px 20px rgba(239,68,68,0.2); }
-
-    /* ── Profile tab ── */
-    .profile-hero { display:grid; grid-template-columns:180px 1fr 1fr; gap:16px; margin-bottom:20px; }
-    @media(max-width:900px){ .profile-hero { grid-template-columns:1fr; } }
-    .profile-badge-icon { font-size:52px; margin-bottom:10px; line-height:1; }
-    .level-bar { display:flex; gap:4px; margin-top:8px; justify-content:center; }
-    .level-pip { width:22px; height:6px; border-radius:3px; }
-    .records-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; margin-bottom:20px; }
-    .record-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 14px; transition: all .2s; border-top: 3px solid var(--border); }
-    .record-card:hover { border-top-color:var(--accent); box-shadow: 0 4px 20px rgba(0,0,0,0.3); transform: translateY(-2px); }
-    .profile-table { width:100%; border-collapse:collapse; font-size:13px; }
-    .profile-table th { text-align:left; padding:10px 12px; font-size:9px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); border-bottom:2px solid var(--border); font-weight:700; }
-    .profile-table th:not(:first-child) { text-align:center; }
-    .profile-table td { padding:10px 12px; border-bottom:1px solid var(--border); }
-    .profile-table tr:last-child td { border-bottom:none; }
-    .profile-table tr:hover td { background:rgba(56,189,248,0.04); }
-
-    /* ── Profile granularity selector ── */
-    .pgran { display:flex; gap:4px; }
-    .pgran-btn { background:var(--surface); border:1px solid var(--border); color:var(--muted); border-radius:8px; padding:4px 12px; font-size:11px; font-weight:600; letter-spacing:.4px; cursor:pointer; transition:all .2s; }
-    .pgran-btn:hover { color:var(--text); border-color:rgba(56,189,248,0.3); }
-    .pgran-btn.active { background:rgba(56,189,248,0.12); border-color:var(--accent); color:var(--accent); box-shadow: 0 0 10px rgba(56,189,248,0.12); }
-    /* ── Month accordion ── */
-    .month-row { cursor:pointer; }
-    .month-row:hover td { background:var(--surface2) !important; }
-    .month-row td:first-child::before { content:'▶'; font-size:9px; color:var(--muted); margin-right:7px; transition:transform .2s; display:inline-block; }
-    .month-row.open td:first-child::before { transform:rotate(90deg); }
-    .month-detail-row { display:none; }
-    .month-detail-row.open { display:table-row; }
-    .month-acts-list { display:flex; flex-direction:column; gap:6px; padding:12px 8px; }
-    .month-act-item { display:grid; grid-template-columns:30px 1fr auto; align-items:center; gap:8px; padding:8px 10px; background:var(--surface2); border-radius:8px; cursor:pointer; border:1px solid transparent; transition: all .2s; }
-    .month-act-item:hover { border-color:rgba(56,189,248,0.4); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
-
-    /* ── Year activity list ── */
-    .year-all-list { max-height: 600px; overflow-y: auto; padding-right: 4px; }
-    .year-all-list::-webkit-scrollbar { width: 4px; }
-    .year-all-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-    /* ══════════════════════════════════════════════════════
-       RESPONSIVE — tablette (≤900px) already handled above
-       RESPONSIVE — mobile (≤640px)
-    ══════════════════════════════════════════════════════ */
-    @media (max-width: 640px) {
-      /* Header */
-      header { padding: 0 12px; height: 52px; }
-      .logo  { font-size: 15px; gap: 7px; }
-      .logo svg { width: 20px; height: 20px; }
-      #sync-label { display: none; }
-      .header-right > span:nth-child(2) { display: none; } /* séparateur | */
-      .btn-sync { padding: 6px 10px; font-size: 12px; }
-
-      /* Nav tabs — scrollable horizontalement */
-      .nav-tabs { padding: 0 12px; gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-wrap: nowrap; }
-      .nav-tabs::-webkit-scrollbar { display: none; }
-      .tab { padding: 10px 13px; font-size: 10px; letter-spacing: .5px; white-space: nowrap; flex-shrink: 0; }
-
-      /* Main */
-      main { padding: 12px; }
-
-      /* Period bar */
-      .period-label { min-width: 100px; font-size: 13px; }
-      .btn-today { padding: 5px 10px; font-size: 12px; }
-
-      /* Filter bar */
-      .filter-btn { font-size: 11px; padding: 4px 9px; }
-
-      /* KPI grid — 2 colonnes */
-      .kpi-grid  { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-      .kpi-value { font-size: 20px; }
-      .kpi-card  { padding: 11px 12px; }
-
-      /* Cards */
-      .card       { padding: 13px; }
-      .card + .card { margin-top: 10px; }
-      .chart-wrap { height: 160px; }
-
-      /* Content grid — déjà 1 col à 900px, juste réduit le gap */
-      .content-grid { gap: 10px; }
-
-      /* Activity items */
-      .activity-item { padding: 10px 11px; gap: 8px; }
-      .act-icon { width: 30px; height: 30px; font-size: 15px; border-radius: 8px; flex-shrink: 0; }
-      .act-name { font-size: 12px; }
-      .act-main { font-size: 12px; }
-      .act-sub  { font-size: 10px; }
-
-      /* Week grid */
-      .week-grid { gap: 3px; }
-      .day-cell  { padding: 4px 2px; font-size: 10px; }
-      .day-num   { font-size: 12px; }
-
-      /* Sync modal */
-      .modal { width: calc(100vw - 24px); padding: 18px; }
-
-      /* Detail modal */
-      .detail-bg     { padding: 10px; align-items: flex-end; }
-      .detail-modal  { max-height: 92vh; border-radius: var(--radius) var(--radius) 0 0; }
-      .detail-header { padding: 14px; gap: 10px; }
-      .detail-icon   { width: 38px; height: 38px; font-size: 18px; }
-      .detail-name   { font-size: 14px; }
-      .detail-body   { padding: 12px 14px; }
-      .detail-stats  { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-      .detail-stat   { padding: 10px; }
-      .detail-stat-value { font-size: 16px; }
-
-      /* Section header (avec sélecteur de granularité) */
-      .section-header { flex-wrap: wrap; gap: 8px; }
-      .pgran { flex-wrap: wrap; }
-      .pgran-btn { padding: 3px 9px; font-size: 11px; }
-
-      /* Profile hero — déjà 1 col à 900px */
-      .records-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-      .record-card  { padding: 12px 10px; }
-      .profile-badge-icon { font-size: 40px; }
-
-      /* Profile table — masque FC repos & sommeil sur mobile */
-      .profile-table { font-size: 12px; }
-      .profile-table th,
-      .profile-table td { padding: 7px 8px; }
-      .profile-table .col-rhr,
-      .profile-table .col-sleep { display: none; }
-
-      /* Health grid — déjà 1 col à 900px */
-      .health-period-bar { flex-wrap: wrap; gap: 4px; }
-      .hpb { padding: 5px 12px; font-size: 12px; }
-
-      /* Year list */
-      .year-all-list { max-height: 380px; }
-
-      /* Toast */
-      .toast { bottom: 12px; right: 12px; left: 12px; text-align: center; }
-    }
-
-    @media (max-width: 380px) {
-      .kpi-grid { grid-template-columns: 1fr 1fr; }
-      .records-grid { grid-template-columns: 1fr 1fr; }
-      .tab { padding: 6px 10px; font-size: 11px; }
-    }
-
-    /* ── Activity detail modal ── */
-    .detail-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 400; align-items: center; justify-content: center; padding: 20px; }
-    .detail-bg.open { display: flex; }
-    .detail-modal { background: var(--surface); border: 1px solid var(--border); border-top: 3px solid var(--accent); border-radius: var(--radius); width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
-    .detail-header { display: flex; align-items: center; gap: 14px; padding: 20px 20px 16px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); z-index: 1; }
-    .detail-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
-    .detail-title { flex: 1; }
-    .detail-name { font-size: 16px; font-weight: 700; }
-    .detail-meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
-    .detail-close { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; flex-shrink: 0; }
-    .detail-close:hover { color: var(--text); }
-    .detail-body { padding: 18px 20px; }
-    .detail-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
-    .detail-stat { background: var(--surface2); border-radius: 10px; padding: 12px; }
-    .detail-stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 4px; }
-    .detail-stat-value { font-size: 18px; font-weight: 700; line-height: 1; }
-    .detail-stat-unit { font-size: 11px; color: var(--muted); }
-    .detail-section { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); margin: 16px 0 8px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
-    .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
-    .detail-row:last-child { border-bottom: none; }
-    .detail-row-label { color: var(--muted); }
-    .detail-row-value { font-weight: 600; }
-    /* ── Heatmap ── */
-    .heatmap-outer { display:flex; gap:6px; align-items:flex-start; }
-    .heatmap-ylabels { display:flex; flex-direction:column; padding-top:17px; gap:0; }
-    .heatmap-ylabel { height:14px; font-size:9px; color:var(--muted); display:flex; align-items:center; padding-right:4px; }
-    .heatmap-right { flex:1; min-width:0; overflow-x:auto; }
-    .heatmap-months { position:relative; height:16px; margin-bottom:2px; }
-    .heatmap-grid { display:flex; gap:3px; }
-    .heatmap-col { display:flex; flex-direction:column; gap:3px; }
-    .heatmap-cell { width:11px; height:11px; border-radius:2px; cursor:default; flex-shrink:0; transition:transform .1s; }
-    .heatmap-cell:hover { transform:scale(1.5); z-index:5; position:relative; }
-    .heatmap-legend { display:flex; align-items:center; gap:5px; margin-top:10px; font-size:10px; color:var(--muted); }
-
-    /* ── Badges ── */
-    .badges-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(100px,1fr)); gap:10px; margin-bottom:20px; }
-    .badge-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 10px; text-align:center; transition:all .2s; }
-    .badge-card.unlocked { border-color:rgba(56,189,248,0.45); }
-    .badge-card.unlocked:hover { transform:translateY(-2px); box-shadow:0 4px 18px rgba(56,189,248,0.15); }
-    .badge-card.locked { opacity:.28; filter:grayscale(.8); }
-    .badge-icon { font-size:26px; line-height:1; margin-bottom:5px; }
-    .badge-label { font-size:10px; font-weight:600; line-height:1.3; }
-    .badge-sub { font-size:9px; color:var(--muted); margin-top:2px; }
-
-    /* ── Recovery ── */
-    .recovery-card { display:flex; align-items:center; gap:20px; padding:20px 22px; }
-    .recovery-ring { position:relative; width:90px; height:90px; border-radius:50%; flex-shrink:0; }
-    .recovery-inner { position:absolute; inset:9px; background:var(--surface); border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-    .recovery-val { font-size:22px; font-weight:800; line-height:1; }
-    .recovery-lbl { font-size:8px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin-top:1px; }
-    .rfactors { flex:1; }
-    .rfactor { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:11px; }
-    .rfactor-bg { flex:1; height:4px; background:var(--surface2); border-radius:2px; overflow:hidden; }
-    .rfactor-fill { height:100%; border-radius:2px; transition:width .5s; }
-    .rfactor-val { font-size:11px; font-weight:600; min-width:34px; text-align:right; color:var(--text); }
-
-    /* ── Form chart legend ── */
-    .form-legend { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:8px; font-size:11px; color:var(--muted); }
-    .fleg { display:flex; align-items:center; gap:5px; }
-    .fleg-line { width:18px; height:2px; border-radius:1px; flex-shrink:0; }
-    .fleg-dash { width:18px; height:0; border-top:2px dashed; flex-shrink:0; }
-
-    /* ── KPI delta ── */
-    .kpi-delta.up   { color:var(--run); }
-    .kpi-delta.down { color:var(--strength); }
-    .kpi-delta.flat { color:var(--muted); }
-
-    /* ── Coach card ── */
-    .coach-section { margin-bottom: 20px; }
-    .coach-header  { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
-    .coach-title   { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--text); }
-    .coach-avatar  { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,#38bdf8,#7c3aed); display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
-    .coach-date    { font-size:11px; color:var(--muted); }
-    .coach-items   { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
-    .coach-item    { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; border-left:3px solid var(--border); transition:all .2s; }
-    .coach-item:hover { box-shadow:0 4px 16px rgba(0,0,0,0.25); }
-    .coach-item.focus    { border-left-color:#38bdf8; }
-    .coach-item.warning  { border-left-color:#f97316; }
-    .coach-item.goal     { border-left-color:#22c55e; }
-    .coach-item.tip      { border-left-color:#7c3aed; }
-    .coach-item.congrats { border-left-color:#f59e0b; }
-    .coach-item-header { display:flex; align-items:center; gap:7px; margin-bottom:7px; }
-    .coach-item-icon   { font-size:18px; line-height:1; }
-    .coach-item-title  { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); }
-    .coach-item-text   { font-size:13px; color:var(--text); line-height:1.55; }
-    @media(max-width:640px){ .coach-items { grid-template-columns:1fr; } }
-
-    /* ── Day cell enriched ── */
-    .day-mini-acts { display:flex; flex-direction:column; gap:2px; margin-top:3px; }
-    .day-mini-act  { font-size:8px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; cursor:pointer; padding:1px 2px; border-radius:3px; }
-    .day-mini-act:hover { background:var(--surface2); color:var(--text); }
-  </style>
 </head>
 <body>
 
-<!-- ── Header ── -->
-<header>
-  <div class="logo">
-    <svg viewBox="0 0 26 26" fill="none"><circle cx="13" cy="13" r="12" stroke="#00b4d8" stroke-width="1.8"/><path d="M13 6v7l4.5 2.5" stroke="#00b4d8" stroke-width="1.8" stroke-linecap="round"/></svg>
-    Garmin Dashboard
-  </div>
-  <div class="header-right">
-    <span id="sync-status"><span class="sync-dot" id="sync-dot"></span><span id="sync-label">Chargement…</span></span>
-    <span>|</span>
-    <button class="btn-sync" onclick="openSyncModal()">⟳ Synchroniser</button>
-  </div>
-</header>
+<div class="app-shell">
 
-<!-- ── Sync modal ── -->
+  <!-- ══════════════════════════════════════════════════════
+       SIDEBAR
+  ══════════════════════════════════════════════════════ -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="10" stroke="#6366f1" stroke-width="1.5"/>
+        <path d="M12 6v6l3.5 2" stroke="#6366f1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div>
+        <div class="sidebar-logo-text">Garmin</div>
+        <div class="sidebar-logo-sub">Dashboard</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-label">Navigation</div>
+      <button class="nav-item active" data-view="dashboard" onclick="switchView('dashboard')">
+        <span class="nav-icon">🏠</span>
+        Dashboard
+      </button>
+      <button class="nav-item" data-view="activities" onclick="switchView('activities')">
+        <span class="nav-icon">🏃</span>
+        Activités
+      </button>
+      <button class="nav-item" data-view="health" onclick="switchView('health')">
+        <span class="nav-icon">💤</span>
+        Santé
+      </button>
+      <button class="nav-item" data-view="profile" onclick="switchView('profile')">
+        <span class="nav-icon">👤</span>
+        Profil
+      </button>
+    </div>
+
+    <div class="sidebar-footer">
+      <div id="sync-status-sidebar" style="font-size:11px;color:var(--muted);padding:0 4px;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+        <span class="sync-dot" id="sync-dot"></span>
+        <span id="sync-label">Chargement…</span>
+      </div>
+      <button class="btn-sync-sidebar" onclick="openSyncModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Synchroniser
+      </button>
+    </div>
+  </nav>
+
+  <!-- ══════════════════════════════════════════════════════
+       MAIN AREA
+  ══════════════════════════════════════════════════════ -->
+  <div class="main-area">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <span class="topbar-title" id="topbar-title">Dashboard</span>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-ghost" onclick="openSyncModal()" style="font-size:12px;padding:6px 12px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Sync
+        </button>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main>
+
+      <!-- ════════════════════════════════════════════════
+           VIEW : DASHBOARD
+      ════════════════════════════════════════════════ -->
+      <div id="view-dashboard" class="view active">
+
+        <!-- Sub-tab bar -->
+        <div class="subtab-bar">
+          <button class="subtab" data-tab="day"   onclick="switchSubTab('day')">Jour</button>
+          <button class="subtab active" data-tab="week"  onclick="switchSubTab('week')">Semaine</button>
+          <button class="subtab" data-tab="month" onclick="switchSubTab('month')">Mois</button>
+          <button class="subtab" data-tab="year"  onclick="switchSubTab('year')">Année</button>
+        </div>
+
+        <!-- Period navigation -->
+        <div class="period-bar">
+          <div class="period-nav">
+            <button class="btn-icon" onclick="movePeriod(-1)">‹</button>
+            <span class="period-label" id="period-label"></span>
+            <button class="btn-icon" onclick="movePeriod(1)">›</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="btn-today" onclick="resetPeriod()">Aujourd'hui</button>
+          </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="filter-bar">
+          <button class="filter-btn active" data-type="all"       onclick="setFilter('all')">Tous</button>
+          <button class="filter-btn" data-type="run"       onclick="setFilter('run')"><span class="filter-dot" style="background:var(--run)"></span>Course</button>
+          <button class="filter-btn" data-type="swim"      onclick="setFilter('swim')"><span class="filter-dot" style="background:var(--swim)"></span>Natation</button>
+          <button class="filter-btn" data-type="hiit"      onclick="setFilter('hiit')"><span class="filter-dot" style="background:var(--hiit)"></span>HIIT</button>
+          <button class="filter-btn" data-type="rowing"    onclick="setFilter('rowing')"><span class="filter-dot" style="background:var(--rowing)"></span>Rameur</button>
+          <button class="filter-btn" data-type="jump_rope" onclick="setFilter('jump_rope')"><span class="filter-dot" style="background:var(--jump_rope)"></span>Jump Rope</button>
+          <button class="filter-btn" data-type="strength"  onclick="setFilter('strength')"><span class="filter-dot" style="background:var(--strength)"></span>Muscu</button>
+          <button class="filter-btn" data-type="hockey"    onclick="setFilter('hockey')"><span class="filter-dot" style="background:var(--hockey)"></span>Hockey</button>
+          <button class="filter-btn" data-type="tennis"    onclick="setFilter('tennis')"><span class="filter-dot" style="background:var(--tennis)"></span>Tennis</button>
+          <button class="filter-btn" data-type="bike"      onclick="setFilter('bike')"><span class="filter-dot" style="background:var(--bike)"></span>Vélo</button>
+          <button class="filter-btn" data-type="walk"      onclick="setFilter('walk')"><span class="filter-dot" style="background:var(--walk)"></span>Marche</button>
+          <button class="filter-btn" data-type="pilates"   onclick="setFilter('pilates')"><span class="filter-dot" style="background:var(--pilates)"></span>Pilates</button>
+        </div>
+
+        <!-- Sub-view : JOUR -->
+        <div id="subview-day" style="display:none">
+          <div class="kpi-grid" id="kpi-day"></div>
+          <div class="content-grid">
+            <div>
+              <div class="card">
+                <div class="card-header"><span class="card-title">Activité du jour</span></div>
+                <div id="list-day" class="activity-list"></div>
+              </div>
+            </div>
+            <div>
+              <div class="card">
+                <div class="card-header"><span class="card-title">Zones cardio</span></div>
+                <div id="zones-day"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sub-view : SEMAINE -->
+        <div id="subview-week">
+          <div class="kpi-grid" id="kpi-week"></div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-header"><span class="card-title">Calendrier de la semaine</span></div>
+            <div class="week-grid" id="week-cells"></div>
+          </div>
+          <div class="content-grid">
+            <div>
+              <div class="card">
+                <div class="card-header">
+                  <span class="card-title">Distance par jour</span>
+                  <span style="font-size:11px;color:var(--muted)">km</span>
+                </div>
+                <div class="chart-wrap"><canvas id="chart-week-dist"></canvas></div>
+              </div>
+              <div class="card">
+                <div class="card-header">
+                  <span class="card-title">Durée par jour</span>
+                  <span style="font-size:11px;color:var(--muted)">min</span>
+                </div>
+                <div class="chart-wrap"><canvas id="chart-week-dur"></canvas></div>
+              </div>
+            </div>
+            <div>
+              <div class="card">
+                <div class="card-header"><span class="card-title">Répartition</span></div>
+                <div class="chart-wrap" style="height:170px"><canvas id="chart-week-pie"></canvas></div>
+              </div>
+              <div class="card">
+                <div class="card-header"><span class="card-title">Activités</span></div>
+                <div id="list-week" class="activity-list"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sub-view : MOIS -->
+        <div id="subview-month" style="display:none">
+          <div class="kpi-grid" id="kpi-month"></div>
+          <div class="content-grid">
+            <div>
+              <div class="card">
+                <div class="card-header">
+                  <span class="card-title">Distance par semaine</span>
+                  <span style="font-size:11px;color:var(--muted)">km</span>
+                </div>
+                <div class="chart-wrap"><canvas id="chart-month-dist"></canvas></div>
+              </div>
+              <div class="card">
+                <div class="card-header"><span class="card-title">Activités par type</span></div>
+                <div class="chart-wrap"><canvas id="chart-month-type"></canvas></div>
+              </div>
+            </div>
+            <div>
+              <div class="card">
+                <div class="card-header"><span class="card-title">Zones cardio (cumul)</span></div>
+                <div id="zones-month"></div>
+              </div>
+              <div class="card">
+                <div class="card-header"><span class="card-title">Activités</span></div>
+                <div id="list-month" class="activity-list"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sub-view : ANNÉE -->
+        <div id="subview-year" style="display:none">
+          <div class="kpi-grid" id="kpi-year"></div>
+          <div class="content-grid">
+            <div>
+              <div class="card">
+                <div class="card-header">
+                  <span class="card-title">Distance mensuelle</span>
+                  <span style="font-size:11px;color:var(--muted)">km</span>
+                </div>
+                <div class="chart-wrap" style="height:220px"><canvas id="chart-year-dist"></canvas></div>
+              </div>
+              <div class="card">
+                <div class="card-header"><span class="card-title">Activités par mois et type</span></div>
+                <div class="chart-wrap" style="height:200px"><canvas id="chart-year-type"></canvas></div>
+              </div>
+            </div>
+            <div>
+              <div class="card">
+                <div class="card-header"><span class="card-title">Répartition annuelle</span></div>
+                <div class="chart-wrap" style="height:180px"><canvas id="chart-year-pie"></canvas></div>
+              </div>
+              <div class="card">
+                <div class="card-header"><span class="card-title">Top charge</span></div>
+                <div id="list-year" class="activity-list"></div>
+              </div>
+            </div>
+          </div>
+          <div class="section-header">
+            <span>Toutes les activités <span id="year-count" style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)"></span></span>
+          </div>
+          <div id="list-year-all" class="activity-list year-all-list"></div>
+        </div>
+
+      </div><!-- /view-dashboard -->
+
+      <!-- ════════════════════════════════════════════════
+           VIEW : ACTIVITÉS (table)
+      ════════════════════════════════════════════════ -->
+      <div id="view-activities" class="view">
+
+        <!-- Period selector + filter -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+          <div style="display:flex;gap:4px">
+            <button class="hpb act-period-btn active" data-period="month" onclick="setActPeriod('month',this)">Ce mois</button>
+            <button class="hpb act-period-btn" data-period="week"  onclick="setActPeriod('week',this)">7 jours</button>
+            <button class="hpb act-period-btn" data-period="year"  onclick="setActPeriod('year',this)">Cette année</button>
+            <button class="hpb act-period-btn" data-period="all"   onclick="setActPeriod('all',this)">Tout</button>
+          </div>
+          <div class="filter-bar" style="margin:0">
+            <button class="filter-btn active" data-type="all"       onclick="setFilter('all')">Tous</button>
+            <button class="filter-btn" data-type="run"       onclick="setFilter('run')"><span class="filter-dot" style="background:var(--run)"></span>Course</button>
+            <button class="filter-btn" data-type="swim"      onclick="setFilter('swim')"><span class="filter-dot" style="background:var(--swim)"></span>Natation</button>
+            <button class="filter-btn" data-type="strength"  onclick="setFilter('strength')"><span class="filter-dot" style="background:var(--strength)"></span>Muscu</button>
+            <button class="filter-btn" data-type="bike"      onclick="setFilter('bike')"><span class="filter-dot" style="background:var(--bike)"></span>Vélo</button>
+            <button class="filter-btn" data-type="hiit"      onclick="setFilter('hiit')"><span class="filter-dot" style="background:var(--hiit)"></span>HIIT</button>
+          </div>
+        </div>
+
+        <!-- KPI strip -->
+        <div class="kpi-grid" id="acts-kpi-strip" style="margin-bottom:20px"></div>
+
+        <!-- Table -->
+        <div class="table-container">
+          <table class="acts-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Nom</th>
+                <th>Durée</th>
+                <th>Distance</th>
+                <th class="col-hr">FC moy.</th>
+                <th class="col-cal">Calories</th>
+                <th class="col-elev">Charge</th>
+              </tr>
+            </thead>
+            <tbody id="acts-table-body"></tbody>
+          </table>
+        </div>
+
+      </div><!-- /view-activities -->
+
+      <!-- ════════════════════════════════════════════════
+           VIEW : SANTÉ
+      ════════════════════════════════════════════════ -->
+      <div id="view-health" class="view">
+
+        <!-- Recovery card -->
+        <div id="recovery-section" style="display:none;margin-bottom:20px">
+          <div class="card recovery-card" id="recovery-card-inner"></div>
+        </div>
+
+        <!-- Period selector -->
+        <div class="health-period-bar">
+          <button class="hpb" data-days="7"  onclick="setHealthPeriod(7)">7 jours</button>
+          <button class="hpb active" data-days="30" onclick="setHealthPeriod(30)">30 jours</button>
+          <button class="hpb" data-days="90" onclick="setHealthPeriod(90)">90 jours</button>
+        </div>
+
+        <!-- KPIs -->
+        <div class="kpi-grid" id="kpi-health"></div>
+
+        <!-- Sleep -->
+        <div class="section-header">Sommeil</div>
+        <div class="health-grid">
+          <div class="card health-full">
+            <div class="card-header">
+              <span class="card-title">Durée &amp; phases <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">min</span></span>
+              <span id="badge-sleep" class="stat-badge"></span>
+            </div>
+            <div class="chart-wrap" style="height:220px"><canvas id="chart-sleep"></canvas></div>
+          </div>
+          <div class="card health-full" id="sleep-score-section" style="display:none">
+            <div class="card-header">
+              <span class="card-title">Score de sommeil <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">/100</span></span>
+              <span id="badge-sleep-score" class="stat-badge"></span>
+            </div>
+            <div class="chart-wrap" style="height:160px"><canvas id="chart-sleep-score"></canvas></div>
+          </div>
+        </div>
+
+        <!-- HRV & HR -->
+        <div class="section-header">HRV &amp; Fréquence cardiaque</div>
+        <div class="health-grid">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">HRV nocturne <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">ms</span></span>
+              <span id="badge-hrv" class="stat-badge"></span>
+            </div>
+            <div class="chart-wrap"><canvas id="chart-hrv"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">FC repos <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">bpm</span></span>
+              <span id="badge-hr" class="stat-badge"></span>
+            </div>
+            <div class="chart-wrap"><canvas id="chart-rhr"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Body Battery -->
+        <div class="section-header">Body Battery</div>
+        <div class="health-grid">
+          <div class="card health-full">
+            <div class="card-header">
+              <span class="card-title">Plage quotidienne (min → max)</span>
+              <span id="badge-bb" class="stat-badge"></span>
+            </div>
+            <div class="chart-wrap" style="height:180px"><canvas id="chart-battery"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Stress -->
+        <div class="section-header">Stress</div>
+        <div class="health-grid">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Niveau moyen</span>
+              <span id="badge-stress" class="stat-badge"></span>
+            </div>
+            <div class="chart-wrap"><canvas id="chart-stress-avg"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Répartition <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">%</span></span>
+            </div>
+            <div class="chart-wrap"><canvas id="chart-stress-pct"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Correlation -->
+        <div class="section-header" id="corr-section-header" style="display:none">Corrélation Sommeil ↔ Performance</div>
+        <div class="health-grid" id="corr-section" style="display:none">
+          <div class="card health-full">
+            <div class="card-header"><span class="card-title">Score sommeil (veille) vs Charge entraînement</span></div>
+            <div class="chart-wrap" style="height:220px"><canvas id="chart-sleep-perf"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Weight -->
+        <div id="weight-section">
+          <div class="section-header">Poids &amp; Composition</div>
+          <div class="health-grid">
+            <div class="card health-full">
+              <div class="card-header">
+                <span class="card-title">Évolution du poids <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">kg</span></span>
+                <span id="badge-weight" class="stat-badge"></span>
+              </div>
+              <div class="chart-wrap" style="height:200px"><canvas id="chart-weight"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Daily activity -->
+        <div class="section-header">Activité journalière</div>
+        <div class="health-grid">
+          <div class="card health-full">
+            <div class="card-header">
+              <span class="card-title">Pas quotidiens</span>
+              <span id="badge-steps" class="stat-badge"></span>
+            </div>
+            <div class="chart-wrap" style="height:180px"><canvas id="chart-steps"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Calories actives <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">kcal</span></span>
+              <span id="badge-cal" class="stat-badge"></span>
+            </div>
+            <div class="chart-wrap"><canvas id="chart-cal-active"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Minutes d'intensité</span>
+              <span id="badge-imin" class="stat-badge"></span>
+            </div>
+            <div class="chart-wrap"><canvas id="chart-intensity-min"></canvas></div>
+          </div>
+        </div>
+
+      </div><!-- /view-health -->
+
+      <!-- ════════════════════════════════════════════════
+           VIEW : PROFIL
+      ════════════════════════════════════════════════ -->
+      <div id="view-profile" class="view">
+
+        <!-- Coach -->
+        <div class="coach-section" id="coach-section" style="display:none">
+          <div class="coach-header">
+            <div class="coach-title">
+              <div class="coach-avatar">🤖</div>
+              Conseil du Coach
+            </div>
+            <span class="coach-date" id="coach-date"></span>
+          </div>
+          <div class="coach-items" id="coach-items"></div>
+        </div>
+
+        <!-- Granularity -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+          <div class="pgran">
+            <button class="pgran-btn active" onclick="setProfileGranularity('month',this)">Mois</button>
+            <button class="pgran-btn" onclick="setProfileGranularity('quarter',this)">Trimestre</button>
+            <button class="pgran-btn" onclick="setProfileGranularity('semester',this)">Semestre</button>
+            <button class="pgran-btn" onclick="setProfileGranularity('year',this)">Année</button>
+          </div>
+        </div>
+
+        <!-- Hero -->
+        <div class="profile-hero">
+          <div class="card" style="text-align:center;padding:24px 16px">
+            <div class="profile-badge-icon" id="profile-main-icon">🏅</div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:6px">Niveau</div>
+            <div id="profile-level-name" style="font-size:18px;font-weight:800"></div>
+            <div class="level-bar" id="profile-level-pips"></div>
+            <div style="font-size:11px;color:var(--muted);margin-top:10px" id="profile-weekly-load"></div>
+          </div>
+          <div class="card" style="padding:16px 18px">
+            <div class="card-header"><span class="card-title">Sports pratiqués</span></div>
+            <div id="profile-sports-list"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title" id="profile-period-label">Depuis le début</span></div>
+            <div id="profile-totals" style="display:grid;grid-template-columns:1fr 1fr;gap:0"></div>
+          </div>
+        </div>
+
+        <!-- Records -->
+        <div class="section-header">Records personnels</div>
+        <div class="records-grid" id="profile-records"></div>
+
+        <!-- Charts -->
+        <div class="section-header">Évolution</div>
+        <div class="content-grid">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Charge d'entraînement</span>
+              <span style="font-size:11px;color:var(--muted)">pts</span>
+            </div>
+            <div class="chart-wrap" style="height:220px"><canvas id="chart-profile-load"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Nombre d'activités</span></div>
+            <div class="chart-wrap" style="height:220px"><canvas id="chart-profile-acts"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Monthly table -->
+        <div class="section-header" style="margin-top:8px">Bilan détaillé</div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="overflow-x:auto">
+            <table class="profile-table">
+              <thead>
+                <tr>
+                  <th>Période</th>
+                  <th>Activités</th>
+                  <th>Durée</th>
+                  <th>Distance</th>
+                  <th>Charge</th>
+                  <th>Sport dominant</th>
+                  <th class="col-rhr">FC repos</th>
+                  <th class="col-sleep">Sommeil moy.</th>
+                </tr>
+              </thead>
+              <tbody id="profile-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Heatmap -->
+        <div class="section-header" style="margin-top:24px">Activité sur 12 mois</div>
+        <div class="card">
+          <div id="heatmap-container"></div>
+        </div>
+
+        <!-- Form & Fatigue -->
+        <div class="section-header" style="margin-top:24px">Forme &amp; Fatigue</div>
+        <div class="card">
+          <div class="form-legend">
+            <span class="fleg"><span class="fleg-line" style="background:#6366f1"></span>CTL — Forme (42j)</span>
+            <span class="fleg"><span class="fleg-line" style="background:#f97316"></span>ATL — Fatigue (7j)</span>
+            <span class="fleg"><span class="fleg-dash" style="border-color:#22c55e"></span>TSB — Fraîcheur</span>
+          </div>
+          <div class="chart-wrap" style="height:240px"><canvas id="chart-form"></canvas></div>
+        </div>
+
+        <!-- VO2max -->
+        <div class="section-header" id="vo2max-section-header" style="display:none;margin-top:24px">Évolution VO2max</div>
+        <div class="card" id="vo2max-section" style="display:none">
+          <div class="chart-wrap" style="height:200px"><canvas id="chart-vo2max"></canvas></div>
+        </div>
+
+        <!-- Trophées -->
+        <div class="section-header" style="margin-top:24px">Trophées</div>
+        <div class="badges-grid" id="profile-badges"></div>
+
+      </div><!-- /view-profile -->
+
+    </main>
+  </div><!-- /main-area -->
+</div><!-- /app-shell -->
+
+<!-- ════════════════════════════════════════════════
+     SYNC MODAL
+════════════════════════════════════════════════ -->
 <div class="modal-bg" id="sync-modal">
   <div class="modal">
     <h3>Synchroniser Garmin Connect</h3>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:8px;line-height:1.5">
+    <p style="font-size:13px;color:var(--muted);margin-bottom:8px;line-height:1.6">
       Les tokens d'authentification sont gérés localement.<br>
-      Si c'est la première fois, lance d'abord dans le terminal :<br>
-      <code style="background:var(--surface2);padding:2px 6px;border-radius:4px;color:var(--accent)">python3 setup_garmin.py</code>
+      Si c'est la première fois, lance d'abord :<br>
+      <code style="background:var(--surface2);padding:2px 7px;border-radius:4px;color:var(--accent);font-size:12px">python3 setup_garmin.py</code>
     </p>
     <div class="sync-log" id="sync-log"></div>
     <div class="modal-actions">
       <button class="btn-secondary" onclick="closeSyncModal()">Annuler</button>
-      <button class="btn-primary" id="sync-submit" onclick="runSync()">Synchroniser</button>
+      <button class="btn btn-primary" id="sync-submit" onclick="runSync()">Synchroniser</button>
     </div>
   </div>
 </div>
 
-<!-- ── Tabs ── -->
-<div class="nav-tabs">
-  <button class="tab" onclick="switchTab('day',event)">Jour</button>
-  <button class="tab active" onclick="switchTab('week',event)">Semaine</button>
-  <button class="tab" onclick="switchTab('month',event)">Mois</button>
-  <button class="tab" onclick="switchTab('year',event)">Année</button>
-  <button class="tab" onclick="switchTab('health',event)">Santé</button>
-  <button class="tab" onclick="switchTab('profile',event)">Profil</button>
-</div>
-
-<main>
-  <!-- Period bar -->
-  <div class="period-bar">
-    <div class="period-nav">
-      <button class="btn-nav" onclick="movePeriod(-1)">&#8249;</button>
-      <span class="period-label" id="period-label"></span>
-      <button class="btn-nav" onclick="movePeriod(1)">&#8250;</button>
-    </div>
-    <button class="btn-today" onclick="resetPeriod()">Aujourd'hui</button>
-  </div>
-
-  <!-- Filter bar -->
-  <div class="filter-bar">
-    <button class="filter-btn active" data-type="all"       onclick="setFilter('all')">Tous</button>
-    <button class="filter-btn" data-type="run"       onclick="setFilter('run')"><span class="filter-dot" style="background:var(--run)"></span>Course</button>
-    <button class="filter-btn" data-type="swim"      onclick="setFilter('swim')"><span class="filter-dot" style="background:var(--swim)"></span>Natation</button>
-    <button class="filter-btn" data-type="hiit"      onclick="setFilter('hiit')"><span class="filter-dot" style="background:var(--hiit)"></span>HIIT</button>
-    <button class="filter-btn" data-type="rowing"    onclick="setFilter('rowing')"><span class="filter-dot" style="background:var(--rowing)"></span>Rameur</button>
-    <button class="filter-btn" data-type="jump_rope" onclick="setFilter('jump_rope')"><span class="filter-dot" style="background:var(--jump_rope)"></span>Jump Rope</button>
-    <button class="filter-btn" data-type="strength"  onclick="setFilter('strength')"><span class="filter-dot" style="background:var(--strength)"></span>Muscu</button>
-    <button class="filter-btn" data-type="hockey"    onclick="setFilter('hockey')"><span class="filter-dot" style="background:var(--hockey)"></span>Hockey</button>
-    <button class="filter-btn" data-type="tennis"    onclick="setFilter('tennis')"><span class="filter-dot" style="background:var(--tennis)"></span>Tennis</button>
-    <button class="filter-btn" data-type="bike"      onclick="setFilter('bike')"><span class="filter-dot" style="background:var(--bike)"></span>Vélo</button>
-    <button class="filter-btn" data-type="walk"      onclick="setFilter('walk')"><span class="filter-dot" style="background:var(--walk)"></span>Marche</button>
-    <button class="filter-btn" data-type="pilates"   onclick="setFilter('pilates')"><span class="filter-dot" style="background:var(--pilates)"></span>Pilates</button>
-  </div>
-
-  <!-- VIEW : JOUR -->
-  <div id="view-day" class="view">
-    <div class="kpi-grid" id="kpi-day"></div>
-    <div class="content-grid">
-      <div>
-        <div class="card"><div class="card-title">Activité du jour</div><div id="list-day" class="activity-list"></div></div>
-      </div>
-      <div>
-        <div class="card"><div class="card-title">Zones cardio</div><div id="zones-day"></div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- VIEW : SEMAINE -->
-  <div id="view-week" class="view active">
-    <div class="kpi-grid" id="kpi-week"></div>
-    <div class="card" style="margin-bottom:16px">
-      <div class="card-title">Calendrier de la semaine</div>
-      <div class="week-grid" id="week-cells"></div>
-    </div>
-    <div class="content-grid">
-      <div>
-        <div class="card"><div class="card-title">Distance par jour <span style="font-size:11px;text-transform:none">km</span></div><div class="chart-wrap"><canvas id="chart-week-dist"></canvas></div></div>
-        <div class="card"><div class="card-title">Durée par jour <span style="font-size:11px;text-transform:none">min</span></div><div class="chart-wrap"><canvas id="chart-week-dur"></canvas></div></div>
-      </div>
-      <div>
-        <div class="card"><div class="card-title">Répartition</div><div class="chart-wrap" style="height:170px"><canvas id="chart-week-pie"></canvas></div></div>
-        <div class="card"><div class="card-title">Activités</div><div id="list-week" class="activity-list"></div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- VIEW : MOIS -->
-  <div id="view-month" class="view">
-    <div class="kpi-grid" id="kpi-month"></div>
-    <div class="content-grid">
-      <div>
-        <div class="card"><div class="card-title">Distance par semaine <span style="font-size:11px;text-transform:none">km</span></div><div class="chart-wrap"><canvas id="chart-month-dist"></canvas></div></div>
-        <div class="card"><div class="card-title">Activités par type</div><div class="chart-wrap"><canvas id="chart-month-type"></canvas></div></div>
-      </div>
-      <div>
-        <div class="card"><div class="card-title">Zones cardio (cumul)</div><div id="zones-month"></div></div>
-        <div class="card"><div class="card-title">Activités</div><div id="list-month" class="activity-list"></div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- VIEW : ANNÉE -->
-  <div id="view-year" class="view">
-    <div class="kpi-grid" id="kpi-year"></div>
-    <div class="content-grid">
-      <div>
-        <div class="card"><div class="card-title">Distance mensuelle <span style="font-size:11px;text-transform:none">km</span></div><div class="chart-wrap" style="height:220px"><canvas id="chart-year-dist"></canvas></div></div>
-        <div class="card"><div class="card-title">Activités par mois et type</div><div class="chart-wrap" style="height:200px"><canvas id="chart-year-type"></canvas></div></div>
-      </div>
-      <div>
-        <div class="card"><div class="card-title">Répartition annuelle</div><div class="chart-wrap" style="height:180px"><canvas id="chart-year-pie"></canvas></div></div>
-        <div class="card"><div class="card-title">Top charge d'entraînement</div><div id="list-year" class="activity-list"></div></div>
-      </div>
-    </div>
-    <div class="section-header" style="margin-top:24px">Toutes les activités <span id="year-count" style="font-weight:400;text-transform:none;letter-spacing:0"></span></div>
-    <div id="list-year-all" class="activity-list year-all-list"></div>
-  </div>
-  <!-- VIEW : SANTÉ -->
-  <div id="view-health" class="view">
-
-    <!-- Carte Récupération du jour -->
-    <div id="recovery-section" style="display:none;margin-bottom:16px">
-      <div class="card recovery-card" id="recovery-card-inner"></div>
-    </div>
-
-    <!-- Sélecteur de période -->
-    <div class="health-period-bar">
-      <button class="hpb" data-days="7"  onclick="setHealthPeriod(7)">7 jours</button>
-      <button class="hpb active" data-days="30" onclick="setHealthPeriod(30)">30 jours</button>
-      <button class="hpb" data-days="90" onclick="setHealthPeriod(90)">90 jours</button>
-    </div>
-
-    <!-- KPIs -->
-    <div class="kpi-grid" id="kpi-health"></div>
-
-    <!-- Sommeil -->
-    <div class="section-header">Sommeil</div>
-    <div class="health-grid">
-      <div class="card health-full">
-        <div class="card-title">Durée & phases <span style="font-size:11px;text-transform:none;color:var(--muted)">min</span><span id="badge-sleep" class="stat-badge"></span></div>
-        <div class="chart-wrap" style="height:220px"><canvas id="chart-sleep"></canvas></div>
-      </div>
-      <div class="card health-full" id="sleep-score-section" style="display:none">
-        <div class="card-title">Score de sommeil <span style="font-size:11px;text-transform:none;color:var(--muted)">/100</span><span id="badge-sleep-score" class="stat-badge"></span></div>
-        <div class="chart-wrap" style="height:160px"><canvas id="chart-sleep-score"></canvas></div>
-      </div>
-    </div>
-
-    <!-- HRV & Cœur -->
-    <div class="section-header">HRV & Fréquence cardiaque</div>
-    <div class="health-grid">
-      <div class="card">
-        <div class="card-title">HRV nocturne <span style="font-size:11px;text-transform:none;color:var(--muted)">ms</span><span id="badge-hrv" class="stat-badge"></span></div>
-        <div class="chart-wrap"><canvas id="chart-hrv"></canvas></div>
-      </div>
-      <div class="card">
-        <div class="card-title">FC repos <span style="font-size:11px;text-transform:none;color:var(--muted)">bpm</span><span id="badge-hr" class="stat-badge"></span></div>
-        <div class="chart-wrap"><canvas id="chart-rhr"></canvas></div>
-      </div>
-    </div>
-
-    <!-- Body Battery -->
-    <div class="section-header">Body Battery</div>
-    <div class="health-grid">
-      <div class="card health-full">
-        <div class="card-title">Plage quotidienne (min → max)<span id="badge-bb" class="stat-badge"></span></div>
-        <div class="chart-wrap" style="height:180px"><canvas id="chart-battery"></canvas></div>
-      </div>
-    </div>
-
-    <!-- Stress -->
-    <div class="section-header">Stress</div>
-    <div class="health-grid">
-      <div class="card">
-        <div class="card-title">Niveau moyen<span id="badge-stress" class="stat-badge"></span></div>
-        <div class="chart-wrap"><canvas id="chart-stress-avg"></canvas></div>
-      </div>
-      <div class="card">
-        <div class="card-title">Répartition <span style="font-size:11px;text-transform:none;color:var(--muted)">%</span></div>
-        <div class="chart-wrap"><canvas id="chart-stress-pct"></canvas></div>
-      </div>
-    </div>
-
-    <!-- Corrélation sommeil ↔ performance -->
-    <div class="section-header" id="corr-section-header" style="display:none">Corrélation Sommeil ↔ Performance</div>
-    <div class="health-grid" id="corr-section" style="display:none">
-      <div class="card health-full">
-        <div class="card-title">Score sommeil (veille) vs Charge entraînement</div>
-        <div class="chart-wrap" style="height:220px"><canvas id="chart-sleep-perf"></canvas></div>
-      </div>
-    </div>
-
-    <!-- Poids -->
-    <div class="section-header">Poids & Composition</div>
-    <div class="health-grid">
-      <div class="card health-full">
-        <div class="card-title">Évolution du poids <span style="font-size:11px;text-transform:none;color:var(--muted)">kg</span><span id="badge-weight" class="stat-badge"></span></div>
-        <div class="chart-wrap" style="height:200px"><canvas id="chart-weight"></canvas></div>
-      </div>
-    </div>
-
-    <!-- Activité journalière -->
-    <div class="section-header">Activité journalière</div>
-    <div class="health-grid">
-      <div class="card health-full">
-        <div class="card-title">Pas quotidiens<span id="badge-steps" class="stat-badge"></span></div>
-        <div class="chart-wrap" style="height:180px"><canvas id="chart-steps"></canvas></div>
-      </div>
-      <div class="card">
-        <div class="card-title">Calories actives <span style="font-size:11px;text-transform:none;color:var(--muted)">kcal</span><span id="badge-cal" class="stat-badge"></span></div>
-        <div class="chart-wrap"><canvas id="chart-cal-active"></canvas></div>
-      </div>
-      <div class="card">
-        <div class="card-title">Minutes d'intensité<span id="badge-imin" class="stat-badge"></span></div>
-        <div class="chart-wrap"><canvas id="chart-intensity-min"></canvas></div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- VIEW : PROFIL -->
-  <div id="view-profile" class="view">
-
-    <!-- Conseil du Coach -->
-    <div class="coach-section" id="coach-section" style="display:none">
-      <div class="coach-header">
-        <div class="coach-title">
-          <div class="coach-avatar">🤖</div>
-          Conseil du Coach
-        </div>
-        <span class="coach-date" id="coach-date"></span>
-      </div>
-      <div class="coach-items" id="coach-items"></div>
-    </div>
-
-    <!-- Filtres granularité (Mois / Trimestre / Semestre / Année) -->
-    <div class="pgran" style="margin-bottom:18px">
-      <button class="pgran-btn active" onclick="setProfileGranularity('month',this)">Mois</button>
-      <button class="pgran-btn" onclick="setProfileGranularity('quarter',this)">Trimestre</button>
-      <button class="pgran-btn" onclick="setProfileGranularity('semester',this)">Semestre</button>
-      <button class="pgran-btn" onclick="setProfileGranularity('year',this)">Année</button>
-    </div>
-
-    <!-- Hero : badge niveau + sports + totaux -->
-    <div class="profile-hero">
-      <div class="card" style="text-align:center;padding:24px 16px">
-        <div class="profile-badge-icon" id="profile-main-icon">🏅</div>
-        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:6px">Niveau</div>
-        <div id="profile-level-name" style="font-size:18px;font-weight:800"></div>
-        <div class="level-bar" id="profile-level-pips"></div>
-        <div style="font-size:11px;color:var(--muted);margin-top:10px" id="profile-weekly-load"></div>
-      </div>
-      <div class="card" style="padding:16px 18px">
-        <div class="card-title">Sports pratiqués</div>
-        <div id="profile-sports-list"></div>
-      </div>
-      <div class="card">
-        <div class="card-title" id="profile-period-label">Depuis le début</div>
-        <div id="profile-totals" style="display:grid;grid-template-columns:1fr 1fr;gap:0"></div>
-      </div>
-    </div>
-
-    <!-- Records -->
-    <div class="section-header">Records personnels</div>
-    <div class="records-grid" id="profile-records"></div>
-
-    <!-- Charts mensuels -->
-    <div class="section-header">Évolution</div>
-    <div class="content-grid">
-      <div class="card">
-        <div class="card-title">Charge d'entraînement <span style="font-size:11px;text-transform:none">pts</span></div>
-        <div class="chart-wrap" style="height:220px"><canvas id="chart-profile-load"></canvas></div>
-      </div>
-      <div class="card">
-        <div class="card-title">Nombre d'activités</div>
-        <div class="chart-wrap" style="height:220px"><canvas id="chart-profile-acts"></canvas></div>
-      </div>
-    </div>
-
-    <!-- Table bilan mensuel -->
-    <div class="section-header" style="margin-top:8px">Bilan mensuel détaillé</div>
-    <div class="card" style="padding:0;overflow:hidden">
-      <div style="overflow-x:auto">
-        <table class="profile-table">
-          <thead>
-            <tr>
-              <th>Mois</th>
-              <th>Activités</th>
-              <th>Durée</th>
-              <th>Distance</th>
-              <th>Charge</th>
-              <th>Sport dominant</th>
-              <th class="col-rhr">FC repos</th>
-              <th class="col-sleep">Sommeil moy.</th>
-            </tr>
-          </thead>
-          <tbody id="profile-table-body"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Heatmap annuelle -->
-    <div class="section-header" style="margin-top:20px">Activité sur 12 mois</div>
-    <div class="card">
-      <div id="heatmap-container"></div>
-    </div>
-
-    <!-- Forme & Fatigue CTL/ATL/TSB -->
-    <div class="section-header" style="margin-top:20px">Forme & Fatigue</div>
-    <div class="card">
-      <div class="form-legend">
-        <span class="fleg"><span class="fleg-line" style="background:#38bdf8"></span>CTL — Forme (42j)</span>
-        <span class="fleg"><span class="fleg-line" style="background:#f97316"></span>ATL — Fatigue (7j)</span>
-        <span class="fleg"><span class="fleg-dash" style="border-color:#22c55e"></span>TSB — Fraîcheur</span>
-      </div>
-      <div class="chart-wrap" style="height:240px"><canvas id="chart-form"></canvas></div>
-    </div>
-
-    <!-- Évolution VO2max -->
-    <div class="section-header" id="vo2max-section-header" style="display:none;margin-top:20px">Évolution VO2max</div>
-    <div class="card" id="vo2max-section" style="display:none">
-      <div class="chart-wrap" style="height:200px"><canvas id="chart-vo2max"></canvas></div>
-    </div>
-
-    <!-- Trophées -->
-    <div class="section-header" style="margin-top:20px">Trophées</div>
-    <div class="badges-grid" id="profile-badges"></div>
-
-  </div>
-
-</main>
-
-<div class="toast" id="toast"></div>
-
-<!-- ── Activity detail modal ── -->
+<!-- ════════════════════════════════════════════════
+     ACTIVITY DETAIL MODAL
+════════════════════════════════════════════════ -->
 <div class="detail-bg" id="detail-modal" onclick="if(event.target===this)closeDetail()">
   <div class="detail-modal">
     <div class="detail-header">
@@ -786,1811 +603,15 @@
   </div>
 </div>
 
-<script>
-/* ═══════════════════════════════════════════════════════════
-   STATE
-═══════════════════════════════════════════════════════════ */
-/* Index global id→activité pour le modal de détail */
-const ACT_MAP = {};
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Scripts -->
+<script src="/js/app.js"></script>
+<script src="/js/dashboard.js"></script>
+<script src="/js/activities.js"></script>
+<script src="/js/health.js"></script>
+<script src="/js/profile.js"></script>
 
-const state = {
-  tab:               'week',
-  offset:            0,
-  filter:            'all',
-  data:              null,
-  wellness:          null,
-  healthDays:        30,
-  profileGranularity:'month',
-};
-
-const TODAY = new Date();
-
-const TYPE_COLOR = {
-  run:       '#22c55e',
-  swim:      '#3b82f6',
-  hiit:      '#f97316',
-  rowing:    '#06b6d4',
-  jump_rope: '#a855f7',
-  strength:  '#ef4444',
-  cardio:    '#f43f5e',
-  hockey:    '#64748b',
-  tennis:    '#84cc16',
-  padel:     '#10b981',
-  bike:      '#f59e0b',
-  walk:      '#06b6d4',
-  pilates:   '#e879f9',
-  yoga:      '#7c3aed',
-  hike:      '#84cc16',
-  ski:       '#93c5fd',
-  sup:       '#0ea5e9',
-  other:     '#64748b',
-};
-const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-const DAYS_FR   = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
-
-/* ═══════════════════════════════════════════════════════════
-   DATA LOADING
-═══════════════════════════════════════════════════════════ */
-async function loadData() {
-  try {
-    const r = await fetch('/api/activities');
-    if (!r.ok) throw new Error('not found');
-    state.data = await r.json();
-    const ls = state.data.last_sync ? state.data.last_sync.slice(0,16).replace('T',' ') : '–';
-    document.getElementById('sync-label').textContent = `Synchro : ${ls}`;
-    document.getElementById('sync-dot').classList.remove('syncing');
-  } catch {
-    document.getElementById('sync-label').textContent = 'Données démo (non connecté)';
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════
-   PERIOD HELPERS
-═══════════════════════════════════════════════════════════ */
-function getPeriodBounds() {
-  const d = new Date(TODAY);
-  if (state.tab === 'day') {
-    d.setDate(d.getDate() + state.offset);
-    return { start: startOfDay(d), end: endOfDay(d) };
-  }
-  if (state.tab === 'week') {
-    d.setDate(d.getDate() + state.offset * 7);
-    return { start: startOfWeek(d), end: endOfWeek(d) };
-  }
-  if (state.tab === 'month') {
-    d.setMonth(d.getMonth() + state.offset);
-    return { start: new Date(d.getFullYear(), d.getMonth(), 1), end: new Date(d.getFullYear(), d.getMonth()+1, 0, 23, 59, 59) };
-  }
-  // year
-  const y = TODAY.getFullYear() + state.offset;
-  return { start: new Date(y, 0, 1), end: new Date(y, 11, 31, 23, 59, 59) };
-}
-
-function startOfDay(d)  { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
-function endOfDay(d)    { return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59); }
-function startOfWeek(d) {
-  const day = d.getDay(); // 0=Sun
-  const diff = (day === 0 ? -6 : 1 - day); // Mon as first
-  return startOfDay(new Date(d.getFullYear(), d.getMonth(), d.getDate() + diff));
-}
-function endOfWeek(d) {
-  const s = startOfWeek(d);
-  return endOfDay(new Date(s.getFullYear(), s.getMonth(), s.getDate() + 6));
-}
-
-function formatPeriodLabel() {
-  const { start, end } = getPeriodBounds();
-  const fmt = (d) => `${d.getDate()} ${MONTHS_FR[d.getMonth()]}`;
-  if (state.tab === 'day')   return `${DAYS_FR[(start.getDay()+6)%7]} ${fmt(start)} ${start.getFullYear()}`;
-  if (state.tab === 'week')  return `${fmt(start)} – ${fmt(end)} ${end.getFullYear()}`;
-  if (state.tab === 'month') return `${['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'][start.getMonth()]} ${start.getFullYear()}`;
-  return `${start.getFullYear()}`;
-}
-
-/* ═══════════════════════════════════════════════════════════
-   ACTIVITY FILTERING
-═══════════════════════════════════════════════════════════ */
-function getAll() {
-  if (state.data && state.data.activities) return state.data.activities;
-  return MOCK_ACTIVITIES;
-}
-
-function getFiltered() {
-  const { start, end } = getPeriodBounds();
-  return getAll().filter(a => {
-    const d = new Date(a.start_time);
-    if (d < start || d > end) return false;
-    if (state.filter !== 'all' && a.type !== state.filter) return false;
-    return true;
-  });
-}
-
-/* ═══════════════════════════════════════════════════════════
-   KPI COMPUTATION
-═══════════════════════════════════════════════════════════ */
-function computeKPIs(acts) {
-  const withHR = acts.filter(a=>a.hr_avg);
-  return {
-    activities:    acts.length,
-    distance:      acts.reduce((s,a) => s + (a.distance_km||0), 0),
-    duration:      acts.reduce((s,a) => s + (a.duration_min||0), 0),
-    calories:      acts.reduce((s,a) => s + (a.calories||0), 0),
-    elevation:     acts.reduce((s,a) => s + (a.elevation_m||0), 0),
-    training_load: acts.reduce((s,a) => s + (a.training_load||0), 0),
-    intensity_min: acts.reduce((s,a) => s + (a.intensity_min||0), 0),
-    hr_avg:        withHR.length ? Math.round(withHR.reduce((s,a)=>s+a.hr_avg,0)/withHR.length) : null,
-    vo2max:        acts.find(a=>a.vo2max)?.vo2max ?? null,
-  };
-}
-
-function renderKPIs(containerId, acts, prevActs=null) {
-  const k = computeKPIs(acts);
-  const prevK = prevActs ? computeKPIs(prevActs) : null;
-
-  function delta(cur, prev) {
-    if (!prevK || !prev || prev === 0) return '';
-    const pct = ((cur - prev) / prev) * 100;
-    if (Math.abs(pct) < 1) return '<div class="kpi-delta flat">→ =</div>';
-    if (pct > 0) return `<div class="kpi-delta up">▲ +${pct.toFixed(0)}%</div>`;
-    return `<div class="kpi-delta down">▼ ${pct.toFixed(0)}%</div>`;
-  }
-
-  const h = (label, val, unit='', sub='', deltaHtml='') => `
-    <div class="kpi-card">
-      <div class="kpi-label">${label}</div>
-      <div class="kpi-value">${val}<span class="kpi-unit">${unit}</span></div>
-      ${sub ? `<div class="kpi-delta">${sub}</div>` : ''}
-      ${deltaHtml}
-    </div>`;
-
-  const dur = k.duration >= 60
-    ? `${Math.floor(k.duration/60)}h${String(Math.round(k.duration%60)).padStart(2,'0')}`
-    : `${Math.round(k.duration)}min`;
-  const load = k.training_load > 0 ? Math.round(k.training_load) : '–';
-  const iMin = k.intensity_min > 0 ? k.intensity_min : '–';
-
-  document.getElementById(containerId).innerHTML =
-    h('Activités',      k.activities,                    '',    '', delta(k.activities, prevK?.activities)) +
-    h('Distance',       k.distance.toFixed(1),           'km',  '', delta(k.distance, prevK?.distance)) +
-    h('Temps actif',    dur,                              '',    '', delta(k.duration, prevK?.duration)) +
-    h('Calories',       Math.round(k.calories).toLocaleString('fr'), 'kcal', '', delta(k.calories, prevK?.calories)) +
-    h('Charge totale',  load,                             'pts', '', k.training_load > 0 ? delta(k.training_load, prevK?.training_load) : '') +
-    h('Min intensité',  iMin,                             'min', '', k.intensity_min > 0 ? delta(k.intensity_min, prevK?.intensity_min) : '') +
-    h('Dénivelé +',     Math.round(k.elevation),         'm',   '', delta(k.elevation, prevK?.elevation)) +
-    (k.hr_avg  ? h('FC moy.',   k.hr_avg, 'bpm') : '') +
-    (k.vo2max  ? h('VO2max',    k.vo2max, 'ml/kg') : '');
-}
-
-/* Zones cardio réelles pondérées par durée */
-function computeZones(acts) {
-  const withZ = acts.filter(a => a.hr_zones_pct && a.hr_zones_pct.length === 5);
-  if (!withZ.length) return null;
-  const totals = [0,0,0,0,0];
-  let totalDur = 0;
-  withZ.forEach(a => {
-    const dur = a.duration_min || 1;
-    a.hr_zones_pct.forEach((pct,i) => { totals[i] += pct * dur; });
-    totalDur += dur;
-  });
-  return totals.map(t => Math.round(t / totalDur));
-}
-
-/* ═══════════════════════════════════════════════════════════
-   ACTIVITY LIST
-═══════════════════════════════════════════════════════════ */
-function renderActivityList(containerId, acts, limit=8) {
-  const el = document.getElementById(containerId);
-  if (!acts.length) { el.innerHTML = '<div class="empty">Aucune activité sur cette période</div>'; return; }
-  el.innerHTML = acts.slice(0, limit).map(a => {
-    ACT_MAP[a.id] = a;
-    const main   = a.distance_km > 0 ? `${a.distance_km} km` : fmt_dur(a.duration_min);
-    const cal    = a.calories ? `${Math.round(a.calories)} kcal` : '';
-    const load   = a.training_load > 0 ? `⚡${Math.round(a.training_load)}` : '';
-    const te     = a.te_label || '';
-    const sub    = [fmt_dur(a.duration_min), cal, load, te].filter(Boolean).join(' · ');
-    const dateStr = a.date ? new Date(a.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : '';
-    return `<div class="activity-item" onclick="openDetail(${a.id})">
-      <div class="act-icon ${a.type||'other'}">${a.icon||'⚡'}</div>
-      <div>
-        <div class="act-name">${a.name}</div>
-        <div class="act-date">${dateStr}</div>
-      </div>
-      <div class="act-stats">
-        <div class="act-main">${main}</div>
-        <div class="act-sub">${sub}</div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-/* ═══════════════════════════════════════════════════════════
-   ACTIVITY DETAIL MODAL
-═══════════════════════════════════════════════════════════ */
-function openDetail(id) {
-  const a = ACT_MAP[id]; if (!a) return;
-  const dateStr = a.date ? new Date(a.date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '';
-
-  // Header
-  const icon = document.getElementById('detail-icon');
-  icon.textContent = a.icon || '⚡';
-  icon.className = `detail-icon act-icon ${a.type||'other'}`;
-  document.getElementById('detail-name').textContent = a.name || a.type_label;
-  document.getElementById('detail-meta').textContent = [dateStr, a.type_label].filter(Boolean).join(' · ');
-
-  // Stats principales
-  const stats = [];
-  if (a.duration_min)  stats.push({l:'Durée',      v: fmt_dur(a.duration_min),  u:''});
-  if (a.distance_km>0) stats.push({l:'Distance',   v: a.distance_km,            u:'km'});
-  if (a.calories)      stats.push({l:'Calories',   v: Math.round(a.calories),   u:'kcal'});
-  if (a.hr_avg)        stats.push({l:'FC moy.',    v: a.hr_avg,                 u:'bpm'});
-  if (a.hr_max)        stats.push({l:'FC max',     v: a.hr_max,                 u:'bpm'});
-  if (a.elevation_m>0) stats.push({l:'Dénivelé+',  v: Math.round(a.elevation_m),u:'m'});
-  if (a.pace_min_km)   stats.push({l:'Allure',     v: a.pace_min_km,            u:'/km'});
-  if (a.speed_kmh)     stats.push({l:'Vitesse',    v: a.speed_kmh,              u:'km/h'});
-  if (a.vo2max)        stats.push({l:'VO2max',     v: a.vo2max,                 u:''});
-
-  document.getElementById('detail-stats').innerHTML = stats.map(s =>
-    `<div class="detail-stat">
-      <div class="detail-stat-label">${s.l}</div>
-      <div class="detail-stat-value">${s.v}<span class="detail-stat-unit"> ${s.u}</span></div>
-    </div>`
-  ).join('');
-
-  // Charge d'entraînement
-  const tRows = [];
-  if (a.training_load > 0) tRows.push(['Charge totale',   `${Math.round(a.training_load)} pts`]);
-  if (a.aerobic_te   > 0) tRows.push(['Effet aérobie',   `${a.aerobic_te.toFixed(1)} / 5`]);
-  if (a.anaerobic_te > 0) tRows.push(['Effet anaérobie', `${a.anaerobic_te.toFixed(1)} / 5`]);
-  if (a.te_label)          tRows.push(['Catégorie',       a.te_label]);
-  if (a.intensity_min > 0) tRows.push(['Min intensité',  `${a.intensity_min} min`]);
-  const tWrap = document.getElementById('detail-training');
-  if (tRows.length) {
-    document.getElementById('detail-training-rows').innerHTML = tRows.map(([l,v]) =>
-      `<div class="detail-row"><span class="detail-row-label">${l}</span><span class="detail-row-value">${v}</span></div>`
-    ).join('');
-    tWrap.style.display = '';
-  } else { tWrap.style.display = 'none'; }
-
-  // Zones cardio
-  const zWrap = document.getElementById('detail-zones-wrap');
-  if (a.hr_zones_pct && a.hr_zones_pct.length === 5) {
-    const colors = ['#3b82f6','#22c55e','#f59e0b','#f97316','#ef4444'];
-    const labels = ['Z1 Récupération','Z2 Endurance','Z3 Aérobie','Z4 Seuil','Z5 Maxi'];
-    document.getElementById('detail-zones').innerHTML = a.hr_zones_pct.map((p,i) =>
-      `<div class="zone-row">
-        <div class="zone-label">${labels[i]}</div>
-        <div class="zone-bar-bg"><div class="zone-bar-fill" style="width:${p}%;background:${colors[i]}"></div></div>
-        <div class="zone-pct">${p}%</div>
-      </div>`
-    ).join('');
-    zWrap.style.display = '';
-  } else { zWrap.style.display = 'none'; }
-
-  document.getElementById('detail-modal').classList.add('open');
-}
-
-function closeDetail() {
-  document.getElementById('detail-modal').classList.remove('open');
-}
-
-function fmt_dur(min) {
-  const h = Math.floor(min/60), m = Math.round(min%60);
-  return h > 0 ? `${h}h${m.toString().padStart(2,'0')}` : `${m} min`;
-}
-
-/* ── Liste complète pour l'onglet Année ── */
-function renderYearActivityList(containerId, acts) {
-  const el = document.getElementById(containerId);
-  const countEl = document.getElementById('year-count');
-  if (countEl) countEl.textContent = `— ${acts.length} activités`;
-  if (!acts.length) { el.innerHTML = '<div class="empty">Aucune activité sur cette période</div>'; return; }
-
-  el.innerHTML = acts.map(a => {
-    ACT_MAP[a.id] = a;
-    const main   = a.distance_km > 0 ? `${a.distance_km} km` : fmt_dur(a.duration_min);
-    const cal    = a.calories ? `${Math.round(a.calories)} kcal` : '';
-    const load   = a.training_load > 0 ? `⚡${Math.round(a.training_load)}` : '';
-    const te     = a.te_label || '';
-    const sub    = [fmt_dur(a.duration_min), cal, load, te].filter(Boolean).join(' · ');
-    const dateStr = a.date ? new Date(a.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : '';
-    return `<div class="activity-item" onclick="openDetail(${a.id})">
-      <div class="act-icon ${a.type||'other'}">${a.icon||'⚡'}</div>
-      <div>
-        <div class="act-name">${a.name}</div>
-        <div class="act-date">${dateStr}</div>
-      </div>
-      <div class="act-stats">
-        <div class="act-main">${main}</div>
-        <div class="act-sub">${sub}</div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-/* Top activités triées par charge d'entraînement */
-function renderTopActivities(containerId, acts, limit=6) {
-  const el = document.getElementById(containerId);
-  if (!acts.length) { el.innerHTML = '<div class="empty">Aucune activité</div>'; return; }
-  const sorted = [...acts].sort((a,b) => (b.training_load||0) - (a.training_load||0));
-  el.innerHTML = sorted.slice(0, limit).map(a => {
-    ACT_MAP[a.id] = a;
-    const load   = a.training_load > 0 ? Math.round(a.training_load) : '–';
-    const te     = a.aerobic_te > 0 ? `TE ${a.aerobic_te.toFixed(1)}` : '';
-    const dist   = a.distance_km > 0 ? `${a.distance_km} km` : fmt_dur(a.duration_min);
-    const cal    = a.calories ? `${Math.round(a.calories)} kcal` : '';
-    const dateStr = a.date ? new Date(a.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : '';
-    return `<div class="activity-item" onclick="openDetail(${a.id})">
-      <div class="act-icon ${a.type||'other'}">${a.icon||'⚡'}</div>
-      <div>
-        <div class="act-name">${a.name}</div>
-        <div class="act-date">${dateStr} · ${dist} · ${cal}</div>
-      </div>
-      <div class="act-stats">
-        <div class="act-main" style="color:var(--accent)">${load}<span style="font-size:11px;font-weight:400;color:var(--muted)"> pts</span></div>
-        <div class="act-sub">${te || a.te_label || ''}</div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-/* ═══════════════════════════════════════════════════════════
-   ZONE BARS
-═══════════════════════════════════════════════════════════ */
-function renderZones(containerId, pcts) {
-  const colors = ['#3b82f6','#22c55e','#f59e0b','#f97316','#ef4444'];
-  const labels = ['Z1 Récup.','Z2 Endur.','Z3 Aérobie','Z4 Seuil','Z5 Maxi'];
-  document.getElementById(containerId).innerHTML = pcts.map((p,i) => `
-    <div class="zone-row">
-      <div class="zone-label">${labels[i]}</div>
-      <div class="zone-bar-bg"><div class="zone-bar-fill" style="width:${p}%;background:${colors[i]}"></div></div>
-      <div class="zone-pct">${p}%</div>
-    </div>`).join('');
-}
-
-/* ═══════════════════════════════════════════════════════════
-   WEEK CELLS
-═══════════════════════════════════════════════════════════ */
-function renderWeekCells(acts) {
-  const { start } = getPeriodBounds();
-  const el = document.getElementById('week-cells');
-  el.innerHTML = DAYS_FR.map((day, i) => {
-    const cellDate = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
-    const iso = cellDate.toISOString().slice(0,10);
-    const allDay  = acts.filter(a => a.date === iso);
-    const dayActs = allDay.filter(a => state.filter === 'all' || a.type === state.filter);
-    const isToday = iso === TODAY.toISOString().slice(0,10);
-    const numEl = isToday
-      ? `<div class="day-num" style="background:var(--accent);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;margin:0 auto 3px;color:#000;font-weight:700;">${cellDate.getDate()}</div>`
-      : `<div class="day-num">${cellDate.getDate()}</div>`;
-    const dots = dayActs.map(a => `<div class="day-dot" style="background:${TYPE_COLOR[a.type]||'#888'}"></div>`).join('');
-    // Activités enrichies : icône + durée, cliquables
-    const miniActs = allDay.slice(0,3).map(a => {
-      ACT_MAP[a.id] = a;
-      return `<div class="day-mini-act" style="color:${TYPE_COLOR[a.type]||'var(--muted)'}" onclick="event.stopPropagation();openDetail(${a.id})" title="${a.name}">${a.icon||'⚡'} ${fmt_dur(a.duration_min)}</div>`;
-    }).join('');
-    return `<div class="day-cell ${dayActs.length ? 'has-act' : ''} ${isToday ? 'today' : ''}">
-      <div class="day-name">${day}</div>${numEl}
-      <div class="day-dots">${dots}</div>
-      ${miniActs ? `<div class="day-mini-acts">${miniActs}</div>` : ''}
-    </div>`;
-  }).join('');
-}
-
-/* ═══════════════════════════════════════════════════════════
-   CHARTS
-═══════════════════════════════════════════════════════════ */
-Chart.defaults.color = '#5b8cad';
-Chart.defaults.borderColor = '#1a3352';
-Chart.defaults.font.family = "-apple-system,'Segoe UI',Inter,sans-serif";
-Chart.defaults.font.size = 11;
-
-const CHARTS = {};
-function mkChart(id, cfg) {
-  if (CHARTS[id]) { CHARTS[id].destroy(); }
-  const el = document.getElementById(id);
-  if (!el) return;
-  CHARTS[id] = new Chart(el, cfg);
-}
-
-// Agrégation par jour de semaine (lun→dim)
-function weeklyDist(acts) {
-  const { start } = getPeriodBounds();
-  return DAYS_FR.map((_, i) => {
-    const iso = new Date(start.getFullYear(), start.getMonth(), start.getDate()+i).toISOString().slice(0,10);
-    return acts.filter(a=>a.date===iso).reduce((s,a)=>s+(a.distance_km||0),0);
-  });
-}
-function weeklyDur(acts) {
-  const { start } = getPeriodBounds();
-  return DAYS_FR.map((_, i) => {
-    const iso = new Date(start.getFullYear(), start.getMonth(), start.getDate()+i).toISOString().slice(0,10);
-    return acts.filter(a=>a.date===iso).reduce((s,a)=>s+(a.duration_min||0),0);
-  });
-}
-function weeklyColors(acts) {
-  const { start } = getPeriodBounds();
-  return DAYS_FR.map((_, i) => {
-    const iso = new Date(start.getFullYear(), start.getMonth(), start.getDate()+i).toISOString().slice(0,10);
-    const day = acts.filter(a=>a.date===iso);
-    if (!day.length) return 'rgba(45,49,72,0.6)';
-    const types = [...new Set(day.map(a=>a.type))];
-    return TYPE_COLOR[types[0]] || '#888';
-  });
-}
-
-function typeDistribution(acts) {
-  const counts = {};
-  acts.forEach(a => { counts[a.type] = (counts[a.type]||0) + 1; });
-  return counts;
-}
-
-function renderWeekCharts(acts) {
-  const dists = weeklyDist(acts);
-  const durs  = weeklyDur(acts);
-  const cols  = weeklyColors(acts);
-
-  mkChart('chart-week-dist', {
-    type: 'bar',
-    data: { labels: DAYS_FR, datasets: [{ data: dists, backgroundColor: cols.map(c=>c+'cc'), borderRadius: 6 }] },
-    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{grid:{display:false}},y:{}} }
-  });
-  mkChart('chart-week-dur', {
-    type: 'bar',
-    data: { labels: DAYS_FR, datasets: [{ data: durs, backgroundColor: cols.map(c=>c+'cc'), borderRadius: 6 }] },
-    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{grid:{display:false}},y:{}} }
-  });
-
-  const dist = typeDistribution(acts);
-  const types = Object.keys(dist);
-  mkChart('chart-week-pie', {
-    type: 'doughnut',
-    data: {
-      labels: types.map(t => ({run:'Course',bike:'Vélo',swim:'Natation',strength:'Muscu',hike:'Rando',yoga:'Yoga',walk:'Marche',other:'Autre'}[t]||t)),
-      datasets: [{ data: Object.values(dist), backgroundColor: types.map(t=>TYPE_COLOR[t]||'#888'), borderWidth:0, hoverOffset:6 }]
-    },
-    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}, cutout:'60%' }
-  });
-}
-
-function renderMonthCharts(acts) {
-  const { start } = getPeriodBounds();
-  const year = start.getFullYear(), month = start.getMonth();
-  // Semaines du mois
-  const weeks = [1,2,3,4].map(w => {
-    const wStart = new Date(year, month, (w-1)*7+1);
-    const wEnd   = new Date(year, month, w*7);
-    return acts.filter(a => { const d = new Date(a.start_time); return d >= wStart && d <= wEnd; });
-  });
-
-  const types = ['run','swim','hiit','rowing','jump_rope','strength','cardio','hockey','tennis','padel','bike','walk','pilates','yoga','hike','ski','sup'];
-  const labels = { run:'Course', swim:'Natation', hiit:'HIIT', rowing:'Rameur', jump_rope:'Jump Rope', strength:'Muscu', cardio:'Cardio', hockey:'Hockey', tennis:'Tennis', padel:'Padel', bike:'Vélo', walk:'Marche', pilates:'Pilates', yoga:'Yoga', hike:'Rando', ski:'Ski', sup:'SUP' };
-
-  mkChart('chart-month-dist', {
-    type: 'bar',
-    data: {
-      labels: ['S1','S2','S3','S4'],
-      datasets: types.map(t => ({
-        label: labels[t],
-        data: weeks.map(w => w.filter(a=>a.type===t).reduce((s,a)=>s+(a.distance_km||0),0)),
-        backgroundColor: TYPE_COLOR[t]+'cc', borderRadius: 5,
-      })).filter(ds => ds.data.some(v=>v>0))
-    },
-    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}, scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true}} }
-  });
-
-  const dist = typeDistribution(acts);
-  const keys = Object.keys(dist);
-  mkChart('chart-month-type', {
-    type: 'bar',
-    data: {
-      labels: keys.map(t=>labels[t]||t),
-      datasets: [{ data: Object.values(dist), backgroundColor: keys.map(t=>TYPE_COLOR[t]||'#888')+'cc', borderRadius:6 }]
-    },
-    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{grid:{display:false}},y:{}} }
-  });
-}
-
-function renderYearCharts(acts) {
-  const { start } = getPeriodBounds();
-  const year = start.getFullYear();
-  const months = Array.from({length:12},(_,i)=>i);
-
-  const types = ['run','swim','hiit','rowing','jump_rope','strength','cardio','hockey','tennis','padel','bike','walk','pilates','yoga','hike','ski','sup'];
-  const labels = { run:'Course', swim:'Natation', hiit:'HIIT', rowing:'Rameur', jump_rope:'Jump Rope', strength:'Muscu', cardio:'Cardio', hockey:'Hockey', tennis:'Tennis', padel:'Padel', bike:'Vélo', walk:'Marche', pilates:'Pilates', yoga:'Yoga', hike:'Rando', ski:'Ski', sup:'SUP' };
-
-  mkChart('chart-year-dist', {
-    type: 'bar',
-    data: {
-      labels: MONTHS_FR,
-      datasets: types.map(t => ({
-        label: labels[t],
-        data: months.map(m => acts.filter(a=>a.type===t && new Date(a.start_time).getMonth()===m).reduce((s,a)=>s+(a.distance_km||0),0)),
-        backgroundColor: TYPE_COLOR[t]+'cc', borderRadius: 4,
-      })).filter(ds=>ds.data.some(v=>v>0))
-    },
-    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}, scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true}} }
-  });
-
-  mkChart('chart-year-type', {
-    type: 'bar',
-    data: {
-      labels: MONTHS_FR,
-      datasets: types.map(t => ({
-        label: labels[t],
-        data: months.map(m => acts.filter(a=>a.type===t && new Date(a.start_time).getMonth()===m).length),
-        backgroundColor: TYPE_COLOR[t]+'cc', borderRadius: 3,
-      })).filter(ds=>ds.data.some(v=>v>0))
-    },
-    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}, scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true}} }
-  });
-
-  const dist = typeDistribution(acts);
-  const keys = Object.keys(dist);
-  mkChart('chart-year-pie', {
-    type: 'doughnut',
-    data: {
-      labels: keys.map(t=>labels[t]||t),
-      datasets: [{ data: Object.values(dist), backgroundColor: keys.map(t=>TYPE_COLOR[t]||'#888'), borderWidth:0, hoverOffset:6 }]
-    },
-    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}}, cutout:'60%' }
-  });
-}
-
-/* ═══════════════════════════════════════════════════════════
-   PROFIL SPORTIF
-═══════════════════════════════════════════════════════════ */
-// Fenêtre temporelle par granularité (en mois, null = tout)
-const PROFILE_WINDOW = { month: 1, quarter: 3, semester: 6, year: 12 };
-const PROFILE_PERIOD_LABEL = {
-  month:    'Ce mois',
-  quarter:  'Ce trimestre (3 mois)',
-  semester: 'Ce semestre (6 mois)',
-  year:     'Cette année (12 mois)',
-};
-
-function getFilteredAllTime() {
-  const all = getAll();
-  if (state.filter === 'all') return all;
-  return all.filter(a => a.type === state.filter);
-}
-
-// Retourne les activités filtrées par type ET par fenêtre temporelle
-function getWindowedActivities() {
-  const all = getFilteredAllTime();
-  const nMonths = PROFILE_WINDOW[state.profileGranularity];
-  if (!nMonths) return all;
-  const cutoff = new Date(TODAY);
-  cutoff.setMonth(cutoff.getMonth() - nMonths);
-  return all.filter(a => new Date((a.start_time || a.date+'T12:00:00')) >= cutoff);
-}
-
-function computeProfileData() {
-  const all = getWindowedActivities();
-  const typeMeta = {};
-  all.forEach(a => { if (a.type && !typeMeta[a.type]) typeMeta[a.type] = { label: a.type_label||a.type, icon: a.icon||'⚡' }; });
-
-  const totals = {
-    acts: all.length,
-    dur:  all.reduce((s,a)=>s+(a.duration_min||0),0),
-    dist: all.reduce((s,a)=>s+(a.distance_km||0),0),
-    cal:  all.reduce((s,a)=>s+(a.calories||0),0),
-    load: all.reduce((s,a)=>s+(a.training_load||0),0),
-  };
-
-  const cutoff8w = new Date(TODAY); cutoff8w.setDate(cutoff8w.getDate()-56);
-  const weeklyLoad = all.filter(a=>new Date(a.start_time||a.date)>=cutoff8w)
-                        .reduce((s,a)=>s+(a.training_load||0),0)/8;
-
-  const typeTime = {};
-  all.forEach(a=>{ if(a.type) typeTime[a.type]=(typeTime[a.type]||0)+(a.duration_min||0); });
-  const topTypes = Object.entries(typeTime).sort((a,b)=>b[1]-a[1]).slice(0,5)
-    .map(([t,mins])=>({ type:t, mins, pct:totals.dur?Math.round(mins/totals.dur*100):0, ...typeMeta[t] }));
-
-  const monthly = {};
-  all.forEach(a=>{
-    const key=(a.date||'').slice(0,7);
-    if(!key||key.length<7) return;
-    if(!monthly[key]) monthly[key]={acts:0,dur:0,dist:0,load:0,cal:0,typeTime:{}};
-    const m=monthly[key];
-    m.acts++; m.dur+=(a.duration_min||0); m.dist+=(a.distance_km||0);
-    m.load+=(a.training_load||0); m.cal+=(a.calories||0);
-    m.typeTime[a.type]=(m.typeTime[a.type]||0)+(a.duration_min||0);
-  });
-
-  const byLoad = [...all].filter(a=>a.training_load>0).sort((a,b)=>b.training_load-a.training_load);
-  const byDist = [...all].filter(a=>a.distance_km>0 && a.type==='run').sort((a,b)=>b.distance_km-a.distance_km);
-  const byDur  = [...all].sort((a,b)=>(b.duration_min||0)-(a.duration_min||0));
-  const byVo2  = [...all].filter(a=>a.vo2max).sort((a,b)=>b.vo2max-a.vo2max);
-  const mEntries = Object.entries(monthly);
-
-  return { all, totals, weeklyLoad, topTypes, monthly, typeMeta,
-    records:{
-      load:     byLoad[0],
-      dist:     byDist[0],
-      dur:      byDur[0],
-      vo2:      byVo2[0],
-      bestActs: mEntries.sort((a,b)=>b[1].acts-a[1].acts)[0],
-      bestLoad: [...mEntries].sort((a,b)=>b[1].load-a[1].load)[0],
-    }
-  };
-}
-
-function athleteLevel(wl) {
-  if (wl<10)  return {label:'Débutant',  color:'#22c55e', bar:1};
-  if (wl<30)  return {label:'Actif',     color:'#3b82f6', bar:2};
-  if (wl<60)  return {label:'Sportif',   color:'#f59e0b', bar:3};
-  if (wl<110) return {label:'Athlète',   color:'#f97316', bar:4};
-  return             {label:'Expert',    color:'#ef4444', bar:5};
-}
-
-function renderProfile() {
-  const d  = computeProfileData();
-  const lv = athleteLevel(d.weeklyLoad);
-  const MLONG = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-  const MSHORT = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-
-  // ── Label période & "Depuis le début" ────────────────────────────────────
-  document.getElementById('profile-period-label').textContent = PROFILE_PERIOD_LABEL[state.profileGranularity] || 'Depuis le début';
-
-  // ── Badge niveau ─────────────────────────────────────────────────────────
-  document.getElementById('profile-main-icon').textContent = d.topTypes[0]?.icon||'🏅';
-  document.getElementById('profile-level-name').innerHTML = `<span style="color:${lv.color}">${lv.label}</span>`;
-  document.getElementById('profile-level-pips').innerHTML = [1,2,3,4,5].map(i=>
-    `<div class="level-pip" style="background:${i<=lv.bar?lv.color:'var(--border)'}"></div>`).join('');
-  const wLabel = PROFILE_WINDOW[state.profileGranularity];
-  document.getElementById('profile-weekly-load').textContent =
-    `~${Math.round(d.weeklyLoad)} pts / semaine${wLabel ? ` (${wLabel} mois)` : ' (tout)'}`;
-
-  // ── Sports ────────────────────────────────────────────────────────────────
-  document.getElementById('profile-sports-list').innerHTML = d.topTypes.map(t=>
-    `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
-      <span style="font-size:18px">${t.icon||'⚡'}</span>
-      <span style="flex:1;font-size:13px;font-weight:500">${t.label||t.type}</span>
-      <span style="font-size:11px;color:var(--muted)">${fmt_dur(t.mins)}</span>
-      <span style="font-size:13px;font-weight:700;color:${TYPE_COLOR[t.type]||'var(--accent)'};min-width:32px;text-align:right">${t.pct}%</span>
-    </div>`).join('');
-
-  // ── Totaux ────────────────────────────────────────────────────────────────
-  document.getElementById('profile-totals').innerHTML = [
-    ['Activités',   d.totals.acts.toLocaleString('fr-FR'),       ''],
-    ['Heures',      Math.round(d.totals.dur/60).toLocaleString('fr-FR'), 'h'],
-    ['Distance',    Math.round(d.totals.dist).toLocaleString('fr-FR'),   'km'],
-    ['Charge tot.', Math.round(d.totals.load).toLocaleString('fr-FR'),   'pts'],
-  ].map(([l,v,u])=>
-    `<div style="padding:14px 12px;border-bottom:1px solid var(--border);border-right:1px solid var(--border)">
-      <div style="font-size:20px;font-weight:800">${v}<span style="font-size:11px;color:var(--muted);font-weight:400"> ${u}</span></div>
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-top:3px">${l}</div>
-    </div>`).join('');
-
-  // ── Records ───────────────────────────────────────────────────────────────
-  const recItems = [];
-  const fmt_date = d => d ? new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}) : '';
-  if(d.records.load) { const a=d.records.load; recItems.push({i:'⚡',l:'Charge max',      v:`${Math.round(a.training_load)} pts`, s:a.name, d:fmt_date(a.date)}); }
-  if(d.records.dist) { const a=d.records.dist; recItems.push({i:'📍',l:'Distance max 🏃',  v:`${a.distance_km} km`,              s:a.name, d:fmt_date(a.date)}); }
-  if(d.records.dur)  { const a=d.records.dur;  recItems.push({i:'⏱',l:'Séance la + longue',v:fmt_dur(a.duration_min),           s:a.name, d:fmt_date(a.date)}); }
-  if(d.records.vo2)  { const a=d.records.vo2;  recItems.push({i:'❤️',l:'VO2max record',   v:`${a.vo2max}`,                      s:a.name, d:fmt_date(a.date)}); }
-  if(d.records.bestActs){ const[k,m]=d.records.bestActs; const[y,mo]=k.split('-');
-    recItems.push({i:'🏆',l:'Période la + active',  v:`${m.acts} séances`, s:`${MLONG[+mo-1]} ${y}`, d:''}); }
-  if(d.records.bestLoad){ const[k,m]=d.records.bestLoad; const[y,mo]=k.split('-');
-    recItems.push({i:'🔥',l:'Période la + chargée', v:`${Math.round(m.load)} pts`, s:`${MLONG[+mo-1]} ${y}`, d:''}); }
-
-  document.getElementById('profile-records').innerHTML = recItems.map(r=>
-    `<div class="record-card">
-      <div style="font-size:26px;margin-bottom:8px">${r.i}</div>
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:4px">${r.l}</div>
-      <div style="font-size:20px;font-weight:800;color:var(--accent)">${r.v}</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:5px;line-height:1.4">${r.s}</div>
-      ${r.d?`<div style="font-size:10px;color:var(--border);margin-top:2px">${r.d}</div>`:''}
-    </div>`).join('');
-
-  // ── Charts avec granularité ──────────────────────────────────────────────
-  const agg = aggregateProfile(d.monthly, state.profileGranularity, MSHORT);
-
-  mkChart('chart-profile-load',{
-    type:'bar',
-    data:{ labels:agg.labels, datasets:[{
-      data: agg.loads,
-      backgroundColor: agg.loads.map(l=>l>500?'#ef4444cc':l>300?'#f97316cc':l>150?'#38bdf8cc':'#0ea5e9cc'),
-      borderRadius:6
-    }]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw} pts`}}},
-      scales:{x:{grid:{display:false}},y:{grid:{color:'#2d3148'}}}}
-  });
-
-  mkChart('chart-profile-acts',{
-    type:'bar',
-    data:{ labels:agg.labels, datasets:[{
-      data: agg.acts,
-      backgroundColor:'#38bdf8bb', borderRadius:6
-    }]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false}},
-      scales:{x:{grid:{display:false}},y:{ticks:{stepSize:1},grid:{color:'#2d3148'}}}}
-  });
-
-  // ── Table avec même granularité que les graphiques ───────────────────────
-  const w       = state.wellness?.days||{};
-  const periods = aggregateProfileTable(d.monthly, state.profileGranularity, MLONG, MSHORT).reverse();
-
-  // ── Nouvelles sections ───────────────────────────────────────────────────
-  renderHeatmap();
-  renderFormChart();
-  renderVo2maxChart();
-  renderBadges();
-
-  document.getElementById('profile-table-body').innerHTML = periods.map(p=>{
-    const dom     = Object.entries(p.typeTime||{}).sort((a,b)=>b[1]-a[1])[0];
-    const domMeta = dom ? d.typeMeta[dom[0]] : null;
-    const safeKey = p.id.replace(/[^a-z0-9]/gi,'_');
-
-    const wDays   = Object.entries(w).filter(([dk])=>p.monthKeys.some(mk=>dk.startsWith(mk))).map(([,v])=>v);
-    const rhrVals = wDays.map(v=>v.resting_hr).filter(Boolean);
-    const sleepV  = wDays.map(v=>v.sleep_total_min).filter(Boolean);
-    const avgRHR  = rhrVals.length ? Math.round(rhrVals.reduce((a,b)=>a+b,0)/rhrVals.length) : null;
-    const avgSlp  = sleepV.length  ? Math.round(sleepV.reduce((a,b)=>a+b,0)/sleepV.length)   : null;
-    const sleepFmt= avgSlp ? `${Math.floor(avgSlp/60)}h${(avgSlp%60).toString().padStart(2,'0')}` : '–';
-
-    return `<tr class="month-row" data-months="${p.monthKeys.join(',')}" onclick="togglePeriod(this,'${safeKey}')">
-      <td style="font-weight:600;white-space:nowrap">${p.label}</td>
-      <td style="text-align:center">${p.acts}</td>
-      <td style="text-align:center">${fmt_dur(p.dur)}</td>
-      <td style="text-align:center">${Math.round(p.dist)||'–'} ${p.dist>0?'km':''}</td>
-      <td style="text-align:center;color:var(--accent);font-weight:700">${Math.round(p.load)||'–'}</td>
-      <td style="text-align:center">${domMeta?`${domMeta.icon} ${domMeta.label}`:'–'}</td>
-      <td class="col-rhr" style="text-align:center;color:var(--run)">${avgRHR?avgRHR+' bpm':'–'}</td>
-      <td class="col-sleep" style="text-align:center">${sleepFmt}</td>
-    </tr>
-    <tr class="month-detail-row" id="mdetail_${safeKey}">
-      <td colspan="8" style="padding:0 8px 8px"><div class="month-acts-list" id="macts_${safeKey}"></div></td>
-    </tr>`;
-  }).join('');
-}
-
-/* Agrège les données mensuelles selon la granularité pour le tableau */
-function aggregateProfileTable(monthly, granularity, MLONG, MSHORT) {
-  const allKeys = Object.keys(monthly).sort();
-  const groups  = {};
-  const order   = [];
-  allKeys.forEach(k=>{
-    const[y,m]=k.split('-');
-    let gk, label;
-    if(granularity==='month')     { gk=k;                          label=`${MLONG[+m-1]} ${y}`; }
-    else if(granularity==='quarter') { const q=Math.ceil(+m/3);   gk=`${y}-Q${q}`; label=`Q${q} ${y}`; }
-    else if(granularity==='semester'){ const s=+m<=6?1:2;          gk=`${y}-S${s}`; label=`S${s} ${y}`; }
-    else                             { gk=y;                       label=y; }
-    if(!groups[gk]){ groups[gk]={id:gk,label,acts:0,dur:0,dist:0,load:0,typeTime:{},monthKeys:[]}; order.push(gk); }
-    const g=groups[gk], mo=monthly[k];
-    g.acts+=mo.acts; g.dur+=mo.dur; g.dist+=mo.dist; g.load+=mo.load;
-    g.monthKeys.push(k);
-    Object.entries(mo.typeTime||{}).forEach(([t,mins])=>{ g.typeTime[t]=(g.typeTime[t]||0)+mins; });
-  });
-  return order.map(k=>groups[k]);
-}
-
-function aggregateProfile(monthly, granularity, MSHORT) {
-  const allKeys = Object.keys(monthly).sort();
-  const groups = {};
-  const order  = [];
-  allKeys.forEach(k=>{
-    const[y,m]=k.split('-');
-    let gk, label;
-    if(granularity==='month')    { gk=k;                label=`${MSHORT[+m-1]} ${y.slice(2)}`; }
-    else if(granularity==='quarter') { const q=Math.ceil(+m/3); gk=`${y}-Q${q}`; label=`Q${q} ${y}`; }
-    else if(granularity==='semester'){ const s=+m<=6?1:2;        gk=`${y}-S${s}`; label=`S${s} ${y}`; }
-    else                             { gk=y;             label=y; }
-    if(!groups[gk]){ groups[gk]={label,load:0,acts:0}; order.push(gk); }
-    groups[gk].load+=monthly[k].load;
-    groups[gk].acts+=monthly[k].acts;
-  });
-  return {
-    labels: order.map(k=>groups[k].label),
-    loads:  order.map(k=>Math.round(groups[k].load)),
-    acts:   order.map(k=>groups[k].acts),
-  };
-}
-
-function setProfileGranularity(g, btn) {
-  state.profileGranularity = g;
-  document.querySelectorAll('.pgran-btn').forEach(b=>b.classList.remove('active'));
-  if(btn) btn.classList.add('active');
-  renderProfile();
-}
-
-/* Accordion commun — fonctionne pour mois, trimestre, semestre, année */
-function togglePeriod(row, safeKey) {
-  const detail = document.getElementById(`mdetail_${safeKey}`);
-  const list   = document.getElementById(`macts_${safeKey}`);
-  if (!detail) return;
-
-  const isOpen = detail.classList.contains('open');
-  if (isOpen) {
-    detail.classList.remove('open');
-    row.classList.remove('open');
-    return;
-  }
-
-  if (!list.children.length) {
-    const monthKeys = (row.dataset.months || '').split(',').filter(Boolean);
-    const acts = getFilteredAllTime()
-      .filter(a => monthKeys.some(mk => (a.date||'').startsWith(mk)))
-      .sort((a,b) => (b.start_time||'').localeCompare(a.start_time||''));
-
-    if (!acts.length) {
-      list.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:13px">Aucune activité</div>';
-    } else {
-      list.innerHTML = acts.map(a => {
-        ACT_MAP[a.id] = a;
-        const main = a.distance_km > 0 ? `${a.distance_km} km` : fmt_dur(a.duration_min);
-        const sub  = [fmt_dur(a.duration_min), a.calories ? `${Math.round(a.calories)} kcal` : '', a.training_load > 0 ? `⚡${Math.round(a.training_load)}` : ''].filter(Boolean).join(' · ');
-        const ds   = a.date ? new Date(a.date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'}) : '';
-        return `<div class="month-act-item" onclick="event.stopPropagation();openDetail(${a.id})">
-          <div class="act-icon ${a.type||'other'}" style="width:30px;height:30px;font-size:15px">${a.icon||'⚡'}</div>
-          <div>
-            <div style="font-size:13px;font-weight:600">${a.name}</div>
-            <div style="font-size:11px;color:var(--muted)">${ds}</div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-size:13px;font-weight:600">${main}</div>
-            <div style="font-size:11px;color:var(--muted)">${sub}</div>
-          </div>
-        </div>`;
-      }).join('');
-    }
-  }
-
-  detail.classList.add('open');
-  row.classList.add('open');
-}
-
-/* ═══════════════════════════════════════════════════════════
-   FEATURE 1 : FORME & FATIGUE — CTL / ATL / TSB
-═══════════════════════════════════════════════════════════ */
-function computeFormCurve() {
-  const all = getAll();
-  // Build date→load map
-  const loadMap = {};
-  all.forEach(a => {
-    if (!a.date) return;
-    loadMap[a.date] = (loadMap[a.date] || 0) + (a.training_load || 0);
-  });
-
-  const days = 180;
-  const result = [];
-  let ctl = 0, atl = 0;
-
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(TODAY);
-    d.setDate(d.getDate() - i);
-    const iso = d.toISOString().slice(0, 10);
-    const load = loadMap[iso] || 0;
-    ctl = ctl + (load - ctl) / 42;
-    atl = atl + (load - atl) / 7;
-    const tsb = ctl - atl;
-    if (i < 90) {
-      result.push({ date: iso, ctl: +ctl.toFixed(1), atl: +atl.toFixed(1), tsb: +tsb.toFixed(1), load });
-    }
-  }
-  return result;
-}
-
-function renderFormChart() {
-  const curve = computeFormCurve();
-  if (!curve.length) return;
-  const labels = curve.map(d => {
-    const dt = new Date(d.date + 'T12:00:00');
-    return dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-  });
-  mkChart('chart-form', {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        { label: 'CTL', data: curve.map(d => d.ctl), borderColor: '#38bdf8', backgroundColor: 'rgba(56,189,248,0.08)', fill: false, tension: 0.4, pointRadius: 0, borderWidth: 2 },
-        { label: 'ATL', data: curve.map(d => d.atl), borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.08)', fill: false, tension: 0.4, pointRadius: 0, borderWidth: 2 },
-        { label: 'TSB', data: curve.map(d => d.tsb), borderColor: '#22c55e', backgroundColor: d => d.raw >= 0 ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.1)', fill: 'origin', tension: 0.4, pointRadius: 0, borderWidth: 2, borderDash: [5, 3] },
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        annotation: { annotations: { zero: { type: 'line', yMin: 0, yMax: 0, borderColor: 'rgba(255,255,255,0.15)', borderWidth: 1 } } }
-      },
-      scales: {
-        x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } },
-        y: { grid: { color: '#1a3352' } }
-      }
-    }
-  });
-}
-
-/* ═══════════════════════════════════════════════════════════
-   FEATURE 2 : COMPARAISON DE PÉRIODES — getPrevFiltered
-═══════════════════════════════════════════════════════════ */
-function getPrevFiltered() {
-  const savedOffset = state.offset;
-  state.offset = savedOffset - 1;
-  const prev = getFiltered();
-  state.offset = savedOffset;
-  return prev;
-}
-
-/* ═══════════════════════════════════════════════════════════
-   FEATURE 3 : SCORE DE RÉCUPÉRATION
-═══════════════════════════════════════════════════════════ */
-function computeRecoveryScore() {
-  if (!state.wellness?.days) return null;
-  const days = Object.values(state.wellness.days).sort((a, b) => a.date.localeCompare(b.date));
-  if (!days.length) return null;
-
-  const todayIso = TODAY.toISOString().slice(0, 10);
-  const yesterday = new Date(TODAY); yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayIso = yesterday.toISOString().slice(0, 10);
-
-  let dayData = state.wellness.days[todayIso] || state.wellness.days[yesterdayIso];
-  if (!dayData) return null;
-
-  const last30 = days.slice(-30);
-  const avgHRV = avg(last30, 'hrv_overnight_avg');
-  const avgRHR = avg(last30, 'resting_hr');
-
-  let score = 50;
-
-  // HRV bonus/malus (max ±25)
-  const hrv = dayData.hrv_overnight_avg;
-  if (hrv && avgHRV) {
-    const delta = (hrv - avgHRV) / avgHRV;
-    score += Math.max(-25, Math.min(25, delta * 100));
-  }
-
-  // FC repos bonus/malus (max ±20)
-  const rhr = dayData.resting_hr;
-  if (rhr && avgRHR) {
-    const delta = (avgRHR - rhr) / avgRHR;
-    score += Math.max(-20, Math.min(20, delta * 100));
-  }
-
-  // Body Battery
-  const bb = dayData.body_battery_high;
-  if (bb != null) {
-    score += Math.max(-25, Math.min(25, (bb - 50) * 0.5));
-  }
-
-  score = Math.max(0, Math.min(100, Math.round(score)));
-  return { score, hrv: hrv || null, rhr: rhr || null, bb: bb || null, date: dayData.date };
-}
-
-function renderRecoveryCard() {
-  const rec = computeRecoveryScore();
-  const section = document.getElementById('recovery-section');
-  if (!rec) { section.style.display = 'none'; return; }
-
-  section.style.display = '';
-  const color = rec.score >= 70 ? '#22c55e' : rec.score >= 40 ? '#f97316' : '#ef4444';
-  const pct = rec.score / 100;
-  const deg = Math.round(pct * 360);
-
-  const last30 = state.wellness?.days ? Object.values(state.wellness.days).sort((a,b)=>a.date.localeCompare(b.date)).slice(-30) : [];
-  const avgHRV = avg(last30, 'hrv_overnight_avg') || 1;
-  const avgRHR = avg(last30, 'resting_hr') || 1;
-
-  const hrvPct  = rec.hrv ? Math.min(100, Math.round((rec.hrv / (avgHRV * 1.5)) * 100)) : 0;
-  const rhrPct  = rec.rhr ? Math.min(100, Math.round(((avgRHR * 1.2 - rec.rhr) / (avgRHR * 0.4)) * 100)) : 0;
-  const bbPct   = rec.bb  ? rec.bb : 0;
-
-  const bar = (label, pct, color, val) => `
-    <div class="rfactor">
-      <span style="min-width:72px;color:var(--muted)">${label}</span>
-      <div class="rfactor-bg"><div class="rfactor-fill" style="width:${Math.max(0,Math.min(100,pct))}%;background:${color}"></div></div>
-      <span class="rfactor-val">${val}</span>
-    </div>`;
-
-  document.getElementById('recovery-card-inner').innerHTML = `
-    <div class="recovery-ring" style="background:conic-gradient(${color} 0deg ${deg}deg, var(--surface2) ${deg}deg 360deg)">
-      <div class="recovery-inner">
-        <div class="recovery-val" style="color:${color}">${rec.score}</div>
-        <div class="recovery-lbl">Score</div>
-      </div>
-    </div>
-    <div class="rfactors">
-      <div style="font-size:13px;font-weight:700;margin-bottom:10px">Récupération du jour</div>
-      ${bar('HRV nocturne', hrvPct, '#7c3aed', rec.hrv ? Math.round(rec.hrv)+' ms' : '–')}
-      ${bar('FC repos', rhrPct, '#ef4444', rec.rhr ? Math.round(rec.rhr)+' bpm' : '–')}
-      ${bar('Body Battery', bbPct, '#22c55e', rec.bb != null ? Math.round(rec.bb) : '–')}
-    </div>`;
-}
-
-/* ═══════════════════════════════════════════════════════════
-   FEATURE 4 : HEATMAP ANNUELLE
-═══════════════════════════════════════════════════════════ */
-function renderHeatmap() {
-  const container = document.getElementById('heatmap-container');
-  if (!container) return;
-
-  const all = getAll();
-  const loadMap = {};
-  all.forEach(a => {
-    if (!a.date) return;
-    loadMap[a.date] = (loadMap[a.date] || 0) + (a.training_load || 0);
-  });
-
-  // 52 semaines glissantes (364 jours) + jours jusqu'à fin de semaine
-  const endDate = new Date(TODAY);
-  // Aller jusqu'au dimanche de la semaine courante
-  const dow = endDate.getDay(); // 0=Sun
-  const daysToSun = dow === 0 ? 0 : 7 - dow;
-  endDate.setDate(endDate.getDate() + daysToSun);
-
-  const startDate = new Date(endDate);
-  startDate.setDate(startDate.getDate() - 52 * 7 + 1);
-  // Reculer jusqu'au lundi
-  const startDow = startDate.getDay();
-  const daysToMon = startDow === 0 ? 6 : startDow - 1;
-  startDate.setDate(startDate.getDate() - daysToMon);
-
-  // Collecter toutes les charges pour quartiles
-  const loads = Object.values(loadMap).filter(v => v > 0).sort((a, b) => a - b);
-  const q1 = loads[Math.floor(loads.length * 0.25)] || 50;
-  const q2 = loads[Math.floor(loads.length * 0.5)]  || 100;
-  const q3 = loads[Math.floor(loads.length * 0.75)] || 200;
-
-  function cellColor(load) {
-    if (!load) return 'var(--surface2)';
-    if (load <= q1) return 'rgba(56,189,248,0.15)';
-    if (load <= q2) return 'rgba(56,189,248,0.35)';
-    if (load <= q3) return 'rgba(56,189,248,0.6)';
-    return 'rgba(56,189,248,0.9)';
-  }
-
-  // Grouper par semaines (colonnes)
-  const cols = [];
-  let curDate = new Date(startDate);
-  const monthLabels = [];
-
-  while (curDate <= endDate) {
-    const col = [];
-    for (let d = 0; d < 7; d++) {
-      const iso = curDate.toISOString().slice(0, 10);
-      col.push({ iso, load: loadMap[iso] || 0 });
-      if (d === 0 && (cols.length === 0 || new Date(col[0].iso).getDate() <= 7)) {
-        // Enregistre le mois si c'est le 1er de la semaine ou si debut de mois
-      }
-      curDate.setDate(curDate.getDate() + 1);
-    }
-    cols.push(col);
-  }
-
-  // Labels de mois
-  const monthsHtml = [];
-  cols.forEach((col, ci) => {
-    const firstDay = new Date(col[0].iso + 'T12:00:00');
-    if (firstDay.getDate() <= 7) {
-      const left = ci * 14; // 11px cell + 3px gap
-      monthsHtml.push(`<span style="position:absolute;left:${left}px;font-size:9px;color:var(--muted);white-space:nowrap">${MONTHS_FR[firstDay.getMonth()]}</span>`);
-    }
-  });
-
-  const gridHtml = cols.map(col => {
-    const cells = col.map(cell => {
-      const title = `${cell.iso}${cell.load ? ' — ' + Math.round(cell.load) + ' pts' : ''}`;
-      return `<div class="heatmap-cell" style="background:${cellColor(cell.load)}" title="${title}"></div>`;
-    }).join('');
-    return `<div class="heatmap-col">${cells}</div>`;
-  }).join('');
-
-  // Légende
-  const legendCells = [
-    `<div style="width:11px;height:11px;border-radius:2px;background:var(--surface2)"></div>`,
-    `<div style="width:11px;height:11px;border-radius:2px;background:rgba(56,189,248,0.15)"></div>`,
-    `<div style="width:11px;height:11px;border-radius:2px;background:rgba(56,189,248,0.35)"></div>`,
-    `<div style="width:11px;height:11px;border-radius:2px;background:rgba(56,189,248,0.6)"></div>`,
-    `<div style="width:11px;height:11px;border-radius:2px;background:rgba(56,189,248,0.9)"></div>`,
-  ].join('');
-
-  const yLabels = ['Lun','','Mer','','Ven','',''].map((l,i) =>
-    `<div class="heatmap-ylabel">${l}</div>`).join('');
-
-  container.innerHTML = `
-    <div class="heatmap-outer">
-      <div class="heatmap-ylabels">${yLabels}</div>
-      <div class="heatmap-right">
-        <div class="heatmap-months" style="position:relative;height:16px;margin-bottom:2px">${monthsHtml.join('')}</div>
-        <div class="heatmap-grid">${gridHtml}</div>
-        <div class="heatmap-legend">Moins ${legendCells} Plus</div>
-      </div>
-    </div>`;
-}
-
-/* ═══════════════════════════════════════════════════════════
-   FEATURE 7 : SCORE SOMMEIL COMPOSITE
-═══════════════════════════════════════════════════════════ */
-function sleepScore(day) {
-  if (!day) return null;
-  const dur   = day.sleep_total_min || 0;
-  const deep  = day.sleep_deep_min  || 0;
-  const rem   = day.sleep_rem_min   || 0;
-  const awake = day.sleep_awake_min || 0;
-  if (!dur) return null;
-
-  // Durée : optimal 420-510 min = 35 pts
-  let durPts;
-  if (dur >= 420 && dur <= 510) durPts = 35;
-  else if (dur < 420) durPts = Math.max(0, 35 * (dur / 420));
-  else durPts = Math.max(0, 35 * (1 - (dur - 510) / 120));
-
-  const deepPts  = Math.min(30, (deep / 90) * 30);
-  const remPts   = Math.min(20, (rem  / 90) * 20);
-  const awakePen = Math.min(20, awake / 5);
-
-  return Math.max(0, Math.min(100, Math.round(durPts + deepPts + remPts - awakePen)));
-}
-
-function renderSleepScoreChart(days) {
-  const scores = days.map(d => sleepScore(d));
-  const hasData = scores.some(s => s !== null);
-  const section = document.getElementById('sleep-score-section');
-  if (!section) return;
-
-  if (!hasData) { section.style.display = 'none'; return; }
-  section.style.display = '';
-
-  const validScores = scores.filter(s => s !== null);
-  const mean = validScores.length ? Math.round(validScores.reduce((a,b)=>a+b,0)/validScores.length) : null;
-  const badgeEl = document.getElementById('badge-sleep-score');
-  if (badgeEl && mean != null) badgeEl.textContent = `moy. ${mean}/100`;
-
-  mkChart('chart-sleep-score', {
-    type: 'line',
-    data: {
-      labels: hlabels(days),
-      datasets: [{
-        label: 'Score sommeil',
-        data: scores,
-        borderColor: '#7c3aed',
-        backgroundColor: 'rgba(124,58,237,0.12)',
-        fill: true,
-        tension: 0.4,
-        pointRadius: 3,
-        borderWidth: 2,
-        spanGaps: true,
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { display: false }, ticks: { maxTicksLimit: days.length > 30 ? 8 : 12 } },
-        y: { min: 0, max: 100 }
-      }
-    }
-  });
-}
-
-/* ═══════════════════════════════════════════════════════════
-   FEATURE 8 : CORRÉLATION SOMMEIL ↔ PERFORMANCE
-═══════════════════════════════════════════════════════════ */
-function renderCorrelationChart(days, acts) {
-  const section      = document.getElementById('corr-section');
-  const sectionHdr   = document.getElementById('corr-section-header');
-  if (!section || !sectionHdr) return;
-
-  const wellnessByDate = {};
-  days.forEach(d => { wellnessByDate[d.date] = d; });
-
-  const points = [];
-  acts.forEach(a => {
-    if (!a.training_load || a.training_load <= 0 || !a.date) return;
-    const prev = new Date(a.date + 'T12:00:00');
-    prev.setDate(prev.getDate() - 1);
-    const prevIso = prev.toISOString().slice(0, 10);
-    const wDay = wellnessByDate[prevIso];
-    if (!wDay) return;
-    const ss = sleepScore(wDay);
-    if (ss === null) return;
-    ACT_MAP[a.id] = a;
-    points.push({ x: ss, y: Math.round(a.training_load), label: a.name, type: a.type });
-  });
-
-  if (points.length < 5) { section.style.display = 'none'; sectionHdr.style.display = 'none'; return; }
-  section.style.display = '';
-  sectionHdr.style.display = '';
-
-  mkChart('chart-sleep-perf', {
-    type: 'scatter',
-    data: {
-      datasets: [{
-        label: 'Activités',
-        data: points,
-        backgroundColor: points.map(p => (TYPE_COLOR[p.type] || '#888') + 'aa'),
-        pointRadius: 6,
-        pointHoverRadius: 9,
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: c => `${c.raw.label} — Sommeil: ${c.raw.x} / Charge: ${c.raw.y} pts` } }
-      },
-      scales: {
-        x: { title: { display: true, text: 'Score sommeil (veille)' }, min: 0, max: 100 },
-        y: { title: { display: true, text: 'Charge (pts)' } }
-      }
-    }
-  });
-}
-
-/* ═══════════════════════════════════════════════════════════
-   FEATURE 9 : ÉVOLUTION VO2MAX
-═══════════════════════════════════════════════════════════ */
-function renderVo2maxChart() {
-  const section    = document.getElementById('vo2max-section');
-  const sectionHdr = document.getElementById('vo2max-section-header');
-  if (!section || !sectionHdr) return;
-
-  const all = getAll().filter(a => a.vo2max > 0 && a.date);
-  const byMonth = {};
-  all.forEach(a => {
-    const key = a.date.slice(0, 7);
-    if (!byMonth[key] || a.vo2max > byMonth[key]) byMonth[key] = a.vo2max;
-  });
-
-  const sorted = Object.entries(byMonth).sort((a, b) => a[0].localeCompare(b[0]));
-  if (sorted.length < 2) { section.style.display = 'none'; sectionHdr.style.display = 'none'; return; }
-
-  section.style.display = '';
-  sectionHdr.style.display = '';
-
-  const labels = sorted.map(([k]) => { const [y, m] = k.split('-'); return `${MONTHS_FR[+m-1]} ${y.slice(2)}`; });
-  const data   = sorted.map(([, v]) => v);
-
-  mkChart('chart-vo2max', {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        label: 'VO2max',
-        data,
-        borderColor: '#ef4444',
-        backgroundColor: 'rgba(239,68,68,0.1)',
-        fill: true,
-        tension: 0.4,
-        pointRadius: 5,
-        borderWidth: 2,
-        pointBackgroundColor: '#ef4444',
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `VO2max : ${c.raw} ml/kg/min` } } },
-      scales: {
-        x: { grid: { display: false } },
-        y: { title: { display: true, text: 'ml/kg/min' } }
-      }
-    }
-  });
-}
-
-/* ═══════════════════════════════════════════════════════════
-   FEATURE 10 : BADGES DE PROGRESSION
-═══════════════════════════════════════════════════════════ */
-const BADGES_DEF = [
-  { id:'s50',   icon:'🎯', label:'50 séances',     sub:'50 activités',    check: (t)=>t.acts>=50 },
-  { id:'s100',  icon:'🏅', label:'100 séances',    sub:'100 activités',   check: (t)=>t.acts>=100 },
-  { id:'s500',  icon:'🥇', label:'500 séances',    sub:'500 activités',   check: (t)=>t.acts>=500 },
-  { id:'d500',  icon:'🛣️', label:'500 km',         sub:'Distance totale', check: (t)=>t.dist>=500 },
-  { id:'d1000', icon:'🌍', label:'1 000 km',        sub:'Distance totale', check: (t)=>t.dist>=1000 },
-  { id:'d5000', icon:'🚀', label:'5 000 km',        sub:'Distance totale', check: (t)=>t.dist>=5000 },
-  { id:'h100',  icon:'⏱️', label:'100h de sport',  sub:'Temps total',     check: (t)=>t.dur>=6000 },
-  { id:'h500',  icon:'🔥', label:'500h de sport',  sub:'Temps total',     check: (t)=>t.dur>=30000 },
-  { id:'l50k',  icon:'💪', label:'50k pts charge', sub:'Charge totale',   check: (t)=>t.load>=50000 },
-  { id:'r10',   icon:'🏃', label:'10 km course',   sub:'Run ≥ 10 km',     check: (t,r)=>r.maxRunDist>=10 },
-  { id:'r21',   icon:'🥈', label:'Semi-marathon',   sub:'Run ≥ 21 km',    check: (t,r)=>r.maxRunDist>=21 },
-  { id:'r42',   icon:'🥇', label:'Marathon',        sub:'Run ≥ 42 km',    check: (t,r)=>r.maxRunDist>=42 },
-];
-
-function renderBadges() {
-  const container = document.getElementById('profile-badges');
-  if (!container) return;
-
-  const all = getAll();
-  const totals = {
-    acts: all.length,
-    dur:  all.reduce((s,a)=>s+(a.duration_min||0),0),
-    dist: all.reduce((s,a)=>s+(a.distance_km||0),0),
-    load: all.reduce((s,a)=>s+(a.training_load||0),0),
-  };
-
-  const runs = all.filter(a => a.type === 'run' && a.distance_km > 0);
-  const records = { maxRunDist: runs.length ? Math.max(...runs.map(a=>a.distance_km)) : 0 };
-
-  container.innerHTML = BADGES_DEF.map(b => {
-    const unlocked = b.check(totals, records, all);
-    return `<div class="badge-card ${unlocked ? 'unlocked' : 'locked'}" title="${b.sub}">
-      <div class="badge-icon">${b.icon}</div>
-      <div class="badge-label">${b.label}</div>
-      <div class="badge-sub">${b.sub}</div>
-    </div>`;
-  }).join('');
-}
-
-/* ═══════════════════════════════════════════════════════════
-   RENDER ALL
-═══════════════════════════════════════════════════════════ */
-function renderAll() {
-  const isHealth  = state.tab === 'health';
-  const isProfile = state.tab === 'profile';
-  document.querySelector('.period-bar').style.display = (isHealth||isProfile) ? 'none' : '';
-  document.querySelector('.filter-bar').style.display = (isHealth||isProfile) ? 'none' : '';
-
-  if (isHealth)  { renderHealth();  return; }
-  if (isProfile) { renderProfile(); return; }
-
-  document.getElementById('period-label').textContent = formatPeriodLabel();
-  const acts  = getFiltered();
-  const zones = computeZones(acts) || [8, 35, 30, 20, 7];
-
-  const prevActs = getPrevFiltered();
-
-  if (state.tab === 'day') {
-    renderKPIs('kpi-day', acts, prevActs);
-    renderActivityList('list-day', acts, 5);
-    renderZones('zones-day', zones);
-  }
-  if (state.tab === 'week') {
-    renderKPIs('kpi-week', acts, prevActs);
-    renderWeekCells(getAll());
-    renderWeekCharts(acts);
-    renderActivityList('list-week', acts, 6);
-  }
-  if (state.tab === 'month') {
-    renderKPIs('kpi-month', acts, prevActs);
-    renderMonthCharts(acts);
-    renderZones('zones-month', zones);
-    renderActivityList('list-month', acts, 8);
-  }
-  if (state.tab === 'year') {
-    renderKPIs('kpi-year', acts, prevActs);
-    renderYearCharts(acts);
-    renderTopActivities('list-year', acts, 6);
-    renderYearActivityList('list-year-all', acts);
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════
-   UI CONTROLS
-═══════════════════════════════════════════════════════════ */
-function switchTab(tab, ev) {
-  state.tab = tab; state.offset = 0;
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-  if (ev) ev.target.classList.add('active');
-  document.getElementById('view-'+tab).classList.add('active');
-  renderAll();
-}
-
-function movePeriod(dir) { state.offset += dir; renderAll(); }
-function resetPeriod()   { state.offset = 0;    renderAll(); }
-
-function setFilter(type) {
-  state.filter = type;
-  document.querySelectorAll('.filter-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.type === type);
-  });
-  renderAll();
-}
-
-/* ═══════════════════════════════════════════════════════════
-   SYNC MODAL
-═══════════════════════════════════════════════════════════ */
-function openSyncModal()  { document.getElementById('sync-modal').classList.add('open'); }
-function closeSyncModal() { document.getElementById('sync-modal').classList.remove('open'); document.getElementById('sync-log').style.display='none'; }
-
-async function runSync() {
-  const btn = document.getElementById('sync-submit');
-  const log = document.getElementById('sync-log');
-  btn.disabled = true;
-  btn.textContent = 'Synchro en cours…';
-  log.style.display = 'block';
-  log.textContent = 'Connexion via tokens sauvegardés…';
-  document.getElementById('sync-dot').classList.add('syncing');
-
-  try {
-    const r = await fetch('/api/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-    const data = await r.json();
-    if (data.status === 'ok') {
-      log.textContent = data.message;
-      showToast(`Synchro OK — ${data.total||''} activités`, 'ok');
-      closeSyncModal();
-      await Promise.all([loadData(), loadWellness()]);
-      renderAll();
-    } else {
-      log.textContent = data.message;
-      showToast('Erreur de synchro', 'err');
-    }
-  } catch (e) {
-    log.textContent = 'Serveur inaccessible. Lance : python3 server.py';
-    showToast('Serveur non démarré', 'err');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Synchroniser';
-    document.getElementById('sync-dot').classList.remove('syncing');
-  }
-}
-
-function showToast(msg, type='ok') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = `toast ${type} show`;
-  setTimeout(() => t.classList.remove('show'), 3500);
-}
-
-/* ═══════════════════════════════════════════════════════════
-   WELLNESS / SANTÉ
-═══════════════════════════════════════════════════════════ */
-async function loadWellness() {
-  try {
-    const r = await fetch('/api/wellness');
-    if (r.ok) state.wellness = await r.json();
-  } catch {}
-}
-
-function getWellnessDays() {
-  if (!state.wellness?.days) return [];
-  return Object.values(state.wellness.days)
-    .sort((a,b) => a.date.localeCompare(b.date))
-    .slice(-state.healthDays);
-}
-
-function avg(days, key) {
-  const vals = days.map(d => d[key]).filter(v => v != null && v > 0);
-  return vals.length ? vals.reduce((s,v) => s+v, 0) / vals.length : null;
-}
-
-function fmtAvg(days, key, decimals=0) {
-  const v = avg(days, key);
-  return v != null ? v.toFixed(decimals) : '–';
-}
-
-function setBadge(id, text) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = text ? `moy. ${text}` : '';
-}
-
-function hlabels(days) {
-  return days.map(d => {
-    const dt = new Date(d.date + 'T12:00:00');
-    return dt.toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
-  });
-}
-
-function renderHealthKPIs(days) {
-  const h = (label, val, unit='', color='') => `
-    <div class="kpi-card">
-      <div class="kpi-label">${label}</div>
-      <div class="kpi-value" style="${color ? 'color:'+color : ''}">${val}<span class="kpi-unit">${unit}</span></div>
-    </div>`;
-
-  const sleepAvg = avg(days, 'sleep_total_min');
-  const sleepStr = sleepAvg ? `${Math.floor(sleepAvg/60)}h${String(Math.round(sleepAvg%60)).padStart(2,'0')}` : '–';
-  const deepAvg  = avg(days, 'sleep_deep_min');
-  const remAvg   = avg(days, 'sleep_rem_min');
-  const hrvAvg   = avg(days, 'hrv_overnight_avg');
-  const bbHigh   = avg(days, 'body_battery_high');
-  const bbLow    = avg(days, 'body_battery_low');
-  const stressA  = avg(days, 'stress_avg');
-  const stressC  = stressA < 25 ? 'var(--run)' : stressA < 50 ? 'var(--bike)' : 'var(--strength)';
-  const rhr      = avg(days, 'resting_hr');
-  const stepsA   = avg(days, 'steps');
-
-  // Poids : dernière valeur connue dans la période
-  const weightDays = days.filter(d => d.weight_kg);
-  const lastWeight = weightDays.length ? weightDays[weightDays.length-1].weight_kg : null;
-  const lastBmi    = weightDays.length ? weightDays[weightDays.length-1].bmi    : null;
-  const bmiColor   = lastBmi ? (lastBmi < 18.5 ? 'var(--swim)' : lastBmi < 25 ? 'var(--run)' : lastBmi < 30 ? 'var(--bike)' : 'var(--strength)') : '';
-
-  document.getElementById('kpi-health').innerHTML =
-    (lastWeight ? h('Poids actuel', lastWeight, 'kg') : '') +
-    (lastBmi    ? h('IMC', lastBmi, '', bmiColor)      : '') +
-    h('Sommeil moy.',   sleepStr) +
-    h('Profond moy.',   deepAvg ? Math.round(deepAvg)+'min' : '–') +
-    h('REM moy.',       remAvg  ? Math.round(remAvg)+'min'  : '–') +
-    h('HRV nuit moy.',  hrvAvg  ? Math.round(hrvAvg) : '–', 'ms') +
-    h('Body Battery ↑', bbHigh  ? Math.round(bbHigh) : '–') +
-    h('Body Battery ↓', bbLow   ? Math.round(bbLow)  : '–') +
-    h('Stress moy.',    stressA ? Math.round(stressA): '–', '', stressC) +
-    h('FC repos moy.',  rhr     ? Math.round(rhr)     : '–', 'bpm') +
-    h('Pas/jour moy.',  stepsA  ? Math.round(stepsA).toLocaleString('fr') : '–');
-}
-
-function renderHealthCharts(days) {
-  const L = hlabels(days);
-  const xOpts = { grid:{display:false}, ticks:{maxTicksLimit: days.length > 30 ? 8 : 12} };
-
-  /* ── Sommeil phases ── */
-  setBadge('badge-sleep', (() => { const v = avg(days,'sleep_total_min'); return v ? `${Math.floor(v/60)}h${String(Math.round(v%60)).padStart(2,'0')}` : null; })());
-  mkChart('chart-sleep', {
-    type:'bar',
-    data:{ labels:L, datasets:[
-      { label:'Profond', data:days.map(d=>d.sleep_deep_min||0),  backgroundColor:'#312e81', borderRadius:2 },
-      { label:'REM',     data:days.map(d=>d.sleep_rem_min||0),   backgroundColor:'#7c3aed', borderRadius:2 },
-      { label:'Léger',   data:days.map(d=>d.sleep_light_min||0), backgroundColor:'#3b82f6', borderRadius:2 },
-      { label:'Éveillé', data:days.map(d=>d.sleep_awake_min||0), backgroundColor:'#475569', borderRadius:2 },
-    ]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{position:'bottom'} },
-      scales:{ x:{...xOpts, stacked:true}, y:{stacked:true, title:{display:true,text:'min'}} }
-    }
-  });
-
-  /* ── HRV ── */
-  setBadge('badge-hrv', fmtAvg(days,'hrv_overnight_avg') + ' ms');
-  mkChart('chart-hrv', {
-    type:'line',
-    data:{ labels:L, datasets:[{
-      label:'HRV nocturne',
-      data: days.map(d=>d.hrv_overnight_avg),
-      borderColor:'#7c3aed', backgroundColor:'rgba(124,58,237,0.12)',
-      fill:true, tension:0.4, pointRadius:2, borderWidth:2
-    }]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false} },
-      scales:{ x:xOpts, y:{ title:{display:true,text:'ms'} } }
-    }
-  });
-
-  /* ── FC repos ── */
-  setBadge('badge-hr', fmtAvg(days,'resting_hr') + ' bpm');
-  mkChart('chart-rhr', {
-    type:'line',
-    data:{ labels:L, datasets:[{
-      label:'FC repos',
-      data: days.map(d=>d.resting_hr),
-      borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,0.1)',
-      fill:true, tension:0.4, pointRadius:2, borderWidth:2
-    }]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false} },
-      scales:{ x:xOpts, y:{ title:{display:true,text:'bpm'} } }
-    }
-  });
-
-  /* ── Body Battery plage ── */
-  const bbHighAvg = avg(days,'body_battery_high');
-  const bbLowAvg  = avg(days,'body_battery_low');
-  setBadge('badge-bb', bbHighAvg ? `${Math.round(bbLowAvg)}→${Math.round(bbHighAvg)}` : '');
-  mkChart('chart-battery', {
-    type:'line',
-    data:{ labels:L, datasets:[
-      { label:'Maximum', data:days.map(d=>d.body_battery_high), borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,0.15)', fill:'+1', tension:0.3, pointRadius:0, borderWidth:2 },
-      { label:'Minimum', data:days.map(d=>d.body_battery_low),  borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,0.05)', fill:false, tension:0.3, pointRadius:0, borderWidth:2 },
-    ]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{position:'bottom'} },
-      scales:{ x:xOpts, y:{ min:0, max:100 } }
-    }
-  });
-
-  /* ── Stress niveau moyen ── */
-  setBadge('badge-stress', fmtAvg(days,'stress_avg'));
-  mkChart('chart-stress-avg', {
-    type:'line',
-    data:{ labels:L, datasets:[{
-      label:'Stress moyen',
-      data: days.map(d=>d.stress_avg),
-      borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,0.1)',
-      fill:true, tension:0.4, pointRadius:2, borderWidth:2
-    }]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false} },
-      scales:{ x:xOpts, y:{ min:0, max:100 } }
-    }
-  });
-
-  /* ── Stress répartition ── */
-  mkChart('chart-stress-pct', {
-    type:'bar',
-    data:{ labels:L, datasets:[
-      { label:'Repos',  data:days.map(d=>Math.round(d.stress_pct_rest||0)),   backgroundColor:'#3b82f6', borderRadius:2 },
-      { label:'Faible', data:days.map(d=>Math.round(d.stress_pct_low||0)),    backgroundColor:'#22c55e', borderRadius:2 },
-      { label:'Moyen',  data:days.map(d=>Math.round(d.stress_pct_medium||0)), backgroundColor:'#f59e0b', borderRadius:2 },
-      { label:'Élevé',  data:days.map(d=>Math.round(d.stress_pct_high||0)),   backgroundColor:'#ef4444', borderRadius:2 },
-    ]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{position:'bottom'} },
-      scales:{ x:{...xOpts, stacked:true}, y:{ stacked:true, max:100 } }
-    }
-  });
-
-  /* ── Pas ── */
-  const stepsAvg = avg(days,'steps');
-  setBadge('badge-steps', stepsAvg ? Math.round(stepsAvg).toLocaleString('fr') : '');
-  mkChart('chart-steps', {
-    type:'bar',
-    data:{ labels:L, datasets:[{
-      label:'Pas',
-      data: days.map(d=>d.steps||0),
-      backgroundColor: days.map(d => (d.steps||0) >= (d.steps_goal||6000) ? 'rgba(34,197,94,0.8)' : 'rgba(100,116,139,0.6)'),
-      borderRadius:4,
-    }]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false},
-        annotation:{ annotations:{ goal:{
-          type:'line',
-          yMin: avg(days,'steps_goal')||6000,
-          yMax: avg(days,'steps_goal')||6000,
-          borderColor:'rgba(255,255,255,0.25)',
-          borderDash:[5,4],
-          label:{ content:'Objectif', display:true, position:'end', color:'#64748b', font:{size:10} }
-        }}}
-      },
-      scales:{ x:xOpts, y:{} }
-    }
-  });
-
-  /* ── Calories actives ── */
-  setBadge('badge-cal', fmtAvg(days,'calories_active') + ' kcal');
-  mkChart('chart-cal-active', {
-    type:'bar',
-    data:{ labels:L, datasets:[{
-      label:'Cal. actives',
-      data: days.map(d=>Math.round(d.calories_active||0)),
-      backgroundColor:'rgba(245,158,11,0.75)', borderRadius:4
-    }]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false} },
-      scales:{ x:xOpts, y:{} }
-    }
-  });
-
-  /* ── Poids ── */
-  const weightData = days.map(d => d.weight_kg || null);
-  const hasWeight  = weightData.some(v => v !== null);
-  if (hasWeight) {
-    const lastW = weightData.filter(Boolean);
-    const minW  = Math.min(...lastW) - 1;
-    const maxW  = Math.max(...lastW) + 1;
-    setBadge('badge-weight', lastW.length ? lastW[lastW.length-1] + ' kg' : '');
-    mkChart('chart-weight', {
-      type: 'line',
-      data: { labels: L, datasets: [{
-        label: 'Poids',
-        data:  weightData,
-        borderColor: '#38bdf8',
-        backgroundColor: 'rgba(56,189,248,0.12)',
-        fill: true,
-        tension: 0.3,
-        spanGaps: true,
-        pointRadius: weightData.map(v => v !== null ? 5 : 0),
-        pointBackgroundColor: '#38bdf8',
-        pointBorderColor: '#0d2035',
-        pointBorderWidth: 2,
-        borderWidth: 2,
-      }]},
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { callbacks: { label: c => c.raw !== null ? `${c.raw} kg` : null } }
-        },
-        scales: {
-          x: xOpts,
-          y: { min: minW, max: maxW, title: { display: true, text: 'kg' } }
-        }
-      }
-    });
-  } else {
-    setBadge('badge-weight', '');
-    const el = document.getElementById('chart-weight');
-    if (el) { const ctx = el.getContext('2d'); ctx.clearRect(0,0,el.width,el.height); }
-    if (CHARTS['chart-weight']) { CHARTS['chart-weight'].destroy(); delete CHARTS['chart-weight']; }
-    const wrap = el?.closest('.card');
-    if (wrap) wrap.style.display = 'none';
-  }
-  // Réaffiche la carte si elle a été masquée
-  { const el = document.getElementById('chart-weight'); const wrap = el?.closest('.card'); if (wrap && hasWeight) wrap.style.display = ''; }
-
-  /* ── Minutes d'intensité ── */
-  const iModAvg = avg(days,'intensity_min_moderate');
-  const iVigAvg = avg(days,'intensity_min_vigorous');
-  setBadge('badge-imin', iModAvg != null ? `${Math.round(iModAvg)}mod + ${Math.round(iVigAvg||0)}vig` : '');
-  mkChart('chart-intensity-min', {
-    type:'bar',
-    data:{ labels:L, datasets:[
-      { label:'Modérée', data:days.map(d=>d.intensity_min_moderate||0), backgroundColor:'rgba(59,130,246,0.75)', borderRadius:3 },
-      { label:'Vigoureuse', data:days.map(d=>d.intensity_min_vigorous||0), backgroundColor:'rgba(239,68,68,0.75)', borderRadius:3 },
-    ]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{position:'bottom'} },
-      scales:{ x:{...xOpts, stacked:true}, y:{ stacked:true } }
-    }
-  });
-}
-
-function renderHealth() {
-  renderRecoveryCard();
-  const days = getWellnessDays();
-  if (!days.length) {
-    document.getElementById('kpi-health').innerHTML =
-      '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--muted)">Aucune donnée. Lance une synchronisation.</div>';
-    return;
-  }
-  renderHealthKPIs(days);
-  renderHealthCharts(days);
-  renderSleepScoreChart(days);
-  const allActs = getAll().filter(a => {
-    const cutoff = new Date(TODAY); cutoff.setDate(cutoff.getDate() - state.healthDays);
-    return new Date(a.start_time || a.date) >= cutoff;
-  });
-  renderCorrelationChart(days, allActs);
-}
-
-function setHealthPeriod(n) {
-  state.healthDays = n;
-  document.querySelectorAll('.hpb').forEach(b => b.classList.toggle('active', +b.dataset.days === n));
-  renderHealth();
-}
-
-/* ═══════════════════════════════════════════════════════════
-   MOCK FALLBACK (si pas de server.py)
-═══════════════════════════════════════════════════════════ */
-const MOCK_ACTIVITIES = [
-  {id:1,name:"Sortie longue",type:"run",icon:"🏃",date:"2026-04-19",start_time:"2026-04-19T07:00:00",duration_min:58,distance_km:12.4,calories:634,hr_avg:148,hr_max:172,elevation_m:87},
-  {id:2,name:"Muscu haut corps",type:"strength",icon:"🏋️",date:"2026-04-18",start_time:"2026-04-18T18:30:00",duration_min:55,distance_km:0,calories:310,hr_avg:125,hr_max:148,elevation_m:0},
-  {id:3,name:"Fractionné 10x400m",type:"run",icon:"🏃",date:"2026-04-17",start_time:"2026-04-17T07:15:00",duration_min:40,distance_km:8.1,calories:490,hr_avg:168,hr_max:185,elevation_m:22},
-  {id:4,name:"Natation endurance",type:"swim",icon:"🏊",date:"2026-04-16",start_time:"2026-04-16T12:00:00",duration_min:48,distance_km:2.4,calories:420,hr_avg:128,hr_max:145,elevation_m:0},
-  {id:5,name:"Vélo route",type:"bike",icon:"🚴",date:"2026-04-15",start_time:"2026-04-15T09:00:00",duration_min:72,distance_km:38.4,calories:820,hr_avg:138,hr_max:162,elevation_m:420},
-  {id:6,name:"Course facile",type:"run",icon:"🏃",date:"2026-04-14",start_time:"2026-04-14T07:00:00",duration_min:52,distance_km:10.2,calories:580,hr_avg:138,hr_max:158,elevation_m:55},
-  {id:7,name:"Rando Pyrénées",type:"hike",icon:"🥾",date:"2026-04-13",start_time:"2026-04-13T08:00:00",duration_min:195,distance_km:18.6,calories:1180,hr_avg:118,hr_max:145,elevation_m:980},
-  {id:8,name:"10km tempo",type:"run",icon:"🏃",date:"2026-04-10",start_time:"2026-04-10T07:00:00",duration_min:44,distance_km:10.0,calories:540,hr_avg:162,hr_max:178,elevation_m:38},
-  {id:9,name:"Vélo 60km",type:"bike",icon:"🚴",date:"2026-04-08",start_time:"2026-04-08T09:00:00",duration_min:95,distance_km:54.2,calories:1080,hr_avg:142,hr_max:168,elevation_m:610},
-  {id:10,name:"Muscu jambes",type:"strength",icon:"🏋️",date:"2026-04-04",start_time:"2026-04-04T18:30:00",duration_min:52,distance_km:0,calories:305,hr_avg:128,hr_max:150,elevation_m:0},
-];
-
-/* ═══════════════════════════════════════════════════════════
-   INIT
-═══════════════════════════════════════════════════════════ */
-/* ═══════════════════════════════════════════════════════════
-   COACH
-═══════════════════════════════════════════════════════════ */
-async function loadCoach() {
-  try {
-    const r = await fetch('/coach.json?v=' + Date.now(), { cache: 'no-store' });
-    if (!r.ok) return;
-    const data = await r.json();
-    const section = document.getElementById('coach-section');
-    const dateEl  = document.getElementById('coach-date');
-    const itemsEl = document.getElementById('coach-items');
-    if (!section || !data.items?.length) return;
-
-    if (dateEl && data.updated_at) {
-      const d = new Date(data.updated_at + 'T12:00:00');
-      dateEl.textContent = 'Mis à jour le ' + d.toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' });
-    }
-
-    itemsEl.innerHTML = data.items.map(item => `
-      <div class="coach-item ${item.type||'tip'}">
-        <div class="coach-item-header">
-          <span class="coach-item-icon">${item.icon||'💬'}</span>
-          <span class="coach-item-title">${item.title||''}</span>
-        </div>
-        <div class="coach-item-text">${item.text||''}</div>
-      </div>`).join('');
-
-    section.style.display = '';
-  } catch {}
-}
-
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/service-worker.js').catch(() => {});
-}
-
-async function init() {
-  await Promise.all([loadData(), loadWellness(), loadCoach()]);
-  renderAll();
-}
-init();
-</script>
 </body>
 </html>
