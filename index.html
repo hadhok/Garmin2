@@ -10,10 +10,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css" />
-  <link rel="manifest" href="/manifest.json">
+  <link rel="manifest" href="/Garmin2/manifest.json">
   <meta name="theme-color" content="#111111">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Garmin">
+  <link rel="apple-touch-icon" href="/Garmin2/icons/icon-192.png">
 </head>
 <body>
 
@@ -634,6 +636,11 @@
 <script src="/js/activities.js"></script>
 <script src="/js/health.js"></script>
 <script src="/js/profile.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('/Garmin2/sw.js', { scope: '/Garmin2/' }));
+  }
+</script>
 
 </body>
 </html>

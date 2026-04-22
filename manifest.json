@@ -1,14 +1,16 @@
 {
   "name": "Garmin Dashboard",
   "short_name": "Garmin",
-  "description": "Tableau de bord personnel Garmin Connect",
-  "start_url": "/",
+  "description": "Tableau de bord fitness Garmin",
+  "start_url": "/Garmin2/",
+  "scope": "/Garmin2/",
   "display": "standalone",
-  "background_color": "#091929",
-  "theme_color": "#091929",
-  "orientation": "portrait-primary",
+  "background_color": "#111111",
+  "theme_color": "#6366f1",
+  "orientation": "portrait",
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "/Garmin2/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/Garmin2/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/Garmin2/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }
