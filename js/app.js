@@ -409,6 +409,9 @@ function switchView(view) {
   document.querySelectorAll('.nav-item').forEach(el => {
     el.classList.toggle('active', el.dataset.view === view);
   });
+  document.querySelectorAll('.bottom-nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.view === view);
+  });
   document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
   const viewEl = document.getElementById('view-' + view);
   if (viewEl) viewEl.classList.add('active');
