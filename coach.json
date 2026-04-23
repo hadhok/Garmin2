@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-04-22",
+  "updated_at": "2026-04-23",
   "coach": "Claude",
   "stats_snapshot": {
-    "phase": "maintien",
+    "phase": "vigilance",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 31.1,
-    "atl": 15.6,
-    "tsb": 15.6,
-    "effort_idx": 0.92,
-    "body_battery": 18.0,
+    "ctl": 30.4,
+    "atl": 13.3,
+    "tsb": 17.0,
+    "effort_idx": 0.4,
+    "body_battery": 20.3,
     "training_readiness": null,
     "niveau": "Sportif",
     "total_activites": 200,
@@ -18,15 +18,15 @@
   "items": [
     {
       "type": "warning",
-      "icon": "🟢",
-      "title": "En maintien — charge stable",
-      "text": "Effort pondéré 7j : 0.9× (1.0 = charge de base, >2 = intense). TSB +16 pts (CTL 31.1 / ATL 15.6). • HRV 37.5 ms (-3 ms vs S-1) • Sommeil 7.8h/nuit • Body Battery fin de journée : 18%"
+      "icon": "🟡",
+      "title": "Sous tension — vigilance requise",
+      "text": "Effort pondéré 7j : 0.4× (1.0 = charge de base, >2 = intense). TSB +17 pts (CTL 30.4 / ATL 13.3). • HRV 35.6 ms (-5 ms vs S-1) • Sommeil 7.7h/nuit • Body Battery fin de journée : 20%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "💛 HRV statut LOW — système nerveux sous pression\n✅ Structure d'entraînement polarisée (idéale) sur 7 séances analysées\n📉 Semaine très creuse (21 pts vs 222 moy.)"
+      "text": "💛 HRV statut LOW — système nerveux sous pression\n✅ Structure d'entraînement pyramidale sur 6 séances analysées\n📉 Semaine très creuse (21 pts vs 222 moy.)"
     },
     {
       "type": "goal",
