@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-04-24",
+  "updated_at": "2026-04-25",
   "coach": "Claude",
   "stats_snapshot": {
-    "phase": "vigilance",
+    "phase": "maintien",
     "fatigue_level": "balanced",
     "garmin_status": null,
-    "ctl": 29.7,
-    "atl": 11.4,
-    "tsb": 18.2,
+    "ctl": 28.9,
+    "atl": 9.8,
+    "tsb": 19.1,
     "effort_idx": 0.4,
-    "body_battery": 21.0,
+    "body_battery": 29.3,
     "training_readiness": null,
     "niveau": "Actif",
     "total_activites": 200,
@@ -18,15 +18,15 @@
   "items": [
     {
       "type": "tip",
-      "icon": "🟡",
-      "title": "Sous tension — vigilance requise",
-      "text": "Effort pondéré 7j : 0.4× (1.0 = charge de base, >2 = intense). TSB +18 pts (CTL 29.7 / ATL 11.4). • HRV 36.1 ms (-5 ms vs S-1) • Sommeil 7.5h/nuit • Body Battery fin de journée : 21%"
+      "icon": "🟢",
+      "title": "En maintien — charge stable",
+      "text": "Effort pondéré 7j : 0.4× (1.0 = charge de base, >2 = intense). TSB +19 pts (CTL 28.9 / ATL 9.8). • HRV 37.8 ms (-0 ms vs S-1) • Sommeil 7.7h/nuit • Body Battery fin de journée : 29%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "✅ Structure d'entraînement pyramidale sur 6 séances analysées\n📉 Semaine très creuse (14 pts vs 222 moy.)"
+      "text": "✅ Structure d'entraînement pyramidale sur 6 séances analysées\n📉 Semaine très creuse (7 pts vs 222 moy.)"
     },
     {
       "type": "goal",
