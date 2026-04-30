@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-04-29",
+  "updated_at": "2026-04-30",
   "coach": "Claude",
   "stats_snapshot": {
-    "phase": "maintien",
+    "phase": "progression",
     "fatigue_level": "balanced",
     "garmin_status": null,
-    "ctl": 26.4,
-    "atl": 6.0,
-    "tsb": 20.4,
+    "ctl": 25.8,
+    "atl": 5.2,
+    "tsb": 20.6,
     "effort_idx": 1.0,
-    "body_battery": 13.3,
+    "body_battery": 19.0,
     "training_readiness": null,
     "niveau": "Actif",
     "total_activites": 202,
@@ -18,15 +18,15 @@
   "items": [
     {
       "type": "tip",
-      "icon": "🟢",
-      "title": "En maintien — charge stable",
-      "text": "Effort pondéré 7j : 1.0× (1.0 = charge de base, >2 = intense). TSB +20 pts (CTL 26.4 / ATL 6.0). • HRV 43.1 ms (+6 ms vs S-1) • Sommeil 6.9h/nuit • Body Battery fin de journée : 13%"
+      "icon": "💪",
+      "title": "En progression — adaptation positive",
+      "text": "Effort pondéré 7j : 1.0× (1.0 = charge de base, >2 = intense). TSB +21 pts (CTL 25.8 / ATL 5.2). • HRV 42.8 ms (+6 ms vs S-1) • Sommeil 7.5h/nuit • Body Battery fin de journée : 19%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "💤 Sommeil limite (6.9h) — vise 7h30 minimum\n✅ Structure d'entraînement pyramidale sur 7 séances analysées\n📉 Semaine très creuse (10 pts vs 111 moy.)"
+      "text": "✅ Structure d'entraînement basse intensité (manque de stimulus) sur 5 séances analysées\n📉 Semaine très creuse (10 pts vs 111 moy.)"
     },
     {
       "type": "goal",
