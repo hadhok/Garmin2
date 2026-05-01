@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-04-30",
+  "updated_at": "2026-05-01",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "progression",
     "fatigue_level": "balanced",
     "garmin_status": null,
-    "ctl": 25.8,
-    "atl": 5.2,
-    "tsb": 20.6,
+    "ctl": 25.2,
+    "atl": 4.4,
+    "tsb": 20.7,
     "effort_idx": 1.0,
-    "body_battery": 19.0,
+    "body_battery": 16.7,
     "training_readiness": null,
     "niveau": "Actif",
     "total_activites": 202,
@@ -20,7 +20,7 @@
       "type": "tip",
       "icon": "💪",
       "title": "En progression — adaptation positive",
-      "text": "Effort pondéré 7j : 1.0× (1.0 = charge de base, >2 = intense). TSB +21 pts (CTL 25.8 / ATL 5.2). • HRV 42.8 ms (+6 ms vs S-1) • Sommeil 7.5h/nuit • Body Battery fin de journée : 19%"
+      "text": "Effort pondéré 7j : 1.0× (1.0 = charge de base, >2 = intense). TSB +21 pts (CTL 25.2 / ATL 4.4). • HRV 44.9 ms (+10 ms vs S-1) • Sommeil 7.5h/nuit • Body Battery fin de journée : 17%"
     },
     {
       "type": "tip",
