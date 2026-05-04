@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-05-03",
+  "updated_at": "2026-05-04",
   "coach": "Claude",
   "stats_snapshot": {
-    "phase": "pic_de_forme",
+    "phase": "maintien",
     "fatigue_level": "balanced",
     "garmin_status": null,
-    "ctl": 24.0,
-    "atl": 3.3,
-    "tsb": 20.7,
+    "ctl": 23.3,
+    "atl": 2.8,
+    "tsb": 20.6,
     "effort_idx": 0.0,
-    "body_battery": 29.0,
+    "body_battery": 32.3,
     "training_readiness": null,
     "niveau": "Actif",
     "total_activites": 202,
@@ -18,21 +18,21 @@
   "items": [
     {
       "type": "tip",
-      "icon": "🚀",
-      "title": "Pic de forme — moment idéal pour performer",
-      "text": "Effort pondéré 7j : 0.0× (1.0 = charge de base, >2 = intense). TSB +21 pts (CTL 24.0 / ATL 3.3). • HRV 44.0 ms (+6 ms vs S-1) • Sommeil 6.9h/nuit • Body Battery fin de journée : 29%"
+      "icon": "🟢",
+      "title": "En maintien — charge stable",
+      "text": "Effort pondéré 7j : 0.0× (1.0 = charge de base, >2 = intense). TSB +21 pts (CTL 23.3 / ATL 2.8). • HRV 41.1 ms (+1 ms vs S-1) • Sommeil 7.5h/nuit • Body Battery fin de journée : 32%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "💤 Sommeil limite (6.9h) — vise 7h30 minimum\n✅ Structure d'entraînement basse intensité (manque de stimulus) sur 3 séances analysées\n📉 Semaine très creuse (0 pts vs 111 moy.)"
+      "text": "✅ Structure d'entraînement basse intensité (manque de stimulus) sur 2 séances analysées\n📉 Semaine très creuse (0 pts vs 111 moy.)"
     },
     {
       "type": "goal",
       "icon": "📋",
-      "title": "Prescription : Récupération active",
-      "text": "20-30 min de marche, mobilité ou yoga. Pas de cardio. Objectif : ne pas aggraver la fatigue. — Z1 uniquement — FC < 120 bpm"
+      "title": "Prescription : Séance légère — Zone 2",
+      "text": "45-60 min à allure conversationnelle. Course lente, vélo ou natation à faible intensité. — Z2 — 60-70% FCmax"
     }
   ]
 }
