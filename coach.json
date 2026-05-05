@@ -1,18 +1,18 @@
 {
-  "updated_at": "2026-05-04",
+  "updated_at": "2026-05-05",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "maintien",
     "fatigue_level": "balanced",
     "garmin_status": null,
-    "ctl": 23.3,
-    "atl": 2.8,
-    "tsb": 20.6,
-    "effort_idx": 0.0,
-    "body_battery": 32.3,
+    "ctl": 24.8,
+    "atl": 13.0,
+    "tsb": 11.8,
+    "effort_idx": 1.0,
+    "body_battery": 33.7,
     "training_readiness": null,
     "niveau": "Actif",
-    "total_activites": 202,
+    "total_activites": 203,
     "total_km": 420
   },
   "items": [
@@ -20,19 +20,19 @@
       "type": "tip",
       "icon": "🟢",
       "title": "En maintien — charge stable",
-      "text": "Effort pondéré 7j : 0.0× (1.0 = charge de base, >2 = intense). TSB +21 pts (CTL 23.3 / ATL 2.8). • HRV 41.1 ms (+1 ms vs S-1) • Sommeil 7.5h/nuit • Body Battery fin de journée : 32%"
+      "text": "Effort pondéré 7j : 1.0× (1.0 = charge de base, >2 = intense). TSB +12 pts (CTL 24.8 / ATL 13.0). • HRV 40.1 ms (-1 ms vs S-1) • Sommeil 7.5h/nuit • Body Battery fin de journée : 34%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "✅ Structure d'entraînement basse intensité (manque de stimulus) sur 2 séances analysées\n📉 Semaine très creuse (0 pts vs 111 moy.)"
+      "text": "📊 Zone 3 trop présente (20%) — zone piège : trop dure pour récupérer, trop facile pour progresser"
     },
     {
       "type": "goal",
       "icon": "📋",
       "title": "Prescription : Séance légère — Zone 2",
-      "text": "45-60 min à allure conversationnelle. Course lente, vélo ou natation à faible intensité. — Z2 — 60-70% FCmax"
+      "text": "Hier : Aerobic Base (strength). 45-60 min à allure conversationnelle. Course lente, vélo ou natation à faible intensité. — Z2 — 60-70% FCmax"
     }
   ]
 }
