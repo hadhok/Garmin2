@@ -16,7 +16,7 @@ Format de sortie (3 cartes fixes) :
 Usage :
   python3 update_coach.py
 """
-import os, json, subprocess
+import os, json, re, subprocess
 from datetime import datetime, timedelta
 
 BASE       = os.path.dirname(os.path.abspath(__file__))
@@ -541,6 +541,46 @@ def generate_coach(s):
 
     return items
 
+# ── PROPAGATION VERS LA BRANCHE GITHUB PAGES ──────────────────────────────────
+def _push_coach_to_branch(base, coach_file, branch, msg):
+    """
+    Injecte coach.json dans <branch> via git plumbing, sans checkout.
+    Fonctionne même si la branche est déjà checked-out dans un worktree.
+    """
+    try:
+        subprocess.run(['git', 'fetch', 'origin', branch], cwd=base,
+                       check=True, capture_output=True)
+        # Blob pour le nouveau coach.json
+        r = subprocess.run(['git', 'hash-object', '-w', coach_file],
+                           cwd=base, capture_output=True, text=True, check=True)
+        blob = r.stdout.strip()
+        # Nouvel arbre : remplace l'entrée coach.json
+        r = subprocess.run(['git', 'ls-tree', f'origin/{branch}'],
+                           cwd=base, capture_output=True, text=True, check=True)
+        new_tree_input = re.sub(
+            r'blob [0-9a-f]+\tcoach\.json',
+            f'blob {blob}\tcoach.json',
+            r.stdout
+        )
+        r = subprocess.run(['git', 'mktree'], cwd=base,
+                           input=new_tree_input, capture_output=True, text=True, check=True)
+        new_tree = r.stdout.strip()
+        # Commit
+        r = subprocess.run(
+            ['git', 'commit-tree', new_tree, '-p', f'origin/{branch}', '-m', msg],
+            cwd=base, capture_output=True, text=True, check=True
+        )
+        new_commit = r.stdout.strip()
+        # Push
+        subprocess.run(
+            ['git', 'push', 'origin', f'{new_commit}:refs/heads/{branch}'],
+            cwd=base, check=True, capture_output=True
+        )
+        print(f"🚀 coach.json → {branch}")
+    except Exception as e:
+        print(f"⚠️  Impossible de propager vers {branch} : {e}")
+
+
 # ── MAIN ───────────────────────────────────────────────────────────────────────
 def main():
     _load_env()
@@ -621,7 +661,9 @@ def main():
             print("ℹ️  Pas de changement (conseils identiques).")
         else:
             subprocess.run(['git', 'push'], cwd=BASE, check=True)
-            print("🚀 Poussé sur GitHub — Vercel redéploiera dans ~30 secondes.")
+            print("🚀 Poussé sur GitHub.")
+            # Propager aussi vers redesign-litellm (branche GitHub Pages)
+            _push_coach_to_branch(BASE, COACH_FILE, 'redesign-litellm', msg)
     except subprocess.CalledProcessError as e:
         print(f"⚠️  Erreur git : {e}")
 
