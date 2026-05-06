@@ -277,7 +277,6 @@ body.sidebar-collapsed .btn-sync-sidebar span { display: none; }
 .topbar {
   height: 56px;
   background: #0d0d0d;
-  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
