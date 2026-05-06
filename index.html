@@ -294,14 +294,14 @@
           <table class="acts-table">
             <thead>
               <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Nom</th>
-                <th>Durée</th>
-                <th>Distance</th>
-                <th class="col-hr">FC moy.</th>
-                <th class="col-cal">Calories</th>
-                <th class="col-elev">Charge</th>
+                <th class="th-sort sort-desc" data-col="date"     onclick="sortActBy('date')">Date</th>
+                <th class="th-sort"           data-col="type"     onclick="sortActBy('type')">Type</th>
+                <th class="th-sort"           data-col="name"     onclick="sortActBy('name')">Nom</th>
+                <th class="th-sort"           data-col="duration" onclick="sortActBy('duration')">Durée</th>
+                <th class="th-sort"           data-col="distance" onclick="sortActBy('distance')">Distance</th>
+                <th class="th-sort col-hr"    data-col="hr"       onclick="sortActBy('hr')">FC moy.</th>
+                <th class="th-sort col-cal"   data-col="calories" onclick="sortActBy('calories')">Calories</th>
+                <th class="th-sort col-elev"  data-col="load"     onclick="sortActBy('load')">Charge</th>
               </tr>
             </thead>
             <tbody id="acts-table-body"></tbody>

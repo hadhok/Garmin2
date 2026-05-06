@@ -5,7 +5,18 @@
 /* ── Period filter state for activities view ── */
 const actState = {
   period: 'month',  // week | month | year | all
+  sort:   { col: 'date', dir: 'desc' },
 };
+
+function sortActBy(col) {
+  if (actState.sort.col === col) {
+    actState.sort.dir = actState.sort.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    actState.sort.col = col;
+    actState.sort.dir = 'desc';
+  }
+  renderActivities();
+}
 
 function setActPeriod(p, btn) {
   actState.period = p;
@@ -59,14 +70,38 @@ function renderActivities() {
       <div class="kpi-value" style="font-size:20px">${k.val}<span class="kpi-unit">${k.unit}</span></div>
     </div>`).join('');
 
+  /* Sort */
+  const { col, dir } = actState.sort;
+  const d = dir === 'asc' ? 1 : -1;
+  const sorted = [...acts].sort((a, b) => {
+    const vals = {
+      date:     [a.date || '', b.date || ''],
+      type:     [a.type || '', b.type || ''],
+      name:     [(a.name || '').toLowerCase(), (b.name || '').toLowerCase()],
+      duration: [a.duration_min || 0, b.duration_min || 0],
+      distance: [a.distance_km  || 0, b.distance_km  || 0],
+      hr:       [a.hr_avg       || 0, b.hr_avg       || 0],
+      calories: [a.calories     || 0, b.calories     || 0],
+      load:     [a.training_load|| 0, b.training_load|| 0],
+    };
+    const [va, vb] = vals[col] || vals.date;
+    return typeof va === 'string' ? va.localeCompare(vb) * d : (va - vb) * d;
+  });
+
+  /* Update th indicators */
+  document.querySelectorAll('.th-sort').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (th.dataset.col === col) th.classList.add('sort-' + dir);
+  });
+
   /* Table */
   const tbody = document.getElementById('acts-table-body');
-  if (!acts.length) {
+  if (!sorted.length) {
     tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Aucune activité sur cette période</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = acts.map(a => {
+  tbody.innerHTML = sorted.map(a => {
     ACT_MAP[a.id] = a;
     const dateStr  = a.date ? new Date(a.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}) : '–';
     const label    = a.type_label || TYPE_LABEL[a.type] || a.type;
