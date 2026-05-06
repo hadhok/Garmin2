@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-05-05",
+  "updated_at": "2026-05-06",
   "coach": "Claude",
   "stats_snapshot": {
-    "phase": "maintien",
+    "phase": "vigilance",
     "fatigue_level": "balanced",
     "garmin_status": null,
-    "ctl": 24.8,
-    "atl": 13.0,
-    "tsb": 11.8,
+    "ctl": 24.2,
+    "atl": 11.1,
+    "tsb": 13.1,
     "effort_idx": 1.0,
-    "body_battery": 33.7,
+    "body_battery": 25.7,
     "training_readiness": null,
     "niveau": "Actif",
     "total_activites": 203,
@@ -18,9 +18,9 @@
   "items": [
     {
       "type": "tip",
-      "icon": "🟢",
-      "title": "En maintien — charge stable",
-      "text": "Effort pondéré 7j : 1.0× (1.0 = charge de base, >2 = intense). TSB +12 pts (CTL 24.8 / ATL 13.0). • HRV 40.1 ms (-1 ms vs S-1) • Sommeil 7.5h/nuit • Body Battery fin de journée : 34%"
+      "icon": "🟡",
+      "title": "Sous tension — vigilance requise",
+      "text": "Effort pondéré 7j : 1.0× (1.0 = charge de base, >2 = intense). TSB +13 pts (CTL 24.2 / ATL 11.1). • HRV 38.4 ms (-4 ms vs S-1) • Sommeil 7.7h/nuit • Body Battery fin de journée : 26%"
     },
     {
       "type": "tip",
@@ -31,8 +31,8 @@
     {
       "type": "goal",
       "icon": "📋",
-      "title": "Prescription : Séance légère — Zone 2",
-      "text": "Hier : Aerobic Base (strength). 45-60 min à allure conversationnelle. Course lente, vélo ou natation à faible intensité. — Z2 — 60-70% FCmax"
+      "title": "Prescription : Récupération active",
+      "text": "20-30 min de marche, mobilité ou yoga. Pas de cardio. Objectif : ne pas aggraver la fatigue. — Z1 uniquement — FC < 120 bpm"
     }
   ]
 }
