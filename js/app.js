@@ -475,7 +475,16 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js').catch(() => {});
 }
 
+function toggleSidebar() {
+  const collapsed = document.body.classList.toggle('sidebar-collapsed');
+  localStorage.setItem('sidebar-collapsed', collapsed ? '1' : '0');
+}
+
 async function init() {
+  // Restaure l'état sidebar
+  if (localStorage.getItem('sidebar-collapsed') === '1') {
+    document.body.classList.add('sidebar-collapsed');
+  }
   await Promise.all([loadData(), loadWellness(), loadCoach()]);
   renderAll();
 }
