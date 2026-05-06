@@ -102,7 +102,7 @@ async function loadWellness() {
 
 async function loadCoach() {
   try {
-    const r = await fetch('/coach.json?v=' + Date.now(), { cache: 'no-store' });
+    const r = await fetch('/Garmin2/coach.json?v=' + Date.now(), { cache: 'no-store' });
     if (!r.ok) return;
     const data = await r.json();
     const section = document.getElementById('coach-section');

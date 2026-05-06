@@ -15,6 +15,11 @@ app  = Flask(__name__, static_folder=BASE)
 def index():
     return send_from_directory(BASE, 'index.html')
 
+@app.route('/Garmin2/coach.json')
+@app.route('/coach.json')
+def coach():
+    return send_from_directory(BASE, 'coach.json')
+
 @app.route('/data/<path:filename>')
 def data(filename):
     data_dir = os.path.join(BASE, 'data')

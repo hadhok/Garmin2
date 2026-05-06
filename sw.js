@@ -25,6 +25,8 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  // Toujours réseau pour les données dynamiques
+  if (e.request.url.includes('/api/') || e.request.url.includes('coach.json')) return;
   e.respondWith(
     caches.match(e.request).then(r => r || fetch(e.request).catch(() => caches.match('/Garmin2/index.html')))
   );
