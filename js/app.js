@@ -54,8 +54,8 @@ const MONTHS_LONG = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet',
 const DAYS_FR = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
 
 /* ── Chart.js defaults ── */
-Chart.defaults.color        = '#64748b';
-Chart.defaults.borderColor  = '#2a2a2a';
+Chart.defaults.color        = '#6b7280';
+Chart.defaults.borderColor  = '#e5e7eb';
 Chart.defaults.font.family  = "Inter, system-ui, -apple-system, sans-serif";
 Chart.defaults.font.size    = 11;
 
