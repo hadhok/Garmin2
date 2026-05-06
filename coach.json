@@ -1,32 +1,32 @@
 {
-  "updated_at": "2026-04-21",
+  "updated_at": "2026-05-06",
   "coach": "Claude",
   "stats_snapshot": {
-    "phase": "maintien",
+    "phase": "vigilance",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 31.9,
-    "atl": 18.2,
-    "tsb": 13.7,
-    "effort_idx": 0.92,
-    "body_battery": 25.0,
+    "ctl": 30.6,
+    "atl": 49.7,
+    "tsb": -19.0,
+    "effort_idx": 0.93,
+    "body_battery": 25.7,
     "training_readiness": null,
     "niveau": "Sportif",
-    "total_activites": 200,
-    "total_km": 416
+    "total_activites": 206,
+    "total_km": 421
   },
   "items": [
     {
       "type": "warning",
-      "icon": "🟢",
-      "title": "En maintien — charge stable",
-      "text": "Effort pondéré 7j : 0.9× (1.0 = charge de base, >2 = intense). TSB +14 pts (CTL 31.9 / ATL 18.2). • HRV 36.9 ms (-4 ms vs S-1) • Sommeil 8.2h/nuit • Body Battery fin de journée : 25%"
+      "icon": "🟡",
+      "title": "Sous tension — vigilance requise",
+      "text": "Effort pondéré 7j : 0.9× (1.0 = charge de base, >2 = intense). TSB -19 pts (CTL 30.6 / ATL 49.7). • HRV 38.4 ms (-4 ms vs S-1) • Sommeil 7.7h/nuit • Body Battery fin de journée : 26%"
     },
     {
-      "type": "tip",
+      "type": "warning",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "💛 HRV statut LOW — système nerveux sous pression\n✅ Structure d'entraînement polarisée (idéale) sur 8 séances analysées"
+      "text": "📊 manque de Zone 1-2 (53% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (24%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📈 Charge semaine +172% au-dessus de la moyenne — risque de surcharge"
     },
     {
       "type": "goal",
