@@ -36,34 +36,41 @@
       </div>
     </div>
 
+    <div class="sidebar-cta">
+      <button class="btn-cta-sync" onclick="openSyncModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Synchroniser
+      </button>
+    </div>
+
     <div class="sidebar-section">
       <button class="nav-item active" data-view="dashboard" onclick="switchView('dashboard')">
         <span class="nav-icon">🏠</span>
         <span class="nav-label">Dashboard</span>
+        <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
       <button class="nav-item" data-view="activities" onclick="switchView('activities')">
         <span class="nav-icon">🏃</span>
         <span class="nav-label">Activités</span>
+        <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
       <button class="nav-item" data-view="health" onclick="switchView('health')">
         <span class="nav-icon">💤</span>
         <span class="nav-label">Santé</span>
+        <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
       <button class="nav-item" data-view="profile" onclick="switchView('profile')">
         <span class="nav-icon">👤</span>
         <span class="nav-label">Profil</span>
+        <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
     </div>
 
     <div class="sidebar-footer">
-      <div id="sync-status-sidebar" style="font-size:11px;color:var(--muted);padding:0 4px;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+      <div id="sync-status-sidebar" style="font-size:11px;color:var(--muted);padding:0 4px;display:flex;align-items:center;gap:6px">
         <span class="sync-dot" id="sync-dot"></span>
         <span id="sync-label">Chargement…</span>
       </div>
-      <button class="btn-sync-sidebar" onclick="openSyncModal()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-        Synchroniser
-      </button>
     </div>
   </nav>
 
