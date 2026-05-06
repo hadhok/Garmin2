@@ -525,7 +525,8 @@ main {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 18px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
 }
 .card + .card { margin-top: 16px; }
 .card-header {
@@ -535,11 +536,10 @@ main {
   margin-bottom: 16px;
 }
 .card-title {
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0;
 }
 .chart-wrap { position: relative; height: 200px; }
 
@@ -557,9 +557,10 @@ main {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 16px 18px;
-  transition: border-color 0.15s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  transition: box-shadow 0.15s, border-color 0.15s;
 }
-.kpi-card:hover { border-color: var(--border2); }
+.kpi-card:hover { border-color: var(--border2); box-shadow: 0 4px 8px rgba(0,0,0,0.08); }
 .kpi-label {
   font-size: 11px;
   text-transform: uppercase;
