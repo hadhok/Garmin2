@@ -329,9 +329,10 @@ body.sidebar-collapsed .btn-sync-sidebar span { display: none; }
   gap: 12px;
 }
 .topbar-title {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 800;
   color: var(--text);
+  letter-spacing: -0.3px;
 }
 .topbar-right {
   display: flex;
@@ -537,10 +538,10 @@ main {
   margin-bottom: 16px;
 }
 .card-title {
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 800;
   color: var(--text);
-  letter-spacing: 0;
+  letter-spacing: -0.2px;
 }
 .chart-wrap { position: relative; height: 200px; }
 
@@ -790,14 +791,13 @@ main {
    SECTION HEADER
    ══════════════════════════════════════════════════════════ */
 .section-header {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--muted);
-  margin: 24px 0 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: var(--text);
+  margin: 28px 0 14px;
+  padding-bottom: 0;
+  border-bottom: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -957,7 +957,7 @@ main {
    ══════════════════════════════════════════════════════════ */
 .coach-section  { margin-bottom:24px; }
 .coach-header   { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
-.coach-title    { display:flex; align-items:center; gap:10px; font-size:14px; font-weight:700; color:var(--text); }
+.coach-title    { display:flex; align-items:center; gap:10px; font-size:17px; font-weight:800; color:var(--text); letter-spacing:-0.2px; }
 .coach-avatar   { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,#a3e635,#22d3ee); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
 .coach-date     { font-size:11px; color:var(--muted); }
 .coach-items    { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }
