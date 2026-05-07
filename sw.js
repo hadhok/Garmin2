@@ -1,15 +1,15 @@
-const CACHE = 'garmin-v3';
+const CACHE = 'garmin-v4';
 const ASSETS = [
-  '/Garmin2/',
-  '/Garmin2/index.html',
-  '/Garmin2/css/style.css',
-  '/Garmin2/js/app.js',
-  '/Garmin2/js/dashboard.js',
-  '/Garmin2/js/activities.js',
-  '/Garmin2/js/health.js',
-  '/Garmin2/js/profile.js',
-  '/Garmin2/icons/icon-192.png',
-  '/Garmin2/icons/icon-512.png'
+  '/',
+  '/index.html',
+  '/css/style.css',
+  '/js/app.js',
+  '/js/dashboard.js',
+  '/js/activities.js',
+  '/js/health.js',
+  '/js/profile.js',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png'
 ];
 
 self.addEventListener('install', e => {
@@ -28,6 +28,6 @@ self.addEventListener('fetch', e => {
   // Toujours réseau pour les données dynamiques
   if (e.request.url.includes('/api/') || e.request.url.includes('coach.json')) return;
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request).catch(() => caches.match('/Garmin2/index.html')))
+    caches.match(e.request).then(r => r || fetch(e.request).catch(() => caches.match('/index.html')))
   );
 });
