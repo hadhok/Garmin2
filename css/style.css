@@ -1241,3 +1241,39 @@ body.loading main::before {
 
   .toast { left: 16px; right: 16px; bottom: 76px; text-align: center; }
 }
+
+/* ══════════════════════════════════════════════════════════
+   iOS PWA — safe-area insets (encoche + home indicator)
+   ══════════════════════════════════════════════════════════ */
+
+/* Quand lancé en standalone (depuis l'écran d'accueil iOS) */
+@media all and (display-mode: standalone) {
+  /* Topbar : descend sous la barre de statut iOS */
+  .topbar {
+    padding-top: env(safe-area-inset-top, 0px);
+    height: calc(56px + env(safe-area-inset-top, 0px));
+  }
+  /* Sur mobile : compenser en standalone */
+  @media (max-width: 768px) {
+    .topbar {
+      padding-top: env(safe-area-inset-top, 0px);
+      height: calc(48px + env(safe-area-inset-top, 0px));
+    }
+    /* Contenu principal : ne pas passer sous le home indicator */
+    main {
+      padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    }
+    /* Bottom nav : hauteur fixe + home indicator */
+    .bottom-nav {
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      height: calc(60px + env(safe-area-inset-bottom, 0px));
+    }
+  }
+}
+
+/* Sidebar sur desktop iOS (iPad en standalone) */
+@media all and (display-mode: standalone) and (min-width: 769px) {
+  .sidebar {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+}
