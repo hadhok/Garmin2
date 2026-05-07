@@ -356,6 +356,27 @@ main {
 .view { display: none; }
 .view.active { display: block; }
 
+/* ── Loading state ── */
+body.loading main::before {
+  content: '';
+  display: block;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent) 0%, #22d3ee 50%, var(--accent) 100%);
+  background-size: 200% 100%;
+  animation: loading-bar 1.2s linear infinite;
+  border-radius: 0 0 2px 2px;
+  position: fixed;
+  top: 56px;
+  left: var(--sidebar-w);
+  right: 0;
+  z-index: 45;
+  transition: left 0.22s cubic-bezier(0.4,0,0.2,1);
+}
+@keyframes loading-bar {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* ══════════════════════════════════════════════════════════
    BUTTONS
    ══════════════════════════════════════════════════════════ */
@@ -1104,6 +1125,50 @@ main {
 .bottom-nav-item svg { width: 22px; height: 22px; flex-shrink: 0; }
 .bottom-nav-item:hover { color: rgba(255,255,255,0.65); }
 .bottom-nav-item.active { color: var(--accent); }
+
+/* ══════════════════════════════════════════════════════════
+   ACTIVITIES — SEARCH & PAGINATION
+   ══════════════════════════════════════════════════════════ */
+.acts-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  color: var(--muted);
+  transition: border-color 0.15s;
+}
+.acts-search-wrap:focus-within {
+  border-color: var(--accent);
+  color: var(--text2);
+}
+.acts-search {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--text);
+  font-family: inherit;
+  width: 160px;
+}
+.acts-search::placeholder { color: var(--muted2); }
+
+.acts-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0 0;
+}
+.acts-pag-info {
+  font-size: 12px;
+  color: var(--muted);
+}
+.acts-pagination .hpb:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
 
 /* ══════════════════════════════════════════════════════════
    RESPONSIVE — TABLET (769px–1024px): icon-only sidebar

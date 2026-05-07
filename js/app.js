@@ -100,30 +100,36 @@ async function loadWellness() {
   } catch {}
 }
 
+function _renderCoachItems(sectionId, dateId, itemsId, data) {
+  const section = document.getElementById(sectionId);
+  const dateEl  = document.getElementById(dateId);
+  const itemsEl = document.getElementById(itemsId);
+  if (!section) return;
+  if (!data.items?.length) { section.style.display = 'none'; return; }
+
+  if (dateEl && data.updated_at) {
+    const d = new Date(data.updated_at + 'T12:00:00');
+    dateEl.textContent = 'Mis à jour le ' + d.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+  }
+  itemsEl.innerHTML = data.items.map(item => `
+    <div class="coach-item ${item.type||'tip'}">
+      <div class="coach-item-header">
+        <span class="coach-item-icon">${item.icon||'💬'}</span>
+        <span class="coach-item-title">${item.title||''}</span>
+      </div>
+      <div class="coach-item-text">${item.text||''}</div>
+    </div>`).join('');
+  section.style.display = '';
+}
+
 async function loadCoach() {
   try {
     const r = await fetch('/Garmin2/coach.json?v=' + Date.now(), { cache: 'no-store' });
     if (!r.ok) return;
     const data = await r.json();
-    const section = document.getElementById('coach-section');
-    const dateEl  = document.getElementById('coach-date');
-    const itemsEl = document.getElementById('coach-items');
-    if (!section || !data.items?.length) return;
-
-    if (dateEl && data.updated_at) {
-      const d = new Date(data.updated_at + 'T12:00:00');
-      dateEl.textContent = 'Mis à jour le ' + d.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
-    }
-
-    itemsEl.innerHTML = data.items.map(item => `
-      <div class="coach-item ${item.type||'tip'}">
-        <div class="coach-item-header">
-          <span class="coach-item-icon">${item.icon||'💬'}</span>
-          <span class="coach-item-title">${item.title||''}</span>
-        </div>
-        <div class="coach-item-text">${item.text||''}</div>
-      </div>`).join('');
-    section.style.display = '';
+    /* Populate both dashboard and profile coach sections */
+    _renderCoachItems('coach-section-dash', 'coach-date-dash', 'coach-items-dash', data);
+    _renderCoachItems('coach-section',      'coach-date',      'coach-items',      data);
   } catch {}
 }
 
@@ -435,6 +441,7 @@ function resetPeriod()   { state.offset = 0;    renderAll(); }
 
 function setFilter(type) {
   state.filter = type;
+  if (typeof actState !== 'undefined') actState.page = 0;
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.type === type));
   renderAll();
 }
@@ -471,9 +478,6 @@ const MOCK_ACTIVITIES = [
 /* ══════════════════════════════════════════════════════════
    INIT
    ══════════════════════════════════════════════════════════ */
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/service-worker.js').catch(() => {});
-}
 
 function toggleSidebar() {
   const collapsed = document.body.classList.toggle('sidebar-collapsed');
@@ -485,7 +489,16 @@ async function init() {
   if (localStorage.getItem('sidebar-collapsed') === '1') {
     document.body.classList.add('sidebar-collapsed');
   }
+  // Spinner pendant le chargement
+  document.body.classList.add('loading');
+  const syncDot = document.getElementById('sync-dot');
+  if (syncDot) syncDot.classList.add('syncing');
+
   await Promise.all([loadData(), loadWellness(), loadCoach()]);
+
+  document.body.classList.remove('loading');
+  if (syncDot) syncDot.classList.remove('syncing');
+
   renderAll();
 }
 

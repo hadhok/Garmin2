@@ -144,7 +144,7 @@ function renderSleepScoreChart(days) {
     }]},
     options: { responsive:true, maintainAspectRatio:false,
       plugins:{legend:{display:false}},
-      scales:{ x:{grid:{display:false},ticks:{maxTicksLimit:days.length>30?8:12}}, y:{min:0,max:100,grid:{color:'#2a2a2a'}} }
+      scales:{ x:{grid:{display:false},ticks:{maxTicksLimit:days.length>30?8:12}}, y:{min:0,max:100,grid:{color:'#e5e7eb'}} }
     }
   });
 }
@@ -187,8 +187,8 @@ function renderCorrelationChart(days, acts) {
       responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>`${c.raw.label} — Sommeil:${c.raw.x} / Charge:${c.raw.y}`}} },
       scales:{
-        x:{title:{display:true,text:'Score sommeil (veille)',color:'#64748b'},min:0,max:100,grid:{color:'#2a2a2a'}},
-        y:{title:{display:true,text:'Charge (pts)',color:'#64748b'},grid:{color:'#2a2a2a'}}
+        x:{title:{display:true,text:'Score sommeil (veille)',color:'#64748b'},min:0,max:100,grid:{color:'#e5e7eb'}},
+        y:{title:{display:true,text:'Charge (pts)',color:'#64748b'},grid:{color:'#e5e7eb'}}
       }
     }
   });
@@ -254,7 +254,7 @@ function renderHealthCharts(days) {
     ]},
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{position:'bottom',labels:{color:'#64748b',boxWidth:10}} },
-      scales:{ x:{...xOpts,stacked:true}, y:{stacked:true,grid:{color:'#2a2a2a'},title:{display:true,text:'min',color:'#64748b'}} }
+      scales:{ x:{...xOpts,stacked:true}, y:{stacked:true,grid:{color:'#e5e7eb'},title:{display:true,text:'min',color:'#64748b'}} }
     }
   });
 
@@ -265,7 +265,7 @@ function renderHealthCharts(days) {
     data:{ labels:L, datasets:[{ label:'HRV nocturne', data:days.map(d=>d.hrv_overnight_avg),
       borderColor:'#7c3aed', backgroundColor:'rgba(124,58,237,0.12)', fill:true, tension:0.4, pointRadius:2, borderWidth:2 }]},
     options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
-      scales:{ x:xOpts, y:{grid:{color:'#2a2a2a'},title:{display:true,text:'ms',color:'#64748b'}} } }
+      scales:{ x:xOpts, y:{grid:{color:'#e5e7eb'},title:{display:true,text:'ms',color:'#64748b'}} } }
   });
 
   /* Resting HR */
@@ -275,7 +275,7 @@ function renderHealthCharts(days) {
     data:{ labels:L, datasets:[{ label:'FC repos', data:days.map(d=>d.resting_hr),
       borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,0.1)', fill:true, tension:0.4, pointRadius:2, borderWidth:2 }]},
     options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
-      scales:{ x:xOpts, y:{grid:{color:'#2a2a2a'},title:{display:true,text:'bpm',color:'#64748b'}} } }
+      scales:{ x:xOpts, y:{grid:{color:'#e5e7eb'},title:{display:true,text:'bpm',color:'#64748b'}} } }
   });
 
   /* Body Battery range */
@@ -290,7 +290,7 @@ function renderHealthCharts(days) {
     ]},
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{position:'bottom',labels:{color:'#64748b',boxWidth:10}} },
-      scales:{ x:xOpts, y:{min:0,max:100,grid:{color:'#2a2a2a'}} }
+      scales:{ x:xOpts, y:{min:0,max:100,grid:{color:'#e5e7eb'}} }
     }
   });
 
@@ -301,7 +301,7 @@ function renderHealthCharts(days) {
     data:{ labels:L, datasets:[{ label:'Stress moyen', data:days.map(d=>d.stress_avg),
       borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,0.1)', fill:true, tension:0.4, pointRadius:2, borderWidth:2 }]},
     options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
-      scales:{ x:xOpts, y:{min:0,max:100,grid:{color:'#2a2a2a'}} } }
+      scales:{ x:xOpts, y:{min:0,max:100,grid:{color:'#e5e7eb'}} } }
   });
 
   /* Stress breakdown */
@@ -315,7 +315,7 @@ function renderHealthCharts(days) {
     ]},
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{position:'bottom',labels:{color:'#64748b',boxWidth:10}} },
-      scales:{ x:{...xOpts,stacked:true}, y:{stacked:true,max:100,grid:{color:'#2a2a2a'}} }
+      scales:{ x:{...xOpts,stacked:true}, y:{stacked:true,max:100,grid:{color:'#e5e7eb'}} }
     }
   });
 
@@ -333,11 +333,11 @@ function renderHealthCharts(days) {
       plugins:{ legend:{display:false},
         annotation:{ annotations:{ goal:{
           type:'line', yMin:avg(days,'steps_goal')||6000, yMax:avg(days,'steps_goal')||6000,
-          borderColor:'rgba(255,255,255,0.2)', borderDash:[5,4],
+          borderColor:'rgba(0,0,0,0.25)', borderDash:[5,4],
           label:{content:'Objectif',display:true,position:'end',color:'#64748b',font:{size:10}}
         }}}
       },
-      scales:{ x:xOpts, y:{grid:{color:'#2a2a2a'}} }
+      scales:{ x:xOpts, y:{grid:{color:'#e5e7eb'}} }
     }
   });
 
@@ -348,7 +348,7 @@ function renderHealthCharts(days) {
     data:{ labels:L, datasets:[{ label:'Cal. actives', data:days.map(d=>Math.round(d.calories_active||0)),
       backgroundColor:'rgba(245,158,11,0.7)', borderRadius:4 }]},
     options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
-      scales:{ x:xOpts, y:{grid:{color:'#2a2a2a'}} } }
+      scales:{ x:xOpts, y:{grid:{color:'#e5e7eb'}} } }
   });
 
   /* Weight */
@@ -370,7 +370,7 @@ function renderHealthCharts(days) {
       options:{ responsive:true, maintainAspectRatio:false,
         plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>c.raw!==null?`${c.raw} kg`:null}} },
         scales:{ x:xOpts,
-          y:{ min:Math.min(...lastW)-1, max:Math.max(...lastW)+1, grid:{color:'#2a2a2a'}, title:{display:true,text:'kg',color:'#64748b'} }
+          y:{ min:Math.min(...lastW)-1, max:Math.max(...lastW)+1, grid:{color:'#e5e7eb'}, title:{display:true,text:'kg',color:'#64748b'} }
         }
       }
     });
@@ -390,7 +390,7 @@ function renderHealthCharts(days) {
     ]},
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{position:'bottom',labels:{color:'#64748b',boxWidth:10}} },
-      scales:{ x:{...xOpts,stacked:true}, y:{stacked:true,grid:{color:'#2a2a2a'}} }
+      scales:{ x:{...xOpts,stacked:true}, y:{stacked:true,grid:{color:'#e5e7eb'}} }
     }
   });
 }
