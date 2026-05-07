@@ -12,13 +12,23 @@ app  = Flask(__name__, static_folder=BASE)
 
 # ── Pages statiques ──────────────────────────────────────────────────────────
 @app.route('/')
+@app.route('/Garmin2/')
+@app.route('/Garmin2/index.html')
 def index():
     return send_from_directory(BASE, 'index.html')
 
-@app.route('/Garmin2/coach.json')
-@app.route('/coach.json')
-def coach():
-    return send_from_directory(BASE, 'coach.json')
+# Assets statiques avec préfixe /Garmin2/ (= chemins utilisés dans index.html)
+@app.route('/Garmin2/<path:filename>')
+def garmin_static(filename):
+    return send_from_directory(BASE, filename)
+
+# Fallback sans préfixe (accès direct / dev)
+@app.route('/<path:filename>')
+def static_root(filename):
+    filepath = os.path.join(BASE, filename)
+    if os.path.isfile(filepath):
+        return send_from_directory(BASE, filename)
+    return send_from_directory(BASE, 'index.html')
 
 @app.route('/data/<path:filename>')
 def data(filename):
