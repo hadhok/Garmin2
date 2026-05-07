@@ -101,25 +101,29 @@ async function loadWellness() {
 }
 
 function _renderCoachItems(sectionId, dateId, itemsId, data) {
-  const section = document.getElementById(sectionId);
-  const dateEl  = document.getElementById(dateId);
-  const itemsEl = document.getElementById(itemsId);
-  if (!section) return;
-  if (!data.items?.length) { section.style.display = 'none'; return; }
+  try {
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+    if (!data.items?.length) { section.style.display = 'none'; return; }
 
-  if (dateEl && data.updated_at) {
-    const d = new Date(data.updated_at + 'T12:00:00');
-    dateEl.textContent = 'Mis à jour le ' + d.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
-  }
-  itemsEl.innerHTML = data.items.map(item => `
-    <div class="coach-item ${item.type||'tip'}">
-      <div class="coach-item-header">
-        <span class="coach-item-icon">${item.icon||'💬'}</span>
-        <span class="coach-item-title">${item.title||''}</span>
-      </div>
-      <div class="coach-item-text">${item.text||''}</div>
-    </div>`).join('');
-  section.style.display = '';
+    const dateEl  = document.getElementById(dateId);
+    const itemsEl = document.getElementById(itemsId);
+    if (!itemsEl) return;
+
+    if (dateEl && data.updated_at) {
+      const d = new Date(data.updated_at + 'T12:00:00');
+      dateEl.textContent = 'Mis à jour le ' + d.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+    }
+    itemsEl.innerHTML = data.items.map(item => `
+      <div class="coach-item ${item.type||'tip'}">
+        <div class="coach-item-header">
+          <span class="coach-item-icon">${item.icon||'💬'}</span>
+          <span class="coach-item-title">${item.title||''}</span>
+        </div>
+        <div class="coach-item-text">${item.text||''}</div>
+      </div>`).join('');
+    section.style.display = '';
+  } catch(e) { console.warn('coach render error', sectionId, e); }
 }
 
 async function loadCoach() {
@@ -127,10 +131,10 @@ async function loadCoach() {
     const r = await fetch('/Garmin2/coach.json?v=' + Date.now(), { cache: 'no-store' });
     if (!r.ok) return;
     const data = await r.json();
-    /* Populate both dashboard and profile coach sections */
+    /* Populate both dashboard and profile coach sections independently */
     _renderCoachItems('coach-section-dash', 'coach-date-dash', 'coach-items-dash', data);
     _renderCoachItems('coach-section',      'coach-date',      'coach-items',      data);
-  } catch {}
+  } catch(e) { console.warn('loadCoach error', e); }
 }
 
 /* ══════════════════════════════════════════════════════════
