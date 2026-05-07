@@ -240,9 +240,9 @@ function renderFormChart() {
     options:{
       responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{display:false},
-        annotation:{annotations:{zero:{type:'line',yMin:0,yMax:0,borderColor:'rgba(255,255,255,0.12)',borderWidth:1}}}
+        annotation:{annotations:{zero:{type:'line',yMin:0,yMax:0,borderColor:'rgba(0,0,0,0.18)',borderWidth:1}}}
       },
-      scales:{ x:{grid:{display:false},ticks:{maxTicksLimit:10}}, y:{grid:{color:'#2a2a2a'}} }
+      scales:{ x:{grid:{display:false},ticks:{maxTicksLimit:10}}, y:{grid:{color:'#e5e7eb'}} }
     }
   });
 }
@@ -268,7 +268,7 @@ function renderVo2maxChart() {
     }]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`VO2max : ${c.raw} ml/kg/min`}}},
-      scales:{x:{grid:{display:false}},y:{grid:{color:'#2a2a2a'},title:{display:true,text:'ml/kg/min',color:'#64748b'}}}
+      scales:{x:{grid:{display:false}},y:{grid:{color:'#e5e7eb'},title:{display:true,text:'ml/kg/min',color:'#64748b'}}}
     }
   });
 }
@@ -393,7 +393,7 @@ function renderProfile() {
     }]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw} pts`}}},
-      scales:{x:{grid:{display:false}},y:{grid:{color:'#2a2a2a'}}}
+      scales:{x:{grid:{display:false}},y:{grid:{color:'#e5e7eb'}}}
     }
   });
   mkChart('chart-profile-acts',{
@@ -401,7 +401,7 @@ function renderProfile() {
     data:{labels:agg.labels,datasets:[{data:agg.acts,backgroundColor:'#6366f1aa',borderRadius:6}]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false}},
-      scales:{x:{grid:{display:false}},y:{ticks:{stepSize:1},grid:{color:'#2a2a2a'}}}
+      scales:{x:{grid:{display:false}},y:{ticks:{stepSize:1},grid:{color:'#e5e7eb'}}}
     }
   });
 

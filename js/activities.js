@@ -6,7 +6,9 @@
 const actState = {
   period: 'month',  // week | month | year | all
   sort:   { col: 'date', dir: 'desc' },
+  page:   0,
 };
+const ACT_PAGE_SIZE = 50;
 
 function sortActBy(col) {
   if (actState.sort.col === col) {
@@ -15,11 +17,13 @@ function sortActBy(col) {
     actState.sort.col = col;
     actState.sort.dir = 'desc';
   }
+  actState.page = 0;
   renderActivities();
 }
 
 function setActPeriod(p, btn) {
   actState.period = p;
+  actState.page   = 0;
   document.querySelectorAll('.act-period-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   renderActivities();
@@ -50,9 +54,13 @@ function getActivitiesByPeriod() {
    RENDER ACTIVITIES TABLE
    ══════════════════════════════════════════════════════════ */
 function renderActivities() {
-  const acts = getActivitiesByPeriod();
+  const raw  = getActivitiesByPeriod();
 
-  /* KPIs strip */
+  /* Search filter */
+  const q = (document.getElementById('acts-search')?.value || '').trim().toLowerCase();
+  const acts = q ? raw.filter(a => (a.name||'').toLowerCase().includes(q) || (a.type_label||TYPE_LABEL[a.type]||'').toLowerCase().includes(q)) : raw;
+
+  /* KPIs strip (computed on filtered set, not paginated) */
   const kpis = computeKPIs(acts);
   const dur  = kpis.duration >= 60
     ? `${Math.floor(kpis.duration/60)}h${String(Math.round(kpis.duration%60)).padStart(2,'0')}`
@@ -94,14 +102,22 @@ function renderActivities() {
     if (th.dataset.col === col) th.classList.add('sort-' + dir);
   });
 
+  /* Pagination */
+  const total      = sorted.length;
+  const totalPages = Math.max(1, Math.ceil(total / ACT_PAGE_SIZE));
+  if (actState.page >= totalPages) actState.page = totalPages - 1;
+  const start = actState.page * ACT_PAGE_SIZE;
+  const page  = sorted.slice(start, start + ACT_PAGE_SIZE);
+
   /* Table */
   const tbody = document.getElementById('acts-table-body');
-  if (!sorted.length) {
+  if (!page.length) {
     tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Aucune activité sur cette période</td></tr>`;
+    _renderActsPagination(total, totalPages);
     return;
   }
 
-  tbody.innerHTML = sorted.map(a => {
+  tbody.innerHTML = page.map(a => {
     ACT_MAP[a.id] = a;
     const dateStr  = a.date ? new Date(a.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}) : '–';
     const label    = a.type_label || TYPE_LABEL[a.type] || a.type;
@@ -109,7 +125,6 @@ function renderActivities() {
     const hr       = a.hr_avg ? `${a.hr_avg} bpm` : '–';
     const cal      = a.calories ? Math.round(a.calories).toLocaleString('fr') : '–';
     const load     = a.training_load > 0 ? Math.round(a.training_load) : '–';
-    const elev     = a.elevation_m > 0 ? `${Math.round(a.elevation_m)} m` : '–';
     return `<tr onclick="openDetail(${a.id})">
       <td class="td-date">${dateStr}</td>
       <td>${typeBadge(a.type, label)}</td>
@@ -121,4 +136,37 @@ function renderActivities() {
       <td class="td-num col-elev" style="color:var(--muted)">${load !== '–' ? `⚡${load}` : '–'}</td>
     </tr>`;
   }).join('');
+
+  _renderActsPagination(total, totalPages);
+}
+
+function _renderActsPagination(total, totalPages) {
+  /* Remove old pagination */
+  const old = document.getElementById('acts-pagination');
+  if (old) old.remove();
+
+  if (totalPages <= 1) return;
+
+  const wrap = document.createElement('div');
+  wrap.id = 'acts-pagination';
+  wrap.className = 'acts-pagination';
+
+  const start = actState.page * ACT_PAGE_SIZE + 1;
+  const end   = Math.min((actState.page + 1) * ACT_PAGE_SIZE, total);
+
+  wrap.innerHTML = `
+    <span class="acts-pag-info">${start}–${end} sur ${total}</span>
+    <div style="display:flex;gap:4px">
+      <button class="hpb" onclick="actChangePage(-1)" ${actState.page === 0 ? 'disabled' : ''}>‹ Préc.</button>
+      <button class="hpb" onclick="actChangePage(1)"  ${actState.page >= totalPages-1 ? 'disabled' : ''}>Suiv. ›</button>
+    </div>`;
+
+  document.querySelector('.table-container').insertAdjacentElement('afterend', wrap);
+}
+
+function actChangePage(dir) {
+  actState.page += dir;
+  renderActivities();
+  /* Scroll to top of table */
+  document.querySelector('.table-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }

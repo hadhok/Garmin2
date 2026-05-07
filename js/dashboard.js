@@ -94,16 +94,14 @@ function renderWeekCells(acts) {
     const allDay  = acts.filter(a => a.date === iso);
     const dayActs = allDay.filter(a => state.filter === 'all' || a.type === state.filter);
     const isToday = iso === TODAY.toISOString().slice(0,10);
-    const numEl = isToday
-      ? `<div class="day-num">${cellDate.getDate()}</div>`
-      : `<div class="day-num">${cellDate.getDate()}</div>`;
     const dots = dayActs.map(a => `<div class="day-dot" style="background:${TYPE_COLOR[a.type]||'#888'}"></div>`).join('');
     const miniActs = allDay.slice(0,3).map(a => {
       ACT_MAP[a.id] = a;
       return `<div class="day-mini-act" style="color:${TYPE_COLOR[a.type]||'var(--muted)'}" onclick="event.stopPropagation();openDetail(${a.id})" title="${a.name}">${a.icon||'⚡'} ${fmt_dur(a.duration_min)}</div>`;
     }).join('');
     return `<div class="day-cell ${dayActs.length ? 'has-act' : ''} ${isToday ? 'today' : ''}">
-      <div class="day-name">${day}</div>${numEl}
+      <div class="day-name">${day}</div>
+      <div class="day-num">${cellDate.getDate()}</div>
       <div class="day-dots">${dots}</div>
       ${miniActs ? `<div class="day-mini-acts">${miniActs}</div>` : ''}
     </div>`;
@@ -139,20 +137,20 @@ function renderWeekCharts(acts) {
   const cols = DAYS_FR.map((_, i) => {
     const iso = new Date(start.getFullYear(), start.getMonth(), start.getDate()+i).toISOString().slice(0,10);
     const day = acts.filter(a=>a.date===iso);
-    if (!day.length) return 'rgba(45,49,72,0.4)';
+    if (!day.length) return 'rgba(0,0,0,0.07)';
     return (TYPE_COLOR[day[0].type] || '#888') + 'cc';
   });
 
   mkChart('chart-week-dist', {
     type: 'bar',
     data: { labels: DAYS_FR, datasets: [{ data: dists, backgroundColor: cols, borderRadius: 6 }] },
-    options: { ...CHART_OPTS, scales: { x:{grid:{display:false}}, y:{grid:{color:'#2a2a2a'}} } }
+    options: { ...CHART_OPTS, scales: { x:{grid:{display:false}}, y:{grid:{color:'#e5e7eb'}} } }
   });
 
   mkChart('chart-week-dur', {
     type: 'bar',
     data: { labels: DAYS_FR, datasets: [{ data: durs, backgroundColor: cols, borderRadius: 6 }] },
-    options: { ...CHART_OPTS, scales: { x:{grid:{display:false}}, y:{grid:{color:'#2a2a2a'}} } }
+    options: { ...CHART_OPTS, scales: { x:{grid:{display:false}}, y:{grid:{color:'#e5e7eb'}} } }
   });
 
   const dist = typeDistribution(acts);
@@ -188,7 +186,7 @@ function renderMonthCharts(acts) {
         backgroundColor: TYPE_COLOR[t]+'cc', borderRadius: 5,
       })).filter(ds => ds.data.some(v=>v>0))
     },
-    options: { ...CHART_OPTS, plugins: { legend:{position:'bottom',labels:{color:'#64748b',boxWidth:10}} }, scales: { x:{stacked:true,grid:{display:false}}, y:{stacked:true,grid:{color:'#2a2a2a'}} } }
+    options: { ...CHART_OPTS, plugins: { legend:{position:'bottom',labels:{color:'#64748b',boxWidth:10}} }, scales: { x:{stacked:true,grid:{display:false}}, y:{stacked:true,grid:{color:'#e5e7eb'}} } }
   });
 
   const dist = typeDistribution(acts);
@@ -199,7 +197,7 @@ function renderMonthCharts(acts) {
       labels: keys.map(t=>TYPE_LABEL[t]||t),
       datasets: [{ data: Object.values(dist), backgroundColor: keys.map(t=>(TYPE_COLOR[t]||'#888')+'cc'), borderRadius:6 }]
     },
-    options: { ...CHART_OPTS, scales: { x:{grid:{display:false}}, y:{grid:{color:'#2a2a2a'}} } }
+    options: { ...CHART_OPTS, scales: { x:{grid:{display:false}}, y:{grid:{color:'#e5e7eb'}} } }
   });
 }
 
@@ -219,7 +217,7 @@ function renderYearCharts(acts) {
         backgroundColor: TYPE_COLOR[t]+'cc', borderRadius: 4,
       })).filter(ds=>ds.data.some(v=>v>0))
     },
-    options: { ...CHART_OPTS, plugins:{legend:{position:'bottom',labels:{color:'#64748b',boxWidth:10}}}, scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,grid:{color:'#2a2a2a'}}} }
+    options: { ...CHART_OPTS, plugins:{legend:{position:'bottom',labels:{color:'#64748b',boxWidth:10}}}, scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,grid:{color:'#e5e7eb'}}} }
   });
 
   mkChart('chart-year-type', {
@@ -232,7 +230,7 @@ function renderYearCharts(acts) {
         backgroundColor: TYPE_COLOR[t]+'cc', borderRadius: 3,
       })).filter(ds=>ds.data.some(v=>v>0))
     },
-    options: { ...CHART_OPTS, plugins:{legend:{position:'bottom',labels:{color:'#64748b',boxWidth:10}}}, scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,grid:{color:'#2a2a2a'}}} }
+    options: { ...CHART_OPTS, plugins:{legend:{position:'bottom',labels:{color:'#64748b',boxWidth:10}}}, scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,grid:{color:'#e5e7eb'}}} }
   });
 
   const dist = typeDistribution(acts);

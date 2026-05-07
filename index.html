@@ -105,6 +105,18 @@
       ════════════════════════════════════════════════ -->
       <div id="view-dashboard" class="view active">
 
+        <!-- Coach (dashboard) -->
+        <div class="coach-section" id="coach-section-dash" style="display:none">
+          <div class="coach-header">
+            <div class="coach-title">
+              <div class="coach-avatar">🤖</div>
+              Conseil du Coach
+            </div>
+            <span class="coach-date" id="coach-date-dash"></span>
+          </div>
+          <div class="coach-items" id="coach-items-dash"></div>
+        </div>
+
         <!-- Sub-tab bar -->
         <div class="subtab-bar">
           <button class="subtab" data-tab="day"   onclick="switchSubTab('day')">Jour</button>
@@ -269,21 +281,30 @@
       <div id="view-activities" class="view">
 
         <!-- Period selector + filter -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
           <div style="display:flex;gap:4px">
             <button class="hpb act-period-btn active" data-period="month" onclick="setActPeriod('month',this)">Ce mois</button>
             <button class="hpb act-period-btn" data-period="week"  onclick="setActPeriod('week',this)">7 jours</button>
             <button class="hpb act-period-btn" data-period="year"  onclick="setActPeriod('year',this)">Cette année</button>
             <button class="hpb act-period-btn" data-period="all"   onclick="setActPeriod('all',this)">Tout</button>
           </div>
-          <div class="filter-bar" style="margin:0">
-            <button class="filter-btn active" data-type="all"       onclick="setFilter('all')">Tous</button>
-            <button class="filter-btn" data-type="run"       onclick="setFilter('run')"><span class="filter-dot" style="background:var(--run)"></span>Course</button>
-            <button class="filter-btn" data-type="swim"      onclick="setFilter('swim')"><span class="filter-dot" style="background:var(--swim)"></span>Natation</button>
-            <button class="filter-btn" data-type="strength"  onclick="setFilter('strength')"><span class="filter-dot" style="background:var(--strength)"></span>Muscu</button>
-            <button class="filter-btn" data-type="bike"      onclick="setFilter('bike')"><span class="filter-dot" style="background:var(--bike)"></span>Vélo</button>
-            <button class="filter-btn" data-type="hiit"      onclick="setFilter('hiit')"><span class="filter-dot" style="background:var(--hiit)"></span>HIIT</button>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="acts-search-wrap">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input class="acts-search" id="acts-search" type="text" placeholder="Rechercher…" oninput="renderActivities()">
+            </div>
           </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="filter-bar" style="margin-bottom:16px">
+          <button class="filter-btn active" data-type="all"       onclick="setFilter('all')">Tous</button>
+          <button class="filter-btn" data-type="run"       onclick="setFilter('run')"><span class="filter-dot" style="background:var(--run)"></span>Course</button>
+          <button class="filter-btn" data-type="swim"      onclick="setFilter('swim')"><span class="filter-dot" style="background:var(--swim)"></span>Natation</button>
+          <button class="filter-btn" data-type="hiit"      onclick="setFilter('hiit')"><span class="filter-dot" style="background:var(--hiit)"></span>HIIT</button>
+          <button class="filter-btn" data-type="rowing"    onclick="setFilter('rowing')"><span class="filter-dot" style="background:var(--rowing)"></span>Rameur</button>
+          <button class="filter-btn" data-type="strength"  onclick="setFilter('strength')"><span class="filter-dot" style="background:var(--strength)"></span>Muscu</button>
+          <button class="filter-btn" data-type="bike"      onclick="setFilter('bike')"><span class="filter-dot" style="background:var(--bike)"></span>Vélo</button>
         </div>
 
         <!-- KPI strip -->
