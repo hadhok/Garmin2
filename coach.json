@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-05-07",
+  "updated_at": "2026-05-08",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "vigilance",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 29.9,
-    "atl": 42.6,
-    "tsb": -12.7,
+    "ctl": 29.2,
+    "atl": 36.5,
+    "tsb": -7.3,
     "effort_idx": 0.93,
-    "body_battery": 21.7,
+    "body_battery": 27.7,
     "training_readiness": null,
     "niveau": "Actif",
     "total_activites": 206,
@@ -20,7 +20,7 @@
       "type": "warning",
       "icon": "🟡",
       "title": "Sous tension — vigilance requise",
-      "text": "Effort pondéré 7j : 0.9× (1.0 = charge de base, >2 = intense). TSB -13 pts (CTL 29.9 / ATL 42.6). • HRV 36.1 ms (-7 ms vs S-1) • Sommeil 7.7h/nuit • Body Battery fin de journée : 22%"
+      "text": "Effort pondéré 7j : 0.9× (1.0 = charge de base, >2 = intense). TSB -7 pts (CTL 29.2 / ATL 36.5). • HRV 35.4 ms (-10 ms vs S-1) • Sommeil 7.8h/nuit • Body Battery fin de journée : 28%"
     },
     {
       "type": "warning",
@@ -32,7 +32,7 @@
       "type": "goal",
       "icon": "📋",
       "title": "Prescription : Récupération active",
-      "text": "Hier : Récupération (run). 20-30 min de marche, mobilité ou yoga. Pas de cardio. Objectif : ne pas aggraver la fatigue. — Z1 uniquement — FC < 120 bpm"
+      "text": "20-30 min de marche, mobilité ou yoga. Pas de cardio. Objectif : ne pas aggraver la fatigue. — Z1 uniquement — FC < 120 bpm"
     }
   ]
 }
