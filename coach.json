@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-05-14",
+  "updated_at": "2026-05-15",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "vigilance",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 29.8,
-    "atl": 32.9,
-    "tsb": -3.1,
+    "ctl": 29.1,
+    "atl": 28.2,
+    "tsb": 0.9,
     "effort_idx": 0.99,
-    "body_battery": 18.7,
+    "body_battery": 18.0,
     "training_readiness": null,
     "niveau": "Actif",
     "total_activites": 208,
@@ -20,7 +20,7 @@
       "type": "warning",
       "icon": "🟡",
       "title": "Sous tension — vigilance requise",
-      "text": "Effort pondéré 7j : 1.0× (1.0 = charge de base, >2 = intense). TSB -3 pts (CTL 29.8 / ATL 32.9). • HRV 34.0 ms (-3 ms vs S-1) • Sommeil 8.2h/nuit • Body Battery fin de journée : 19%"
+      "text": "Effort pondéré 7j : 1.0× (1.0 = charge de base, >2 = intense). TSB +1 pts (CTL 29.1 / ATL 28.2). • HRV 34.8 ms (-0 ms vs S-1) • Sommeil 8.2h/nuit • Body Battery fin de journée : 18%"
     },
     {
       "type": "tip",
