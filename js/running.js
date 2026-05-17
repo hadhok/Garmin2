@@ -250,16 +250,56 @@ function renderRunKPIs() {
 
   const kd = (v, u) => v !== null ? `${v}<span class="kpi-unit">${u}</span>` : '–';
 
-  el.innerHTML = [
-    { label: 'VO2max', val: vo2 ? `${vo2}<span class="kpi-unit"> ml/kg/min</span>` : '–',
-      sub: vo2Delta !== null ? `<div class="kpi-delta ${vo2Delta >= 0 ? 'up' : 'down'}">${vo2Delta >= 0 ? '▲' : '▼'} ${Math.abs(vo2Delta)}</div>` : '' },
-    { label: 'Allure Marathon', val: marathonTime ? secToPace(marathonTime.paceSec) : '–', sub: '<div class="kpi-delta">estimé VDOT</div>' },
-    { label: 'CTL run', val: kd(last.ctl.toFixed(1), ' pts'), sub: '' },
-    { label: 'ATL run', val: kd(last.atl.toFixed(1), ' pts'), sub: '' },
-    { label: 'TSB run', val: kd(last.tsb.toFixed(1), ' pts'),
-      sub: `<div class="kpi-delta ${last.tsb >= 0 ? 'up' : 'down'}">${last.tsb >= 0 ? 'Frais' : 'Fatigué'}</div>` },
-    { label: 'Distance 7j', val: kd(dist7.toFixed(1), ' km'), sub: '' },
-  ].map(k => `<div class="kpi-card"><div class="kpi-label">${k.label}</div><div class="kpi-value">${k.val}</div>${k.sub}</div>`).join('');
+  const tsbStatus = last.tsb > 5 ? 'Très frais — charge insuffisante' :
+                    last.tsb >= -5 ? 'Équilibré — prêt à performer' :
+                    last.tsb >= -10 ? 'Légèrement fatigué — progression active' :
+                    last.tsb >= -20 ? 'Zone de surcompensation — progression optimale' :
+                    'Surcharge — récupération nécessaire';
+
+  const cards = [
+    { label: 'VO2max',
+      val: vo2 ? `${vo2}<span class="kpi-unit"> ml/kg/min</span>` : '–',
+      sub: vo2Delta !== null ? `<div class="kpi-delta ${vo2Delta >= 0 ? 'up' : 'down'}">${vo2Delta >= 0 ? '▲' : '▼'} ${Math.abs(vo2Delta)}</div>` : '',
+      tip: `Consommation maximale d'oxygène mesurée par Garmin. Plus la valeur est élevée, meilleure est votre capacité aérobie. Le delta (▲▼) compare la dernière séance à la précédente.` },
+    { label: 'Allure Marathon',
+      val: marathonTime ? secToPace(marathonTime.paceSec) : '–',
+      sub: '<div class="kpi-delta">estimé VDOT</div>',
+      tip: `Allure marathon estimée par la méthode Jack Daniels (VDOT). Calculée depuis votre VO2max actuel. C'est une estimation théorique — les conditions réelles peuvent varier.` },
+    { label: 'CTL run',
+      val: kd(last.ctl.toFixed(1), ' pts'),
+      sub: '',
+      tip: `Charge Chronique (Fitness) — moyenne exponentielle sur 42 jours. Représente votre endurance de fond. Plus c'est élevé, plus vous êtes entraîné sur le long terme.` },
+    { label: 'ATL run',
+      val: kd(last.atl.toFixed(1), ' pts'),
+      sub: '',
+      tip: `Charge Aiguë (Fatigue) — moyenne exponentielle sur 7 jours. Reflète la charge des derniers jours. Une ATL élevée signifie une semaine intense, donc plus de fatigue.` },
+    { label: 'TSB run',
+      val: kd(last.tsb.toFixed(1), ' pts'),
+      sub: `<div class="kpi-delta ${last.tsb >= -10 ? 'up' : 'down'}">${last.tsb >= 0 ? 'Frais' : 'Fatigué'}</div>`,
+      tip: `Balance (Forme) = CTL − ATL. Positif → Frais. Négatif → Fatigué.\n• > +5 : trop frais, sous-charge\n• −5 à −10 : zone optimale de progression\n• < −20 : surcharge, risque blessure\n\nActuellement : ${tsbStatus}` },
+    { label: 'Distance 7j',
+      val: kd(dist7.toFixed(1), ' km'),
+      sub: '',
+      tip: `Distance totale parcourue en course à pied sur les 7 derniers jours (toutes courses ≥ ${MIN_DIST} km).` },
+  ];
+
+  el.innerHTML = cards.map(k => `
+    <div class="kpi-card" onclick="kpiTipToggle(this)">
+      <div class="kpi-info-btn">i</div>
+      <div class="kpi-tooltip">${k.tip.replace(/\n/g, '<br>')}</div>
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.val}</div>
+      ${k.sub}
+    </div>`).join('');
+}
+
+function kpiTipToggle(card) {
+  // Sur mobile (no-hover) : toggle. Sur desktop le CSS :hover suffit.
+  const isTouch = window.matchMedia('(hover: none)').matches;
+  if (!isTouch) return;
+  const isOpen = card.classList.contains('tip-open');
+  document.querySelectorAll('.kpi-card.tip-open').forEach(c => c.classList.remove('tip-open'));
+  if (!isOpen) card.classList.add('tip-open');
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1094,3 +1134,10 @@ function renderRunning() {
   renderRunTypesGrid();
   renderRunTable();
 }
+
+/* ── Fermer les tooltips KPI en tapant en dehors (mobile) ── */
+document.addEventListener('click', e => {
+  if (!e.target.closest('.kpi-card')) {
+    document.querySelectorAll('.kpi-card.tip-open').forEach(c => c.classList.remove('tip-open'));
+  }
+});

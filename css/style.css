@@ -583,6 +583,62 @@ body.loading main::before {
   transition: box-shadow 0.15s, border-color 0.15s;
 }
 .kpi-card:hover { border-color: var(--border2); box-shadow: 0 4px 8px rgba(0,0,0,0.08); }
+
+/* ── KPI Tooltip ── */
+.kpi-card { position: relative; }
+.kpi-info-btn {
+  position: absolute;
+  top: 10px; right: 10px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--border);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+.kpi-info-btn:hover { background: var(--accent); color: #fff; }
+.kpi-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e293b;
+  color: #f1f5f9;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 10px 13px;
+  border-radius: 10px;
+  width: 220px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.22);
+  z-index: 999;
+  pointer-events: none;
+  white-space: normal;
+}
+.kpi-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%; left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #1e293b;
+}
+/* Affichage : hover desktop */
+.kpi-card:hover .kpi-tooltip,
+.kpi-card.tip-open .kpi-tooltip {
+  display: block;
+}
+/* Éviter que la bulle sorte à gauche/droite */
+.kpi-card:first-child .kpi-tooltip { left: 0; transform: none; }
+.kpi-card:first-child .kpi-tooltip::after { left: 24px; transform: none; }
+.kpi-card:last-child .kpi-tooltip { left: auto; right: 0; transform: none; }
+.kpi-card:last-child .kpi-tooltip::after { left: auto; right: 18px; transform: none; }
 .kpi-label {
   font-size: 11px;
   text-transform: uppercase;
