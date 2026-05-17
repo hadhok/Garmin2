@@ -353,22 +353,113 @@ function kpiTipToggle(card) {
 function renderRunFormChart() {
   const curve = computeRunForm();
   if (!curve.length) return;
-  const labels = curve.map(d => new Date(d.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
+
+  const labels   = curve.map(d => new Date(d.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
+  const ctlVals  = curve.map(d => d.ctl);
+  const atlVals  = curve.map(d => d.atl);
+  const tsbVals  = curve.map(d => d.tsb);
+
+  const maxCTLATL = Math.ceil(Math.max(...ctlVals, ...atlVals, 1) * 1.2);
+  const tsbMin    = Math.floor(Math.min(...tsbVals, -5)  - 5);
+  const tsbMax    = Math.ceil( Math.max(...tsbVals,  5)  + 5);
+
   mkChart('chart-run-form', {
     type: 'line',
     data: { labels, datasets: [
-      { label: 'CTL', data: curve.map(d => d.ctl), borderColor: '#6366f1', fill: false, tension: 0.4, pointRadius: 0, borderWidth: 2 },
-      { label: 'ATL', data: curve.map(d => d.atl), borderColor: '#f97316', fill: false, tension: 0.4, pointRadius: 0, borderWidth: 2 },
-      { label: 'TSB', data: curve.map(d => d.tsb), borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.08)', fill: 'origin', tension: 0.4, pointRadius: 0, borderWidth: 2, borderDash: [5, 3] },
+      { label: 'CTL', data: ctlVals,
+        borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.06)',
+        fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2.5,
+        yAxisID: 'yCTL' },
+      { label: 'ATL', data: atlVals,
+        borderColor: '#f97316', backgroundColor: 'transparent',
+        fill: false, tension: 0.4, pointRadius: 0, borderWidth: 2,
+        yAxisID: 'yCTL' },
+      { label: 'TSB', data: tsbVals,
+        borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.08)',
+        fill: 'origin', tension: 0.4, pointRadius: 0, borderWidth: 2,
+        borderDash: [5, 3], yAxisID: 'yTSB' },
     ]},
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false },
-        annotation: { annotations: { zero: { type: 'line', yMin: 0, yMax: 0, borderColor: 'rgba(0,0,0,0.18)', borderWidth: 1 } } }
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: {
+          label: c => {
+            if (c.dataset.label === 'CTL') return `CTL (fitness) : ${c.raw} pts`;
+            if (c.dataset.label === 'ATL') return `ATL (fatigue) : ${c.raw} pts`;
+            if (c.dataset.label === 'TSB') {
+              const status = c.raw > 0 ? 'Frais' : c.raw > -10 ? 'Optimal' : c.raw > -20 ? 'En charge' : 'Surcharge';
+              return `TSB (forme) : ${c.raw} → ${status}`;
+            }
+          }
+        }},
+        annotation: { annotations: {
+          zero:      { type:'line', yScaleID:'yTSB', yMin:0,   yMax:0,   borderColor:'rgba(0,0,0,0.25)', borderWidth:1.5 },
+          surcharge: { type:'box',  yScaleID:'yTSB', yMin:tsbMin, yMax:-20, backgroundColor:'rgba(239,68,68,0.07)',  borderWidth:0 },
+          charge:    { type:'box',  yScaleID:'yTSB', yMin:-20,    yMax:-10, backgroundColor:'rgba(249,115,22,0.07)', borderWidth:0 },
+          optimal:   { type:'box',  yScaleID:'yTSB', yMin:-10,    yMax:0,   backgroundColor:'rgba(34,197,94,0.07)',  borderWidth:0 },
+          frais:     { type:'box',  yScaleID:'yTSB', yMin:0,      yMax:tsbMax, backgroundColor:'rgba(99,102,241,0.05)', borderWidth:0 },
+        }},
       },
-      scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } }, y: { grid: { color: '#e5e7eb' } } }
+      scales: {
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 10 } } },
+        yCTL: {
+          type: 'linear', position: 'left',
+          min: 0, max: maxCTLATL,
+          grid: { color: 'rgba(0,0,0,0.06)' },
+          title: { display: true, text: 'CTL / ATL (pts)', color: '#6366f1', font: { size: 10 } },
+          ticks: { font: { size: 10 }, color: '#6366f1' },
+        },
+        yTSB: {
+          type: 'linear', position: 'right',
+          min: tsbMin, max: tsbMax,
+          grid: { display: false },
+          title: { display: true, text: 'TSB (forme)', color: '#22c55e', font: { size: 10 } },
+          ticks: { font: { size: 10 }, color: '#22c55e',
+            callback: v => v === 0 ? '0' : v > 0 ? `+${v}` : `${v}` },
+        },
+      },
     }
   });
+
+  // ── Barre de référence CTL ──────────────────────────────────────────────────
+  const scaleEl = document.getElementById('run-ctl-scale');
+  if (!scaleEl) return;
+  const lastCTL = ctlVals[ctlVals.length - 1] || 0;
+  const ctlLevels = [
+    { max: 20,  label: 'Débutant',      color: '#94a3b8' },
+    { max: 40,  label: 'Régulier',      color: '#22c55e' },
+    { max: 60,  label: 'Avancé',        color: '#3b82f6' },
+    { max: 80,  label: 'Performant',    color: '#f97316' },
+    { max: Infinity, label: 'Elite',   color: '#ef4444' },
+  ];
+  const currentLevel = ctlLevels.find(l => lastCTL < l.max);
+  scaleEl.innerHTML = `
+    <div style="margin-top:12px;padding:10px 14px;background:var(--surface2);border-radius:10px;font-size:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px">Niveau CTL actuel</span>
+        <span style="font-weight:700;color:${currentLevel.color}">${currentLevel.label} — ${lastCTL} pts</span>
+      </div>
+      <div style="display:flex;gap:2px;height:8px;border-radius:6px;overflow:hidden">
+        ${ctlLevels.map((l, i) => {
+          const prev = i > 0 ? ctlLevels[i-1].max : 0;
+          const size = l.max === Infinity ? 20 : l.max - prev;
+          const filled = lastCTL >= (l.max === Infinity ? prev : l.max);
+          const partial = lastCTL >= prev && lastCTL < l.max;
+          const pct = partial ? Math.round((lastCTL - prev) / size * 100) : 0;
+          return `<div style="flex:${size === Infinity ? 1 : size};background:var(--border);border-radius:2px;overflow:hidden;position:relative">
+            <div style="height:100%;width:${filled ? 100 : pct}%;background:${l.color};border-radius:2px"></div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:var(--muted)">
+        <span>0</span><span>20</span><span>40</span><span>60</span><span>80</span><span>100+</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
+        ${ctlLevels.map(l => `<span style="font-size:10px;color:var(--muted)"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${l.color};margin-right:3px"></span>${l.label}</span>`).join('')}
+      </div>
+    </div>`;
 }
 
 /* ══════════════════════════════════════════════════════════
