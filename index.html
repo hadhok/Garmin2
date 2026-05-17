@@ -613,107 +613,163 @@
       ════════════════════════════════════════════════ -->
       <div id="view-running" class="view">
 
+        <!-- Filtre période global -->
+        <div class="run-period-bar">
+          <button class="subtab" data-gperiod="3m"  onclick="setGlobalPeriod('3m')">3 mois</button>
+          <button class="subtab active" data-gperiod="6m"  onclick="setGlobalPeriod('6m')">6 mois</button>
+          <button class="subtab" data-gperiod="1y"  onclick="setGlobalPeriod('1y')">1 an</button>
+          <button class="subtab" data-gperiod="all" onclick="setGlobalPeriod('all')">Tout</button>
+        </div>
+
         <!-- KPI bar -->
         <div class="kpi-grid" id="run-kpis"></div>
 
         <!-- Plan de la semaine -->
-        <div class="section-header">Plan de la semaine</div>
-        <div class="card" id="run-week-plan"></div>
+        <div class="section-header collapsible" onclick="toggleSection(this)">Plan de la semaine <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="card" id="run-week-plan"></div>
+        </div>
 
-        <!-- Forme running + Pronostics -->
-        <div class="health-grid" style="margin-top:0">
-          <div class="card health-full">
-            <div class="section-header" style="margin:0 0 12px">Forme &amp; Fatigue — Course</div>
-            <div class="form-legend">
-              <span class="fleg"><span class="fleg-line" style="background:#6366f1"></span>CTL</span>
-              <span class="fleg"><span class="fleg-line" style="background:#f97316"></span>ATL</span>
-              <span class="fleg"><span class="fleg-dash" style="border-color:#22c55e"></span>TSB</span>
+        <!-- Records personnels -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">Records personnels <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="card"><div id="run-prs"></div></div>
+        </div>
+
+        <!-- Forme running -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">Forme &amp; Fatigue <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="health-grid" style="margin-top:0">
+            <div class="card health-full">
+              <div class="form-legend">
+                <span class="fleg"><span class="fleg-line" style="background:#6366f1"></span>CTL</span>
+                <span class="fleg"><span class="fleg-line" style="background:#f97316"></span>ATL</span>
+                <span class="fleg"><span class="fleg-dash" style="border-color:#22c55e"></span>TSB</span>
+              </div>
+              <div class="chart-wrap" style="height:200px"><canvas id="chart-run-form"></canvas></div>
+              <div class="section-header" style="margin:16px 0 8px;font-size:13px;font-weight:600">Volume hebdomadaire</div>
+              <div class="chart-wrap" style="height:160px"><canvas id="chart-run-volume"></canvas></div>
             </div>
-            <div class="chart-wrap" style="height:200px"><canvas id="chart-run-form"></canvas></div>
           </div>
         </div>
 
         <!-- Pronostics + Allures -->
-        <div class="health-grid">
-          <div class="card">
-            <div class="section-header" style="margin:0 0 12px">Pronostics</div>
-            <div id="run-pronostics"></div>
-          </div>
-          <div class="card">
-            <div class="section-header" style="margin:0 0 12px">Allures d'entraînement</div>
-            <div id="run-paces"></div>
+        <div class="section-header collapsible" onclick="toggleSection(this)">Pronostics &amp; Allures <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="health-grid">
+            <div class="card">
+              <div class="section-header" style="margin:0 0 12px">Pronostics</div>
+              <div id="run-pronostics"></div>
+            </div>
+            <div class="card">
+              <div class="section-header" style="margin:0 0 12px">Allures d'entraînement</div>
+              <div id="run-paces"></div>
+            </div>
           </div>
         </div>
 
-        <!-- VO2max + Zones FC -->
-        <div class="health-grid">
-          <div class="card">
-            <div class="section-header" style="margin:0 0 12px">Évolution VO2max</div>
-            <div class="chart-wrap" style="height:180px"><canvas id="chart-run-vo2"></canvas></div>
-          </div>
-          <div class="card">
-            <div class="section-header" style="margin:0 0 12px">Distribution zones FC</div>
-            <div class="chart-wrap" style="height:180px"><canvas id="chart-run-zones"></canvas></div>
+        <!-- VO2max + Zones FC + Tendance allure -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">VO2max &amp; Zones FC <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="health-grid">
+            <div class="card">
+              <div class="section-header" style="margin:0 0 12px">Évolution VO2max</div>
+              <div class="chart-wrap" style="height:180px"><canvas id="chart-run-vo2"></canvas></div>
+            </div>
+            <div class="card">
+              <div class="section-header" style="margin:0 0 12px">Distribution zones FC</div>
+              <div class="chart-wrap" style="height:180px"><canvas id="chart-run-zones"></canvas></div>
+            </div>
+            <div class="card">
+              <div class="section-header" style="margin:0 0 12px">Tendance allure</div>
+              <div class="chart-wrap" style="height:180px"><canvas id="chart-run-pace-trend"></canvas></div>
+            </div>
           </div>
         </div>
 
         <!-- TRIMP + Allure/FC -->
-        <div class="health-grid">
-          <div class="card">
-            <div class="section-header" style="margin:0 0 12px">Charge &amp; Monotonie</div>
-            <div id="run-trimp"></div>
-          </div>
-          <div class="card">
-            <div class="section-header" style="margin:0 0 12px">Efficience (Allure × FC)</div>
-            <div class="chart-wrap" style="height:180px"><canvas id="chart-run-efficiency"></canvas></div>
+        <div class="section-header collapsible" onclick="toggleSection(this)">TRIMP &amp; Efficience <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="health-grid">
+            <div class="card">
+              <div class="section-header" style="margin:0 0 12px">Charge &amp; Monotonie</div>
+              <div id="run-trimp"></div>
+            </div>
+            <div class="card">
+              <div class="section-header" style="margin:0 0 12px">Efficience (Allure × FC)</div>
+              <div class="chart-wrap" style="height:180px"><canvas id="chart-run-efficiency"></canvas></div>
+              <div id="run-ef-indicator"></div>
+            </div>
           </div>
         </div>
 
         <!-- Statistiques mensuelles -->
-        <div class="card" style="padding:0;overflow:hidden">
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;flex-wrap:wrap;gap:8px">
-            <span style="font-weight:600;font-size:14px">Statistiques</span>
-            <div style="display:flex;gap:6px;flex-wrap:wrap">
-              <div class="subtab-bar" style="margin:0;padding:0;background:var(--surface2);border-radius:8px;display:flex">
-                <button class="subtab active" data-rperiod="3m"  onclick="setRunPeriod('3m')">3 mois</button>
-                <button class="subtab"        data-rperiod="6m"  onclick="setRunPeriod('6m')">6 mois</button>
-                <button class="subtab"        data-rperiod="1y"  onclick="setRunPeriod('1y')">1 an</button>
-                <button class="subtab"        data-rperiod="all" onclick="setRunPeriod('all')">Tout</button>
+        <div class="section-header collapsible" onclick="toggleSection(this)">Statistiques mensuelles <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="card" style="padding:0;overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;flex-wrap:wrap;gap:8px">
+              <span style="font-weight:600;font-size:14px">Statistiques</span>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <div class="subtab-bar" style="margin:0;padding:0;background:var(--surface2);border-radius:8px;display:flex">
+                  <button class="subtab active" data-rperiod="3m"  onclick="setRunPeriod('3m')">3 mois</button>
+                  <button class="subtab"        data-rperiod="6m"  onclick="setRunPeriod('6m')">6 mois</button>
+                  <button class="subtab"        data-rperiod="1y"  onclick="setRunPeriod('1y')">1 an</button>
+                  <button class="subtab"        data-rperiod="all" onclick="setRunPeriod('all')">Tout</button>
+                </div>
               </div>
             </div>
+            <table class="acts-table" id="run-stats-table">
+              <thead><tr>
+                <th>Mois</th><th>Sorties</th><th>Distance</th><th>Durée</th>
+                <th>Allure moy</th><th>FC moy</th><th>Dénivelé</th><th>TRIMP</th>
+              </tr></thead>
+              <tbody id="run-stats-body"></tbody>
+            </table>
           </div>
-          <table class="acts-table" id="run-stats-table">
-            <thead><tr>
-              <th>Mois</th><th>Sorties</th><th>Distance</th><th>Durée</th>
-              <th>Allure moy</th><th>FC moy</th><th>Dénivelé</th><th>TRIMP</th>
-            </tr></thead>
-            <tbody id="run-stats-body"></tbody>
-          </table>
         </div>
 
         <!-- Analyse types de courses -->
-        <div class="card" style="padding:0;overflow:hidden">
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;flex-wrap:wrap;gap:8px">
-            <span style="font-weight:600;font-size:14px">Analyse — Types de courses</span>
-            <div style="display:flex;gap:6px;align-items:center">
-              <button class="subtab" onclick="setRunYear(-1)">‹</button>
-              <span id="run-year-label" style="font-size:13px;font-weight:500;min-width:40px;text-align:center"></span>
-              <button class="subtab" onclick="setRunYear(+1)">›</button>
+        <div class="section-header collapsible" onclick="toggleSection(this)">Types de courses <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="card" style="padding:0;overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;flex-wrap:wrap;gap:8px">
+              <span style="font-weight:600;font-size:14px">Analyse — Types de courses</span>
+              <div style="display:flex;gap:6px;align-items:center">
+                <button class="subtab" onclick="setRunYear(-1)">‹</button>
+                <span id="run-year-label" style="font-size:13px;font-weight:500;min-width:40px;text-align:center"></span>
+                <button class="subtab" onclick="setRunYear(+1)">›</button>
+              </div>
             </div>
+            <div id="run-types-grid" style="overflow-x:auto"></div>
           </div>
-          <div id="run-types-grid" style="overflow-x:auto"></div>
+        </div>
+
+        <!-- Calendrier visuel -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">Calendrier <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="card" id="run-calendar"></div>
         </div>
 
         <!-- Tableau des sorties -->
-        <div class="section-header" style="margin-top:8px">Historique des courses</div>
-        <div class="card" style="padding:0;overflow:hidden">
-          <table class="acts-table" id="run-table">
-            <thead><tr>
-              <th>Date</th><th>Nom</th><th>Dist.</th><th>Durée</th>
-              <th>Allure</th><th>FC moy</th><th>VO2max</th><th>TRIMP</th><th>Charge</th>
-            </tr></thead>
-            <tbody id="run-table-body"></tbody>
-          </table>
+        <div class="section-header collapsible" onclick="toggleSection(this)">Historique des courses <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="card" style="padding:0;overflow:hidden">
+            <table class="acts-table" id="run-table">
+              <thead><tr>
+                <th class="run-th-sort" onclick="sortRunTable('date')">Date <span class="sort-arrow" id="sort-date">▼</span></th>
+                <th>Nom</th>
+                <th class="run-th-sort" onclick="sortRunTable('distance_km')">Dist. <span class="sort-arrow" id="sort-distance_km"></span></th>
+                <th class="run-th-sort" onclick="sortRunTable('duration_min')">Durée <span class="sort-arrow" id="sort-duration_min"></span></th>
+                <th class="run-th-sort" onclick="sortRunTable('pace_min_km')">Allure <span class="sort-arrow" id="sort-pace_min_km"></span></th>
+                <th class="run-th-sort" onclick="sortRunTable('hr_avg')">FC moy <span class="sort-arrow" id="sort-hr_avg"></span></th>
+                <th>Type</th>
+                <th class="run-th-sort" onclick="sortRunTable('vo2max')">VO2max <span class="sort-arrow" id="sort-vo2max"></span></th>
+                <th class="run-th-sort" onclick="sortRunTable('trimp')">TRIMP <span class="sort-arrow" id="sort-trimp"></span></th>
+                <th class="run-th-sort" onclick="sortRunTable('training_load')">Charge <span class="sort-arrow" id="sort-training_load"></span></th>
+              </tr></thead>
+              <tbody id="run-table-body"></tbody>
+            </table>
+          </div>
         </div>
 
       </div><!-- /view-running -->

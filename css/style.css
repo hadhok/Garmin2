@@ -1333,3 +1333,177 @@ body.loading main::before {
     padding-top: env(safe-area-inset-top, 0px);
   }
 }
+
+/* ══════════════════════════════════════════════════════════
+   RUNNING — Améliorations
+   ══════════════════════════════════════════════════════════ */
+
+/* Barre de filtre période globale */
+.run-period-bar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  background: var(--surface2);
+  border-radius: 8px;
+  padding: 3px;
+  width: fit-content;
+}
+
+/* Sections repliables (accordion) */
+.section-header.collapsible { cursor: pointer; user-select: none; display: flex; justify-content: space-between; align-items: center; }
+.chev { font-size: 12px; transition: transform 0.2s; color: var(--muted); margin-left: 6px; }
+.section-body { overflow: hidden; transition: max-height 0.35s ease; }
+.section-body.closed { display: none; }
+
+/* Personal Records */
+.pr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+.pr-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  position: relative;
+}
+.pr-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 16px;
+}
+.pr-category {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.pr-pace {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.pr-meta {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+/* Calendrier visuel */
+.run-cal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.run-cal-nav button {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 12px;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 14px;
+  transition: all .15s;
+}
+.run-cal-nav button:hover { border-color: var(--border2); }
+.run-cal-title {
+  font-weight: 700;
+  font-size: 14px;
+}
+.run-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.run-cal-head {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: center;
+  padding: 4px 0;
+}
+.run-cal-day {
+  aspect-ratio: 1;
+  border-radius: 6px;
+  background: var(--surface2);
+  position: relative;
+  cursor: default;
+  transition: transform .1s;
+}
+.run-cal-day.has-run {
+  cursor: pointer;
+}
+.run-cal-day.has-run:hover { transform: scale(1.1); z-index: 2; }
+.run-cal-day.empty { background: transparent; }
+.run-cal-day-num {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-size: 9px;
+  color: var(--muted);
+  line-height: 1;
+}
+.run-cal-day.has-run .run-cal-day-num { color: rgba(255,255,255,0.8); }
+
+/* Tooltip calendrier */
+.run-cal-day[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15,15,15,0.92);
+  color: #fff;
+  font-size: 11px;
+  white-space: nowrap;
+  border-radius: 6px;
+  padding: 5px 8px;
+  pointer-events: none;
+  z-index: 100;
+  line-height: 1.5;
+}
+
+/* Efficience Factor indicator */
+.ef-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: var(--surface2);
+  border-radius: 8px;
+  font-size: 12px;
+}
+.ef-value {
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Bouton Garmin push */
+.btn-garmin-push {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-garmin-push:hover { opacity: 0.85; }
+.btn-garmin-push:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Tri tableau */
+.run-th-sort { cursor: pointer; user-select: none; white-space: nowrap; }
+.run-th-sort:hover { color: var(--accent); }
+.sort-arrow { font-size: 9px; margin-left: 3px; color: var(--accent); }

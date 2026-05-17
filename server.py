@@ -96,6 +96,19 @@ def status():
         'total':     d.get('total', 0),
     })
 
+# ── API : push plan → Garmin Connect ────────────────────────────────────────
+@app.route('/api/push-plan', methods=['POST'])
+def api_push_plan():
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('push_plan', os.path.join(BASE, 'push_plan.py'))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        pushed = mod.push_plan_to_garmin()
+        return jsonify({'pushed': len(pushed), 'sessions': pushed})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     print("Garmin Dashboard → http://localhost:5000")
     app.run(port=5000, debug=False)

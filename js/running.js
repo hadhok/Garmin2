@@ -23,6 +23,11 @@ function hrZoneBounds(z) {
 const runState = {
   period: '6m',
   year: new Date().getFullYear(),
+  globalPeriod: '6m',
+  calendarMonth: new Date().getMonth(),
+  calendarYear: new Date().getFullYear(),
+  sortCol: 'date',
+  sortDir: -1,
 };
 
 /* ── Helpers ── */
@@ -215,6 +220,12 @@ function renderWeekPlan() {
       ${p.lastHRV ? `<span>HRV ${p.lastHRV} ms</span>` : ''}
       ${p.lastBB  ? `<span>Battery ${p.lastBB}%</span>` : ''}
       <span>TSB cible fin semaine : ${p.tsbTarget}</span>
+    </div>
+
+    <div style="margin-top:14px;text-align:right">
+      <button class="btn-garmin-push" onclick="pushPlanToGarmin(this)">
+        📤 Envoyer vers Garmin Connect
+      </button>
     </div>`;
 }
 
@@ -256,6 +267,32 @@ function renderRunKPIs() {
                     last.tsb >= -20 ? 'Zone de surcompensation — progression optimale' :
                     'Surcharge — récupération nécessaire';
 
+  // Streak : semaines consécutives avec ≥1 course (en remontant depuis aujourd'hui)
+  let streak = 0;
+  {
+    const runDates = new Set(runs.map(r => r.date.slice(0, 10)));
+    for (let w = 0; w < 104; w++) {
+      const monday = new Date(TODAY);
+      monday.setDate(monday.getDate() - monday.getDay() + 1 - w * 7);
+      let found = false;
+      for (let d = 0; d < 7; d++) {
+        const dd = new Date(monday);
+        dd.setDate(dd.getDate() + d);
+        if (runDates.has(dd.toISOString().slice(0, 10))) { found = true; break; }
+      }
+      if (!found) break;
+      streak++;
+    }
+  }
+
+  // Séances/semaine : moyenne sur les 12 dernières semaines
+  let seancesPerWeek = 0;
+  {
+    const d12w = new Date(TODAY); d12w.setDate(d12w.getDate() - 84);
+    const runs12w = runs.filter(r => new Date(r.date) >= d12w);
+    seancesPerWeek = +(runs12w.length / 12).toFixed(1);
+  }
+
   const cards = [
     { label: 'VO2max',
       val: vo2 ? `${vo2}<span class="kpi-unit"> ml/kg/min</span>` : '–',
@@ -281,6 +318,14 @@ function renderRunKPIs() {
       val: kd(dist7.toFixed(1), ' km'),
       sub: '',
       tip: `Distance totale parcourue en course à pied sur les 7 derniers jours (toutes courses ≥ ${MIN_DIST} km).` },
+    { label: 'Streak',
+      val: `${streak}<span class="kpi-unit"> sem.</span>`,
+      sub: '',
+      tip: `Nombre de semaines consécutives avec au moins une course, en comptant à rebours depuis aujourd'hui. Indique la régularité de l'entraînement.` },
+    { label: 'Séances/sem',
+      val: `${seancesPerWeek}<span class="kpi-unit">/sem</span>`,
+      sub: '<div class="kpi-delta">12 dernières sem.</div>',
+      tip: `Nombre moyen de courses par semaine calculé sur les 12 dernières semaines (84 jours). Mesure la fréquence d'entraînement récente.` },
   ];
 
   el.innerHTML = cards.map(k => `
@@ -406,7 +451,7 @@ function renderRunVO2Chart() {
    RENDER : Distribution zones FC (agrégé sur toutes courses)
    ══════════════════════════════════════════════════════════ */
 function renderRunZonesChart() {
-  const runs = getRuns().filter(r => r.hr_zones_pct && r.duration_min);
+  const runs = getRunsForGlobalPeriod().filter(r => r.hr_zones_pct && r.duration_min);
   if (!runs.length) return;
 
   // Moyenne pondérée par durée
@@ -437,24 +482,45 @@ function renderRunZonesChart() {
    RENDER : Efficience allure × FC (scatter)
    ══════════════════════════════════════════════════════════ */
 function renderRunEfficiencyChart() {
-  const runs = getRuns().filter(r => r.pace_min_km && r.hr_avg);
+  const runs = getRunsForGlobalPeriod().filter(r => r.pace_min_km && r.hr_avg);
   if (runs.length < 3) return;
 
   const data = runs.map(r => ({
     x: paceToSec(r.pace_min_km),
     y: r.hr_avg,
     label: r.date,
+    speed: r.distance_km && r.duration_min ? (r.distance_km / r.duration_min * 1000) : null,
   })).filter(p => p.x);
+
+  // Régression linéaire simple
+  const n = data.length;
+  const sumX  = data.reduce((s, p) => s + p.x, 0);
+  const sumY  = data.reduce((s, p) => s + p.y, 0);
+  const sumXY = data.reduce((s, p) => s + p.x * p.y, 0);
+  const sumX2 = data.reduce((s, p) => s + p.x * p.x, 0);
+  const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+  const intercept = (sumY - slope * sumX) / n;
+  const xMin = Math.min(...data.map(p => p.x));
+  const xMax = Math.max(...data.map(p => p.x));
+  const regrData = [{ x: xMin, y: slope * xMin + intercept }, { x: xMax, y: slope * xMax + intercept }];
 
   mkChart('chart-run-efficiency', {
     type: 'scatter',
-    data: { datasets: [{ data, backgroundColor: 'rgba(99,102,241,0.6)', pointRadius: 5, pointHoverRadius: 7 }] },
+    data: {
+      datasets: [
+        { data, backgroundColor: 'rgba(99,102,241,0.6)', pointRadius: 5, pointHoverRadius: 7, label: 'Course' },
+        { type: 'line', data: regrData, borderColor: 'rgba(239,68,68,0.8)', backgroundColor: 'transparent',
+          borderWidth: 2, pointRadius: 0, label: 'Tendance', tension: 0 },
+      ]
+    },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: {
-          label: c => `${c.raw.label} — ${secToPace(c.raw.x)}/km @ ${c.raw.y} bpm`
+          label: c => c.dataset.label === 'Course'
+            ? `${c.raw.label} — ${secToPace(c.raw.x)}/km @ ${c.raw.y} bpm`
+            : null
         }}
       },
       scales: {
@@ -465,6 +531,28 @@ function renderRunEfficiencyChart() {
       }
     }
   });
+
+  // Efficience Factor = vitesse (m/min) / FC moy
+  const efData = data.filter(p => p.speed && p.y > 0);
+  const efIndicator = document.getElementById('run-ef-indicator');
+  if (efIndicator && efData.length) {
+    const efValues = efData.map(p => p.speed / p.y);
+    const efAvg = efValues.reduce((s, v) => s + v, 0) / efValues.length;
+    // Tendance : compare 1ère moitié vs 2ème moitié
+    const half = Math.floor(efValues.length / 2);
+    const efOld = half > 0 ? efValues.slice(0, half).reduce((s,v) => s+v, 0) / half : efAvg;
+    const efNew = efValues.slice(half).reduce((s, v) => s + v, 0) / (efValues.length - half);
+    const improving = efNew > efOld;
+    efIndicator.innerHTML = `
+      <div class="ef-indicator">
+        <div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:2px">Efficience Factor</div>
+          <div class="ef-value">${efAvg.toFixed(3)}</div>
+        </div>
+        <div style="font-size:22px">${improving ? '↑' : '↓'}</div>
+        <div style="font-size:11px;color:var(--muted)">${improving ? 'En amélioration' : 'En baisse'}<br>sur la période</div>
+      </div>`;
+  }
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -523,20 +611,62 @@ function renderRunTRIMP() {
 /* ══════════════════════════════════════════════════════════
    RENDER : Tableau des sorties
    ══════════════════════════════════════════════════════════ */
+const TYPE_COLORS_TABLE = {
+  'Easy Run':         '#22c55e',
+  'Tempo Run':        '#f97316',
+  'Interval Training':'#ef4444',
+  'Long Run':         '#6366f1',
+  'Récupération':     '#94a3b8',
+};
+
+function sortRunTable(col) {
+  if (runState.sortCol === col) {
+    runState.sortDir *= -1;
+  } else {
+    runState.sortCol = col;
+    runState.sortDir = -1;
+  }
+  // Update visual arrows
+  document.querySelectorAll('.sort-arrow').forEach(el => el.textContent = '');
+  const arrowEl = document.getElementById(`sort-${col}`);
+  if (arrowEl) arrowEl.textContent = runState.sortDir === -1 ? '▼' : '▲';
+  renderRunTable();
+}
+
 function renderRunTable() {
   const tbody = document.getElementById('run-table-body');
   if (!tbody) return;
-  const runs = getRuns().sort((a, b) => b.date.localeCompare(a.date));
+
+  const col = runState.sortCol;
+  const dir = runState.sortDir;
+
+  const runs = getRuns().map(r => ({ ...r, _trimp: computeTRIMP(r) })).sort((a, b) => {
+    let va, vb;
+    if (col === 'date')          { va = a.date;              vb = b.date; }
+    else if (col === 'distance_km')   { va = a.distance_km || 0;    vb = b.distance_km || 0; }
+    else if (col === 'duration_min')  { va = a.duration_min || 0;   vb = b.duration_min || 0; }
+    else if (col === 'pace_min_km')   { va = paceToSec(a.pace_min_km) || 9999; vb = paceToSec(b.pace_min_km) || 9999; }
+    else if (col === 'hr_avg')        { va = a.hr_avg || 0;          vb = b.hr_avg || 0; }
+    else if (col === 'vo2max')        { va = a.vo2max || 0;          vb = b.vo2max || 0; }
+    else if (col === 'trimp')         { va = a._trimp;               vb = b._trimp; }
+    else if (col === 'training_load') { va = a.training_load || 0;   vb = b.training_load || 0; }
+    else { va = a.date; vb = b.date; }
+    if (va < vb) return -dir;
+    if (va > vb) return dir;
+    return 0;
+  });
 
   if (!runs.length) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">Aucune course ≥ 3 km</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px">Aucune course ≥ 3 km</td></tr>';
     return;
   }
 
   tbody.innerHTML = runs.map(r => {
-    const trimp = computeTRIMP(r);
+    const trimp = r._trimp;
     const vo2   = r.vo2max ? r.vo2max : '–';
     const date  = new Date(r.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: '2-digit' });
+    const type  = classifyRun(r);
+    const tcolor = TYPE_COLORS_TABLE[type] || '#94a3b8';
     return `<tr>
       <td>${date}</td>
       <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.name || '–'}</td>
@@ -544,6 +674,7 @@ function renderRunTable() {
       <td>${fmt_dur(r.duration_min)}</td>
       <td style="font-variant-numeric:tabular-nums">${r.pace_min_km || '–'}/km</td>
       <td>${r.hr_avg || '–'} bpm</td>
+      <td><span style="font-size:11px;font-weight:600;color:${tcolor}">${type}</span></td>
       <td>${vo2}</td>
       <td>${trimp}</td>
       <td>${Math.round(r.training_load || 0)}</td>
@@ -934,6 +1065,31 @@ function getRunsForPeriod() {
   return runs.filter(r => new Date(r.date) >= cutoff);
 }
 
+/* Helper : runs filtrés selon la période globale */
+function getRunsForGlobalPeriod() {
+  const runs = getRuns();
+  if (runState.globalPeriod === 'all') return runs;
+  const months = runState.globalPeriod === '3m' ? 3 : runState.globalPeriod === '6m' ? 6 : 12;
+  const cutoff = new Date(TODAY);
+  cutoff.setMonth(cutoff.getMonth() - months);
+  return runs.filter(r => new Date(r.date) >= cutoff);
+}
+
+function setGlobalPeriod(p) {
+  runState.globalPeriod = p;
+  document.querySelectorAll('[data-gperiod]').forEach(b =>
+    b.classList.toggle('active', b.dataset.gperiod === p));
+  renderRunning();
+}
+
+function toggleSection(header) {
+  const body = header.nextElementSibling;
+  if (!body || !body.classList.contains('section-body')) return;
+  const isClosed = body.classList.toggle('closed');
+  const chev = header.querySelector('.chev');
+  if (chev) chev.style.transform = isClosed ? 'rotate(-90deg)' : '';
+}
+
 /* ══════════════════════════════════════════════════════════
    STATISTIQUES MENSUELLES
    ══════════════════════════════════════════════════════════ */
@@ -1115,16 +1271,276 @@ function renderRunTypesGrid() {
 }
 
 /* ══════════════════════════════════════════════════════════
+   RENDER : Personal Records
+   ══════════════════════════════════════════════════════════ */
+function renderRunPR() {
+  const el = document.getElementById('run-prs');
+  if (!el) return;
+  const runs = getRuns();
+  if (!runs.length) { el.innerHTML = '<p style="color:var(--muted);font-size:13px">Aucune donnée</p>'; return; }
+
+  const categories = [
+    { label: '3–5 km',  min: 3,  max: 5  },
+    { label: '5–8 km',  min: 5,  max: 8  },
+    { label: '8–14 km', min: 8,  max: 14 },
+    { label: '14–22 km',min: 14, max: 22 },
+    { label: '22 km+',  min: 22, max: Infinity },
+  ];
+
+  const prs = categories.map(cat => {
+    const bucket = runs.filter(r =>
+      r.distance_km >= cat.min && r.distance_km < cat.max && r.pace_min_km
+    );
+    if (!bucket.length) return null;
+    // Meilleur = allure la plus rapide = sec/km le plus bas
+    const best = bucket.reduce((best, r) => {
+      const s = paceToSec(r.pace_min_km);
+      return (s && s < (paceToSec(best.pace_min_km) || 9999)) ? r : best;
+    }, bucket[0]);
+    return { cat, run: best };
+  }).filter(Boolean);
+
+  if (!prs.length) { el.innerHTML = '<p style="color:var(--muted);font-size:13px">Pas encore de records calculables</p>'; return; }
+
+  el.innerHTML = `<div class="pr-grid">${prs.map(({ cat, run }) => {
+    const date = new Date(run.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: '2-digit' });
+    return `<div class="pr-card">
+      <div class="pr-badge">🏅</div>
+      <div class="pr-category">${cat.label}</div>
+      <div class="pr-pace">${run.pace_min_km}/km</div>
+      <div class="pr-meta">
+        ${run.distance_km?.toFixed(1)} km · ${date}<br>
+        ${run.name ? `<span style="opacity:.7">${run.name}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+/* ══════════════════════════════════════════════════════════
+   RENDER : Volume hebdomadaire (bar chart)
+   ══════════════════════════════════════════════════════════ */
+function renderRunVolumeChart() {
+  const WEEKS = 16;
+  const labels = [], volumes = [], colors = [];
+
+  for (let w = WEEKS - 1; w >= 0; w--) {
+    const monday = new Date(TODAY);
+    // Aller au lundi de la semaine courante
+    const dow = monday.getDay() === 0 ? 6 : monday.getDay() - 1;
+    monday.setDate(monday.getDate() - dow - w * 7);
+    const sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6);
+
+    const weekRuns = getRuns().filter(r => {
+      const d = new Date(r.date);
+      return d >= monday && d <= sunday;
+    });
+    const km = weekRuns.reduce((s, r) => s + (r.distance_km || 0), 0);
+
+    labels.push(monday.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
+    volumes.push(+km.toFixed(1));
+    colors.push(km === 0 ? 'rgba(148,163,184,0.3)' : km < 30 ? '#22c55e' : km < 50 ? '#f97316' : '#ef4444');
+  }
+
+  mkChart('chart-run-volume', {
+    type: 'bar',
+    data: { labels, datasets: [{ data: volumes, backgroundColor: colors, borderRadius: 4 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => `${c.raw} km` } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 10 } } },
+        y: { grid: { color: '#e5e7eb' }, ticks: { callback: v => v + ' km', font: { size: 10 } }, beginAtZero: true }
+      }
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
+   RENDER : Tendance allure mensuelle
+   ══════════════════════════════════════════════════════════ */
+function renderRunPaceTrend() {
+  const MONTHS = 12;
+  const labels = [], paces = [];
+  const MOIS_FR = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+
+  for (let m = MONTHS - 1; m >= 0; m--) {
+    const d = new Date(TODAY);
+    d.setDate(1);
+    d.setMonth(d.getMonth() - m);
+    const key = d.toISOString().slice(0, 7);
+    const monthRuns = getRuns().filter(r => r.date.startsWith(key) && r.pace_min_km && r.distance_km);
+
+    labels.push(`${MOIS_FR[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`);
+    if (monthRuns.length) {
+      const totalDist = monthRuns.reduce((s, r) => s + r.distance_km, 0);
+      const totalSec  = monthRuns.reduce((s, r) => s + paceToSec(r.pace_min_km) * r.distance_km, 0);
+      paces.push(totalDist > 0 ? +(totalSec / totalDist).toFixed(1) : null);
+    } else {
+      paces.push(null);
+    }
+  }
+
+  const validPaces = paces.filter(v => v !== null);
+  if (validPaces.length < 2) return;
+
+  // Couleur du point : vert si améliore (pace plus bas = plus rapide)
+  const ptColors = paces.map((v, i) => {
+    if (v === null) return 'transparent';
+    const prev = paces.slice(0, i).reverse().find(x => x !== null);
+    if (!prev) return '#6366f1';
+    return v <= prev ? '#22c55e' : '#ef4444';
+  });
+
+  const minP = Math.min(...validPaces);
+  const maxP = Math.max(...validPaces);
+
+  mkChart('chart-run-pace-trend', {
+    type: 'line',
+    data: { labels, datasets: [{
+      label: 'Allure moy.',
+      data: paces,
+      borderColor: '#6366f1',
+      backgroundColor: 'rgba(99,102,241,0.1)',
+      fill: true, tension: 0.4,
+      pointRadius: paces.map(v => v !== null ? 5 : 0),
+      pointBackgroundColor: ptColors,
+      spanGaps: true, borderWidth: 2,
+    }]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => c.raw !== null ? `${secToPace(c.raw)}/km` : '–' } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 6, font: { size: 10 } } },
+        y: {
+          grid: { color: '#e5e7eb' },
+          reverse: true,
+          min: Math.max(0, minP - 15),
+          max: maxP + 15,
+          ticks: { callback: v => secToPace(v), font: { size: 10 } },
+          title: { display: true, text: 'Allure (min/km)', color: '#94a3b8', font: { size: 10 } }
+        }
+      }
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
+   RENDER : Calendrier visuel
+   ══════════════════════════════════════════════════════════ */
+function renderRunCalendar() {
+  const el = document.getElementById('run-calendar');
+  if (!el) return;
+
+  const year  = runState.calendarYear;
+  const month = runState.calendarMonth;
+
+  // Indexer les courses par date
+  const runsByDate = {};
+  getRuns().forEach(r => {
+    const key = r.date.slice(0, 10);
+    if (!runsByDate[key]) runsByDate[key] = [];
+    runsByDate[key].push(r);
+  });
+
+  const MOIS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const JOURS   = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+
+  // 1er jour du mois (ISO week : lundi=0)
+  const firstDay = new Date(year, month, 1);
+  const startDow = (firstDay.getDay() + 6) % 7; // lundi = 0
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  // Cellules (padding avant + jours du mois)
+  const cells = [];
+  for (let i = 0; i < startDow; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  const TYPE_COLORS_CAL = {
+    'Easy Run':         '#22c55e',
+    'Tempo Run':        '#f97316',
+    'Interval Training':'#ef4444',
+    'Long Run':         '#6366f1',
+    'Récupération':     '#94a3b8',
+  };
+
+  const cellsHtml = cells.map(d => {
+    if (d === null) return `<div class="run-cal-day empty"></div>`;
+    const iso = `${year}-${String(month + 1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dayRuns = runsByDate[iso] || [];
+    if (!dayRuns.length) {
+      return `<div class="run-cal-day"><span class="run-cal-day-num">${d}</span></div>`;
+    }
+    // Prendre la course principale du jour
+    const r = dayRuns[0];
+    const type  = classifyRun(r);
+    const color = TYPE_COLORS_CAL[type] || '#94a3b8';
+    const tip   = `${d} — ${r.name || type}\\n${r.distance_km?.toFixed(1)} km · ${r.pace_min_km || '–'}/km`;
+    const onclick = `openDetail && openDetail('${r.id}')`;
+    return `<div class="run-cal-day has-run" style="background:${color}" data-tip="${tip}" onclick="${onclick}">
+      <span class="run-cal-day-num">${d}</span>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="run-cal-nav">
+      <button onclick="changeCalMonth(-1)">‹</button>
+      <span class="run-cal-title">${MOIS_FR[month]} ${year}</span>
+      <button onclick="changeCalMonth(+1)">›</button>
+    </div>
+    <div class="run-cal-grid">
+      ${JOURS.map(j => `<div class="run-cal-head">${j}</div>`).join('')}
+      ${cellsHtml}
+    </div>`;
+}
+
+function changeCalMonth(delta) {
+  runState.calendarMonth += delta;
+  if (runState.calendarMonth < 0)  { runState.calendarMonth = 11; runState.calendarYear--; }
+  if (runState.calendarMonth > 11) { runState.calendarMonth = 0;  runState.calendarYear++; }
+  renderRunCalendar();
+}
+
+/* ══════════════════════════════════════════════════════════
+   API : Push plan → Garmin
+   ══════════════════════════════════════════════════════════ */
+async function pushPlanToGarmin(btn) {
+  btn.disabled = true;
+  btn.textContent = '⏳ Injection en cours…';
+  try {
+    const r = await fetch('/api/push-plan', { method: 'POST' });
+    const d = await r.json();
+    if (r.ok) {
+      btn.textContent = `✅ ${d.pushed} séances injectées`;
+    } else {
+      btn.textContent = `❌ ${d.error}`;
+      btn.disabled = false;
+    }
+  } catch(e) {
+    btn.textContent = '❌ Erreur réseau';
+    btn.disabled = false;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
    ENTRY POINT
    ══════════════════════════════════════════════════════════ */
 function renderRunning() {
   renderRunKPIs();
   renderWeekPlan();
+  renderRunPR();
   renderRunFormChart();
+  renderRunVolumeChart();
   renderRunPronostics();
   renderRunPaces();
   renderRunVO2Chart();
   renderRunZonesChart();
+  renderRunPaceTrend();
   renderRunEfficiencyChart();
   renderRunTRIMP();
   renderRunStatsTable();
@@ -1132,7 +1548,11 @@ function renderRunning() {
   const yearEl = document.getElementById('run-year-label');
   if (yearEl) yearEl.textContent = runState.year;
   renderRunTypesGrid();
+  renderRunCalendar();
   renderRunTable();
+  // Sync sort arrows on init
+  const arrowEl = document.getElementById(`sort-${runState.sortCol}`);
+  if (arrowEl) arrowEl.textContent = runState.sortDir === -1 ? '▼' : '▲';
 }
 
 /* ── Fermer les tooltips KPI en tapant en dehors (mobile) ── */
