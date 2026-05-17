@@ -9,5 +9,8 @@
       "path": "/api/cron",
       "schedule": "0 18 * * *"
     }
+  ],
+  "rewrites": [
+    { "source": "/((?!api|icons|css|js|data|coach\\.json|manifest\\.json|sw\\.js).*)", "destination": "/index.html" }
   ]
 }
