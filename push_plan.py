@@ -35,16 +35,27 @@ def zone_bpm(z):
     zn = HR_ZONES[z - 1]
     return int(zn['pct_min'] * HR_MAX), int(zn['pct_max'] * HR_MAX)
 
-def hr_target(z):
-    """Cible FC Garmin pour une zone donnée."""
-    mn, mx = zone_bpm(z)
-    return {
-        "workoutTargetTypeId": 4,
-        "workoutTargetTypeKey": "heart.rate.zone",
-        "displayOrder": 6,
-        "targetValueOne": mn,
-        "targetValueTwo": mx,
-    }
+_HR_TARGET_TYPE = {
+    "workoutTargetTypeId": 4,
+    "workoutTargetTypeKey": "heart.rate.zone",
+    "displayOrder": 4,
+}
+
+def make_step(factory_fn, duration_sec, step_order, zone):
+    """
+    Crée une étape avec cible FC correctement injectée.
+    targetValueOne/Two doivent être des champs extra au niveau du step
+    (pas dans targetType), d'où l'injection via __pydantic_extra__.
+    """
+    mn, mx = zone_bpm(zone)
+    step = factory_fn(
+        duration_sec,
+        step_order=step_order,
+        target_type=dict(_HR_TARGET_TYPE),
+    )
+    step.__pydantic_extra__['targetValueOne'] = mn
+    step.__pydantic_extra__['targetValueTwo'] = mx
+    return step
 
 def no_target():
     return {"workoutTargetTypeId": 1, "workoutTargetTypeKey": "no.target", "displayOrder": 1}
@@ -159,54 +170,54 @@ def build_garmin_workout(session):
     # ── Footing récupération : 30 min Z1 continu ──────────────────────────────
     if sid == 'recov':
         steps = [
-            create_interval_step(dur * 60, step_order=1, target_type=hr_target(1)),
+            make_step(create_interval_step, dur * 60, 1, 1),
         ]
 
     # ── Endurance facile : 10 éch + 25/45 Z2 + 10 retour ────────────────────
     elif sid in ('easy', 'easy_long'):
         main_dur = dur - 20   # après éch + retour
         steps = [
-            create_warmup_step(10 * 60, step_order=1, target_type=hr_target(1)),
-            create_interval_step(main_dur * 60, step_order=2, target_type=hr_target(2)),
-            create_cooldown_step(10 * 60, step_order=3, target_type=hr_target(1)),
+            make_step(create_warmup_step,  10 * 60,       1, 1),
+            make_step(create_interval_step, main_dur * 60, 2, 2),
+            make_step(create_cooldown_step, 10 * 60,       3, 1),
         ]
 
     # ── Tempo : 15 éch + 20 min Z3 + 10 retour ───────────────────────────────
     elif sid == 'tempo':
         steps = [
-            create_warmup_step(15 * 60, step_order=1, target_type=hr_target(2)),
-            create_interval_step(20 * 60, step_order=2, target_type=hr_target(3)),
-            create_cooldown_step(10 * 60, step_order=3, target_type=hr_target(2)),
+            make_step(create_warmup_step,   15 * 60, 1, 2),
+            make_step(create_interval_step, 20 * 60, 2, 3),
+            make_step(create_cooldown_step, 10 * 60, 3, 2),
         ]
 
     # ── Seuil : 15 éch + 3×8 min Z4 (2 min récup) + 5 retour ────────────────
     elif sid == 'threshold':
-        interval_step = create_interval_step(8 * 60, step_order=1, target_type=hr_target(4))
-        recov_step    = create_recovery_step(2 * 60, step_order=2, target_type=hr_target(1))
+        interval_step = make_step(create_interval_step, 8 * 60, 1, 4)
+        recov_step    = make_step(create_recovery_step,  2 * 60, 2, 1)
         repeat_block  = create_repeat_group(
             iterations=3,
             workout_steps=[interval_step, recov_step],
             step_order=2,
         )
         steps = [
-            create_warmup_step(15 * 60, step_order=1, target_type=hr_target(2)),
+            make_step(create_warmup_step,   15 * 60, 1, 2),
             repeat_block,
-            create_cooldown_step(5 * 60, step_order=3, target_type=hr_target(2)),
+            make_step(create_cooldown_step,  5 * 60, 3, 2),
         ]
 
     # ── Fractionné : 15 éch + 6×3 min Z5 (90 s récup) + 12 retour ───────────
     elif sid == 'interval':
-        interval_step = create_interval_step(3 * 60, step_order=1, target_type=hr_target(5))
-        recov_step    = create_recovery_step(90,      step_order=2, target_type=hr_target(1))
+        interval_step = make_step(create_interval_step, 3 * 60, 1, 5)
+        recov_step    = make_step(create_recovery_step,      90, 2, 1)
         repeat_block  = create_repeat_group(
             iterations=6,
             workout_steps=[interval_step, recov_step],
             step_order=2,
         )
         steps = [
-            create_warmup_step(15 * 60, step_order=1, target_type=hr_target(2)),
+            make_step(create_warmup_step,   15 * 60, 1, 2),
             repeat_block,
-            create_cooldown_step(12 * 60, step_order=3, target_type=hr_target(2)),
+            make_step(create_cooldown_step, 12 * 60, 3, 2),
         ]
 
     else:
