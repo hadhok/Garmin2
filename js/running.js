@@ -5,6 +5,11 @@
 const HR_REST  = 62;
 const MIN_DIST = 3;   // km
 
+const runState = {
+  period: '6m',
+  year: new Date().getFullYear(),
+};
+
 /* ── Helpers ── */
 function getRuns() {
   return getAll().filter(a => a.type === 'run' && (a.distance_km || 0) >= MIN_DIST);
@@ -578,6 +583,229 @@ function renderFormeDiagram() {
 }
 
 /* ══════════════════════════════════════════════════════════
+   CLASSIFICATION DES TYPES DE COURSES
+   ══════════════════════════════════════════════════════════ */
+function classifyRun(r) {
+  const lbl  = r.te_label || '';
+  const ate  = r.aerobic_te   || 0;
+  const ante = r.anaerobic_te || 0;
+  const dist = r.distance_km  || 0;
+
+  if (lbl === 'Vo2Max'            || ante >= 1.5)  return 'Interval Training';
+  if (lbl === 'Lactate Threshold' || ate  >= 4.2)  return 'Tempo Run';
+  if (lbl === 'Tempo'             || ate  >= 3.5)  return 'Tempo Run';
+  if (dist >= 12)                                  return 'Long Run';
+  if (lbl === 'Aerobic Base'      || ate  >= 2.8)  return 'Easy Run';
+  if (ate < 2.0)                                   return 'Récupération';
+  return 'Easy Run';
+}
+
+/* ══════════════════════════════════════════════════════════
+   FILTRES : période & année
+   ══════════════════════════════════════════════════════════ */
+function setRunPeriod(p) {
+  runState.period = p;
+  document.querySelectorAll('[data-rperiod]').forEach(b =>
+    b.classList.toggle('active', b.dataset.rperiod === p));
+  renderRunStatsTable();
+}
+
+function setRunYear(delta) {
+  runState.year += delta;
+  document.getElementById('run-year-label').textContent = runState.year;
+  renderRunTypesGrid();
+}
+
+function getRunsForPeriod() {
+  const runs = getRuns();
+  if (runState.period === 'all') return runs;
+  const months = runState.period === '3m' ? 3 : runState.period === '6m' ? 6 : 12;
+  const cutoff = new Date(TODAY);
+  cutoff.setMonth(cutoff.getMonth() - months);
+  return runs.filter(r => new Date(r.date) >= cutoff);
+}
+
+/* ══════════════════════════════════════════════════════════
+   STATISTIQUES MENSUELLES
+   ══════════════════════════════════════════════════════════ */
+function renderRunStatsTable() {
+  const tbody = document.getElementById('run-stats-body');
+  if (!tbody) return;
+
+  const runs = getRunsForPeriod();
+
+  // Grouper par mois YYYY-MM
+  const byMonth = {};
+  runs.forEach(r => {
+    const key = r.date.slice(0, 7);
+    if (!byMonth[key]) byMonth[key] = [];
+    byMonth[key].push(r);
+  });
+
+  // Générer tous les mois dans la période (même vides)
+  const months = [];
+  const end   = new Date(TODAY);
+  const start = new Date(TODAY);
+  const nMonths = runState.period === '3m' ? 3 : runState.period === '6m' ? 6 : runState.period === '1y' ? 12 : 24;
+  start.setMonth(start.getMonth() - nMonths + 1);
+  start.setDate(1);
+  const cur = new Date(start);
+  while (cur <= end) {
+    const key = cur.toISOString().slice(0, 7);
+    months.push(key);
+    cur.setMonth(cur.getMonth() + 1);
+  }
+
+  const MOIS_FR = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+
+  tbody.innerHTML = months.reverse().map(key => {
+    const [y, m] = key.split('-');
+    const label  = `${MOIS_FR[+m - 1]} ${y}`;
+    const rs     = byMonth[key] || [];
+
+    if (!rs.length) {
+      return `<tr><td style="color:var(--accent);font-weight:500">${label}</td>
+        <td colspan="7" style="color:var(--muted);font-style:italic">Pas d'activités</td></tr>`;
+    }
+
+    const n    = rs.length;
+    const dist = rs.reduce((s, r) => s + (r.distance_km || 0), 0);
+    const dur  = rs.reduce((s, r) => s + (r.duration_min || 0), 0);
+    const elev = rs.reduce((s, r) => s + (r.elevation_m || 0), 0);
+    const trimp= rs.reduce((s, r) => s + computeTRIMP(r), 0);
+    const hrAvg= rs.filter(r => r.hr_avg).reduce((s, r) => s + r.hr_avg, 0) / (rs.filter(r => r.hr_avg).length || 1);
+
+    // Allure moyenne pondérée par distance
+    const paceRuns = rs.filter(r => r.pace_min_km && r.distance_km);
+    let avgPace = '–';
+    if (paceRuns.length) {
+      const totalDist = paceRuns.reduce((s, r) => s + r.distance_km, 0);
+      const totalSec  = paceRuns.reduce((s, r) => s + paceToSec(r.pace_min_km) * r.distance_km, 0);
+      avgPace = secToPace(totalSec / totalDist);
+    }
+
+    const h = Math.floor(dur / 60), mn = Math.round(dur % 60);
+    const durStr = h > 0 ? `${h}h${mn.toString().padStart(2,'0')}` : `${mn} min`;
+
+    return `<tr>
+      <td style="color:var(--accent);font-weight:500">${label}</td>
+      <td>${n}×</td>
+      <td>${dist.toFixed(1)} km</td>
+      <td>${durStr}</td>
+      <td style="font-variant-numeric:tabular-nums">${avgPace}/km</td>
+      <td>${hrAvg > 0 ? Math.round(hrAvg) + ' bpm' : '–'}</td>
+      <td>${elev > 0 ? '+' + Math.round(elev) + ' m' : '–'}</td>
+      <td style="font-weight:600;color:#3b82f6">${trimp}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ══════════════════════════════════════════════════════════
+   GRILLE TYPES DE COURSES PAR MOIS
+   ══════════════════════════════════════════════════════════ */
+function renderRunTypesGrid() {
+  const el = document.getElementById('run-types-grid');
+  if (!el) return;
+
+  const yr   = runState.year;
+  const runs = getRuns().filter(r => r.date.startsWith(String(yr)));
+
+  const TYPES = ['Easy Run', 'Tempo Run', 'Interval Training', 'Long Run', 'Récupération'];
+  const MOIS  = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+
+  // Grouper par type × mois
+  const grid = {}; // grid[type][month_idx] = { count, dur_min }
+  TYPES.forEach(t => { grid[t] = Array.from({length:12}, () => ({ count:0, dur:0 })); });
+  const totalByMonth = Array.from({length:12}, () => ({ count:0, dur:0 }));
+
+  runs.forEach(r => {
+    const t   = classifyRun(r);
+    const mi  = +r.date.slice(5, 7) - 1;
+    if (!grid[t]) grid[t] = Array.from({length:12}, () => ({ count:0, dur:0 }));
+    grid[t][mi].count++;
+    grid[t][mi].dur += r.duration_min || 0;
+    totalByMonth[mi].count++;
+    totalByMonth[mi].dur += r.duration_min || 0;
+  });
+
+  // Totaux par type
+  const typeTotal = {};
+  TYPES.forEach(t => {
+    typeTotal[t] = grid[t].reduce((s, v) => ({ count: s.count+v.count, dur: s.dur+v.dur }), {count:0,dur:0});
+  });
+
+  const maxDur = Math.max(...TYPES.map(t => typeTotal[t].dur), 1);
+
+  const fmtDur = (min) => {
+    if (!min) return '–';
+    const h = Math.floor(min / 60), m = Math.round(min % 60);
+    return h > 0 ? `${h}h${m.toString().padStart(2,'0')}` : `${m}m`;
+  };
+
+  const cell = (v) => {
+    if (!v.count) return `<td style="padding:8px 10px;color:var(--muted);font-size:12px;text-align:center">–</td>`;
+    const pct = (v.dur / Math.max(typeTotal[TYPES.find(t=>true)].dur || 1, 1) * 100);
+    return `<td style="padding:8px 10px;text-align:center">
+      <div style="font-size:12px;font-weight:500">${v.count}×</div>
+      <div style="font-size:11px;color:var(--muted)">${fmtDur(v.dur)}</div>
+    </td>`;
+  };
+
+  // Couleur par type
+  const TYPE_COLORS = {
+    'Easy Run':         '#22c55e',
+    'Tempo Run':        '#f97316',
+    'Interval Training':'#ef4444',
+    'Long Run':         '#6366f1',
+    'Récupération':     '#94a3b8',
+  };
+
+  el.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:600px">
+      <thead>
+        <tr style="border-bottom:2px solid var(--border)">
+          <th style="padding:8px 16px;text-align:left;font-weight:500;color:var(--muted);width:150px">Type</th>
+          ${MOIS.map(m => `<th style="padding:8px 6px;text-align:center;font-weight:500;color:var(--muted)">${m}</th>`).join('')}
+          <th style="padding:8px 10px;text-align:center;font-weight:600">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${TYPES.map((t, ti) => {
+          const tot = typeTotal[t];
+          if (!tot.count) return '';
+          const barW = Math.round((tot.dur / maxDur) * 100);
+          return `<tr style="${ti % 2 === 1 ? 'background:var(--surface2)' : ''}">
+            <td style="padding:10px 16px;font-weight:500">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="width:8px;height:8px;border-radius:50%;background:${TYPE_COLORS[t]};flex-shrink:0"></span>
+                ${t}
+              </div>
+              <div style="margin-top:4px;height:3px;background:var(--border);border-radius:2px;overflow:hidden">
+                <div style="height:100%;width:${barW}%;background:${TYPE_COLORS[t]};border-radius:2px"></div>
+              </div>
+            </td>
+            ${grid[t].map(v => cell(v)).join('')}
+            <td style="padding:8px 10px;text-align:center;font-weight:600">
+              <div>${tot.count}×</div>
+              <div style="font-size:11px;color:var(--muted)">${fmtDur(tot.dur)}</div>
+            </td>
+          </tr>`;
+        }).join('')}
+        <tr style="border-top:2px solid var(--border);background:var(--surface2)">
+          <td style="padding:10px 16px;font-weight:700">Total</td>
+          ${totalByMonth.map(v => `<td style="padding:8px 10px;text-align:center">
+            ${v.count ? `<div style="font-size:12px;font-weight:600">${v.count}×</div><div style="font-size:11px;color:var(--muted)">${fmtDur(v.dur)}</div>` : '<span style="color:var(--muted)">–</span>'}
+          </td>`).join('')}
+          <td style="padding:8px 10px;text-align:center;font-weight:700">
+            <div>${runs.length}×</div>
+            <div style="font-size:11px;color:var(--muted)">${fmtDur(runs.reduce((s,r)=>s+(r.duration_min||0),0))}</div>
+          </td>
+        </tr>
+      </tbody>
+    </table>`;
+}
+
+/* ══════════════════════════════════════════════════════════
    ENTRY POINT
    ══════════════════════════════════════════════════════════ */
 function renderRunning() {
@@ -590,5 +818,10 @@ function renderRunning() {
   renderRunZonesChart();
   renderRunEfficiencyChart();
   renderRunTRIMP();
+  renderRunStatsTable();
+  // Init année + grille types
+  const yearEl = document.getElementById('run-year-label');
+  if (yearEl) yearEl.textContent = runState.year;
+  renderRunTypesGrid();
   renderRunTable();
 }

@@ -667,6 +667,41 @@
           </div>
         </div>
 
+        <!-- Statistiques mensuelles -->
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;flex-wrap:wrap;gap:8px">
+            <span style="font-weight:600;font-size:14px">Statistiques</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <div class="subtab-bar" style="margin:0;padding:0;background:var(--surface2);border-radius:8px;display:flex">
+                <button class="subtab active" data-rperiod="3m"  onclick="setRunPeriod('3m')">3 mois</button>
+                <button class="subtab"        data-rperiod="6m"  onclick="setRunPeriod('6m')">6 mois</button>
+                <button class="subtab"        data-rperiod="1y"  onclick="setRunPeriod('1y')">1 an</button>
+                <button class="subtab"        data-rperiod="all" onclick="setRunPeriod('all')">Tout</button>
+              </div>
+            </div>
+          </div>
+          <table class="acts-table" id="run-stats-table">
+            <thead><tr>
+              <th>Mois</th><th>Sorties</th><th>Distance</th><th>Durée</th>
+              <th>Allure moy</th><th>FC moy</th><th>Dénivelé</th><th>TRIMP</th>
+            </tr></thead>
+            <tbody id="run-stats-body"></tbody>
+          </table>
+        </div>
+
+        <!-- Analyse types de courses -->
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;flex-wrap:wrap;gap:8px">
+            <span style="font-weight:600;font-size:14px">Analyse — Types de courses</span>
+            <div style="display:flex;gap:6px;align-items:center">
+              <button class="subtab" onclick="setRunYear(-1)">‹</button>
+              <span id="run-year-label" style="font-size:13px;font-weight:500;min-width:40px;text-align:center"></span>
+              <button class="subtab" onclick="setRunYear(+1)">›</button>
+            </div>
+          </div>
+          <div id="run-types-grid" style="overflow-x:auto"></div>
+        </div>
+
         <!-- Tableau des sorties -->
         <div class="section-header" style="margin-top:8px">Historique des courses</div>
         <div class="card" style="padding:0;overflow:hidden">
