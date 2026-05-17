@@ -402,10 +402,187 @@ function renderRunTable() {
 }
 
 /* ══════════════════════════════════════════════════════════
+   DIAGRAMME DE FORME (mixte : CTL/ATL + TRIMP + VO2max)
+   ══════════════════════════════════════════════════════════ */
+function renderFormeDiagram() {
+  const DAYS = 180;
+
+  // --- Charges toutes activités → CTL/ATL ---
+  const loadMap = {};
+  getAll().forEach(a => {
+    const d = (a.date || '').slice(0, 10);
+    if (d) loadMap[d] = (loadMap[d] || 0) + (a.training_load || 0);
+  });
+
+  // --- TRIMP & VO2max par jour (runs ≥ MIN_DIST) ---
+  const trimpMap = {}, vo2Map = {};
+  getRuns().forEach(r => {
+    const d = r.date.slice(0, 10);
+    trimpMap[d] = (trimpMap[d] || 0) + computeTRIMP(r);
+    if (r.vo2max > 0) vo2Map[d] = r.vo2max;
+  });
+
+  // --- Build series ---
+  const labels = [], ctlSeries = [], atlSeries = [], trimpSeries = [];
+  const vo2PointSeries = [], vo2AvgSeries = [];
+  let ctl = 0, atl = 0, lastVo2 = null;
+  const vo2Window = [];
+
+  for (let i = DAYS - 1; i >= 0; i--) {
+    const d = new Date(TODAY); d.setDate(d.getDate() - i);
+    const iso = d.toISOString().slice(0, 10);
+    const load = loadMap[iso] || 0;
+    ctl = ctl + (load - ctl) / 42;
+    atl = atl + (load - atl) / 7;
+
+    labels.push(iso);
+    ctlSeries.push(+ctl.toFixed(1));
+    atlSeries.push(+atl.toFixed(1));
+    trimpSeries.push(trimpMap[iso] || null);
+
+    // VO2max: point uniquement les jours de course
+    vo2PointSeries.push(vo2Map[iso] ?? null);
+
+    // Moyenne mobile VO2max sur 28j (carry-forward si pas de mesure)
+    if (vo2Map[iso]) lastVo2 = vo2Map[iso];
+    vo2Window.push(lastVo2);
+    if (vo2Window.length > 28) vo2Window.shift();
+    const validVo2 = vo2Window.filter(v => v !== null);
+    vo2AvgSeries.push(validVo2.length ? +(validVo2.reduce((s, v) => s + v, 0) / validVo2.length).toFixed(1) : null);
+  }
+
+  // --- Légende custom ---
+  const legendEl = document.getElementById('forme-legend');
+  if (legendEl) {
+    legendEl.innerHTML = [
+      ['#22c55e', 'Aptitude (CTL)'],
+      ['#ef4444', 'Fatigue (ATL)'],
+      ['rgba(59,130,246,0.7)', 'TRIMP'],
+      ['#374151', 'VO2max'],
+      ['#1a1a1a', 'Moy. VO2max'],
+    ].map(([c, l]) => `<span style="display:flex;align-items:center;gap:4px">
+      <span style="width:12px;height:3px;background:${c};border-radius:2px;display:inline-block"></span>${l}
+    </span>`).join('');
+  }
+
+  // --- Échelles dynamiques ---
+  const maxCTL   = Math.max(...ctlSeries, 1);
+  const maxTrimp = Math.max(...trimpSeries.filter(v => v !== null), 1);
+  const vo2Vals  = vo2AvgSeries.filter(v => v !== null);
+  const vo2Min   = vo2Vals.length ? Math.floor(Math.min(...vo2Vals)) - 3 : 30;
+  const vo2Max   = vo2Vals.length ? Math.ceil(Math.max(...vo2Vals))  + 3 : 55;
+
+  // X labels : afficher 1 label sur ~20 pour lisibilité
+  const xLabels = labels.map((iso, idx) => {
+    if (idx % 20 !== 0) return '';
+    return new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  });
+
+  mkChart('chart-forme-diagram', {
+    type: 'bar',
+    data: {
+      labels: xLabels,
+      datasets: [
+        {
+          type: 'line', label: 'Aptitude (CTL)',
+          data: ctlSeries,
+          borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.25)',
+          fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2,
+          yAxisID: 'yCTL', order: 3,
+        },
+        {
+          type: 'line', label: 'Fatigue (ATL)',
+          data: atlSeries,
+          borderColor: '#ef4444', backgroundColor: 'transparent',
+          fill: false, tension: 0.4, pointRadius: 0, borderWidth: 1.5,
+          yAxisID: 'yCTL', order: 2,
+        },
+        {
+          type: 'bar', label: 'TRIMP',
+          data: trimpSeries,
+          backgroundColor: 'rgba(59,130,246,0.55)',
+          yAxisID: 'yTrimp', order: 4, barPercentage: 0.9,
+        },
+        {
+          type: 'line', label: 'VO2max',
+          data: vo2PointSeries,
+          borderColor: 'transparent', backgroundColor: '#374151',
+          fill: false, tension: 0, spanGaps: false,
+          pointRadius: vo2PointSeries.map(v => v !== null ? 5 : 0),
+          pointHoverRadius: 7, pointBackgroundColor: '#374151',
+          yAxisID: 'yVo2', order: 1,
+        },
+        {
+          type: 'line', label: 'Moy. VO2max',
+          data: vo2AvgSeries,
+          borderColor: '#111827', backgroundColor: 'transparent',
+          fill: false, tension: 0.4, pointRadius: 0, borderWidth: 1.5,
+          borderDash: [4, 3],
+          yAxisID: 'yVo2', order: 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => {
+              const idx = items[0]?.dataIndex;
+              return labels[idx] ? new Date(labels[idx] + 'T12:00:00')
+                .toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+            },
+            label: (c) => {
+              if (c.dataset.label === 'Aptitude (CTL)')  return `CTL : ${c.raw} pts`;
+              if (c.dataset.label === 'Fatigue (ATL)')   return `ATL : ${c.raw} pts`;
+              if (c.dataset.label === 'TRIMP' && c.raw)          return `TRIMP : ${c.raw} pts`;
+              if (c.dataset.label === 'Moy. VO2max' && c.raw)   return `VO2max moy : ${c.raw}`;
+              if (c.dataset.label === 'VO2max' && c.raw !== null) return `VO2max : ${c.raw}`;
+              return null;
+            },
+          }
+        },
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { maxRotation: 0, font: { size: 10 } },
+        },
+        yCTL: {
+          type: 'linear', position: 'left',
+          min: 0, max: Math.ceil(maxCTL * 1.3),
+          grid: { color: 'rgba(0,0,0,0.06)' },
+          title: { display: true, text: 'CTL / ATL (pts)', color: '#94a3b8', font: { size: 10 } },
+          ticks: { font: { size: 10 } },
+        },
+        yTrimp: {
+          type: 'linear', position: 'right',
+          min: 0, max: Math.ceil(maxTrimp * 1.2),
+          grid: { display: false },
+          title: { display: true, text: 'TRIMP', color: '#3b82f6', font: { size: 10 } },
+          ticks: { color: '#3b82f6', font: { size: 10 } },
+        },
+        yVo2: {
+          type: 'linear', position: 'right',
+          min: vo2Min, max: vo2Max,
+          grid: { display: false },
+          title: { display: true, text: 'VO2max', color: '#374151', font: { size: 10 } },
+          ticks: { color: '#374151', font: { size: 10 } },
+          offset: true,
+        },
+      },
+    },
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
    ENTRY POINT
    ══════════════════════════════════════════════════════════ */
 function renderRunning() {
   renderRunKPIs();
+  renderFormeDiagram();
   renderRunFormChart();
   renderRunPronostics();
   renderRunPaces();
