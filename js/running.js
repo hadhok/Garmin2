@@ -587,8 +587,18 @@ function renderRunZonesChart() {
    RENDER : Efficience allure × FC (scatter)
    ══════════════════════════════════════════════════════════ */
 function renderRunEfficiencyChart() {
-  const runs = getRunsForGlobalPeriod().filter(r => r.pace_min_km && r.hr_avg);
-  if (runs.length < 3) return;
+  // Si pas assez de données sur la période, on élargit à tout l'historique
+  let runs = getRunsForGlobalPeriod().filter(r => r.pace_min_km && r.hr_avg);
+  let fallback = false;
+  if (runs.length < 5) {
+    runs = getRuns().filter(r => r.pace_min_km && r.hr_avg);
+    fallback = true;
+  }
+  const efIndicator = document.getElementById('run-ef-indicator');
+  if (runs.length < 3) {
+    if (efIndicator) efIndicator.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:6px 0">Pas assez de données (min. 3 courses avec allure + FC)</div>';
+    return;
+  }
 
   const data = runs.map(r => ({
     x: paceToSec(r.pace_min_km),
@@ -603,11 +613,14 @@ function renderRunEfficiencyChart() {
   const sumY  = data.reduce((s, p) => s + p.y, 0);
   const sumXY = data.reduce((s, p) => s + p.x * p.y, 0);
   const sumX2 = data.reduce((s, p) => s + p.x * p.x, 0);
-  const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+  const denom = n * sumX2 - sumX * sumX;
+  const slope     = denom !== 0 ? (n * sumXY - sumX * sumY) / denom : 0;
   const intercept = (sumY - slope * sumX) / n;
   const xMin = Math.min(...data.map(p => p.x));
   const xMax = Math.max(...data.map(p => p.x));
-  const regrData = [{ x: xMin, y: slope * xMin + intercept }, { x: xMax, y: slope * xMax + intercept }];
+  const regrData = denom !== 0
+    ? [{ x: xMin, y: slope * xMin + intercept }, { x: xMax, y: slope * xMax + intercept }]
+    : [];
 
   mkChart('chart-run-efficiency', {
     type: 'scatter',
@@ -656,7 +669,8 @@ function renderRunEfficiencyChart() {
         </div>
         <div style="font-size:22px">${improving ? '↑' : '↓'}</div>
         <div style="font-size:11px;color:var(--muted)">${improving ? 'En amélioration' : 'En baisse'}<br>sur la période</div>
-      </div>`;
+      </div>
+      ${fallback ? '<div style="font-size:10px;color:var(--muted);margin-top:4px">* données élargies à tout l\'historique (période trop courte)</div>' : ''}`;
   }
 }
 
@@ -1636,26 +1650,25 @@ async function pushPlanToGarmin(btn) {
    ENTRY POINT
    ══════════════════════════════════════════════════════════ */
 function renderRunning() {
-  renderRunKPIs();
-  renderWeekPlan();
-  renderRunPR();
-  renderRunFormChart();
-  renderRunVolumeChart();
-  renderRunPronostics();
-  renderRunPaces();
-  renderRunVO2Chart();
-  renderRunZonesChart();
-  renderRunPaceTrend();
-  renderRunEfficiencyChart();
-  renderRunTRIMP();
-  renderRunStatsTable();
-  // Init année + grille types
+  const safe = (fn) => { try { fn(); } catch(e) { console.error('[Running]', fn.name, e); } };
+  safe(renderRunKPIs);
+  safe(renderWeekPlan);
+  safe(renderRunPR);
+  safe(renderRunFormChart);
+  safe(renderRunVolumeChart);
+  safe(renderRunPronostics);
+  safe(renderRunPaces);
+  safe(renderRunVO2Chart);
+  safe(renderRunZonesChart);
+  safe(renderRunPaceTrend);
+  safe(renderRunEfficiencyChart);
+  safe(renderRunTRIMP);
+  safe(renderRunStatsTable);
   const yearEl = document.getElementById('run-year-label');
   if (yearEl) yearEl.textContent = runState.year;
-  renderRunTypesGrid();
-  renderRunCalendar();
-  renderRunTable();
-  // Sync sort arrows on init
+  safe(renderRunTypesGrid);
+  safe(renderRunCalendar);
+  safe(renderRunTable);
   const arrowEl = document.getElementById(`sort-${runState.sortCol}`);
   if (arrowEl) arrowEl.textContent = runState.sortDir === -1 ? '▼' : '▲';
 }
