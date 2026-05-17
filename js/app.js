@@ -426,7 +426,7 @@ function switchView(view) {
   const viewEl = document.getElementById('view-' + view);
   if (viewEl) viewEl.classList.add('active');
 
-  const titles = { dashboard:'Dashboard', activities:'Activités', health:'Santé', profile:'Profil' };
+  const titles = { dashboard:'Dashboard', activities:'Activités', health:'Santé', profile:'Profil', running:'Running' };
   const titleEl = document.getElementById('topbar-title');
   if (titleEl) titleEl.textContent = titles[view] || view;
 
@@ -457,6 +457,7 @@ function renderAll() {
   if (state.view === 'health')     { renderHealth();     return; }
   if (state.view === 'profile')    { renderProfile();    return; }
   if (state.view === 'activities') { renderActivities(); return; }
+  if (state.view === 'running')    { renderRunning();    return; }
 
   /* Dashboard */
   document.getElementById('period-label').textContent = formatPeriodLabel();

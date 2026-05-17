@@ -73,6 +73,11 @@
         <span class="nav-label">Profil</span>
         <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
+      <button class="nav-item" data-view="running" onclick="switchView('running')">
+        <span class="nav-icon">🏁</span>
+        <span class="nav-label">Running</span>
+        <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
     </div>
 
     <div class="sidebar-footer">
@@ -596,6 +601,77 @@
 
       </div><!-- /view-profile -->
 
+      <!-- ════════════════════════════════════════════════
+           VIEW : RUNNING
+      ════════════════════════════════════════════════ -->
+      <div id="view-running" class="view">
+
+        <!-- KPI bar -->
+        <div class="kpi-grid" id="run-kpis"></div>
+
+        <!-- Forme running + Pronostics -->
+        <div class="health-grid" style="margin-top:0">
+          <div class="card health-full">
+            <div class="section-header" style="margin:0 0 12px">Forme &amp; Fatigue — Course</div>
+            <div class="form-legend">
+              <span class="fleg"><span class="fleg-line" style="background:#6366f1"></span>CTL</span>
+              <span class="fleg"><span class="fleg-line" style="background:#f97316"></span>ATL</span>
+              <span class="fleg"><span class="fleg-dash" style="border-color:#22c55e"></span>TSB</span>
+            </div>
+            <div class="chart-wrap" style="height:200px"><canvas id="chart-run-form"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Pronostics + Allures -->
+        <div class="health-grid">
+          <div class="card">
+            <div class="section-header" style="margin:0 0 12px">Pronostics</div>
+            <div id="run-pronostics"></div>
+          </div>
+          <div class="card">
+            <div class="section-header" style="margin:0 0 12px">Allures d'entraînement</div>
+            <div id="run-paces"></div>
+          </div>
+        </div>
+
+        <!-- VO2max + Zones FC -->
+        <div class="health-grid">
+          <div class="card">
+            <div class="section-header" style="margin:0 0 12px">Évolution VO2max</div>
+            <div class="chart-wrap" style="height:180px"><canvas id="chart-run-vo2"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="section-header" style="margin:0 0 12px">Distribution zones FC</div>
+            <div class="chart-wrap" style="height:180px"><canvas id="chart-run-zones"></canvas></div>
+          </div>
+        </div>
+
+        <!-- TRIMP + Allure/FC -->
+        <div class="health-grid">
+          <div class="card">
+            <div class="section-header" style="margin:0 0 12px">Charge &amp; Monotonie</div>
+            <div id="run-trimp"></div>
+          </div>
+          <div class="card">
+            <div class="section-header" style="margin:0 0 12px">Efficience (Allure × FC)</div>
+            <div class="chart-wrap" style="height:180px"><canvas id="chart-run-efficiency"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Tableau des sorties -->
+        <div class="section-header" style="margin-top:8px">Historique des courses</div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <table class="acts-table" id="run-table">
+            <thead><tr>
+              <th>Date</th><th>Nom</th><th>Dist.</th><th>Durée</th>
+              <th>Allure</th><th>FC moy</th><th>VO2max</th><th>TRIMP</th><th>Charge</th>
+            </tr></thead>
+            <tbody id="run-table-body"></tbody>
+          </table>
+        </div>
+
+      </div><!-- /view-running -->
+
     </main>
   </div><!-- /main-area -->
 </div><!-- /app-shell -->
@@ -669,6 +745,10 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     Profil
   </button>
+  <button class="bottom-nav-item" data-view="running" onclick="switchView('running')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4a1 1 0 1 0 2 0 1 1 0 0 0-2 0"/><path d="m7 20 2-6 3 2 2-4"/><path d="m5 10 3-3 3 2 4-4"/></svg>
+    Running
+  </button>
 </nav>
 
 <!-- Scripts -->
@@ -677,6 +757,7 @@
 <script src="/js/activities.js"></script>
 <script src="/js/health.js"></script>
 <script src="/js/profile.js"></script>
+<script src="/js/running.js"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js', { scope: '/' }));
