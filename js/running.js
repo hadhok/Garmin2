@@ -471,7 +471,7 @@ function renderFormeDiagram() {
   }
 
   // --- Échelles dynamiques ---
-  const maxCTL   = Math.max(...ctlSeries, 1);
+  const maxCTL   = Math.max(...ctlSeries, ...atlSeries, 1);
   const maxTrimp = Math.max(...trimpSeries.filter(v => v !== null), 1);
   const vo2Vals  = vo2AvgSeries.filter(v => v !== null);
   const vo2Min   = vo2Vals.length ? Math.floor(Math.min(...vo2Vals)) - 3 : 30;
@@ -810,7 +810,6 @@ function renderRunTypesGrid() {
    ══════════════════════════════════════════════════════════ */
 function renderRunning() {
   renderRunKPIs();
-  renderFormeDiagram();
   renderRunFormChart();
   renderRunPronostics();
   renderRunPaces();

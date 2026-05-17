@@ -282,4 +282,7 @@ function renderDashboard() {
     renderTopActivities('list-year', acts, 6);
     renderYearActivityList('list-year-all', acts);
   }
+
+  // Diagramme de forme (toutes vues)
+  if (typeof renderFormeDiagram === 'function') renderFormeDiagram();
 }
