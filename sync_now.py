@@ -35,6 +35,30 @@ def _import_sync():
     spec.loader.exec_module(mod)
     return mod
 
+# ── Cache local (data/*.json) ──────────────────────────────────────────────────
+def _dump_local_cache():
+    """Rafraîchit data/activities.json et data/wellness.json depuis Supabase."""
+    from supabase import create_client
+    sb = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])
+
+    # Activités
+    acts_r = sb.table('activities').select('*').order('start_time', desc=True).execute()
+    meta_r = sb.table('sync_meta').select('last_sync, total_activities').eq('id', 1).limit(1).execute()
+    last_sync = meta_r.data[0]['last_sync'] if meta_r.data else datetime.now().isoformat(timespec='seconds')
+    total     = meta_r.data[0]['total_activities'] if meta_r.data else len(acts_r.data)
+    data_dir  = os.path.join(BASE, 'data')
+    os.makedirs(data_dir, exist_ok=True)
+    with open(os.path.join(data_dir, 'activities.json'), 'w', encoding='utf-8') as f:
+        json.dump({'last_sync': last_sync, 'total': total, 'activities': acts_r.data}, f, ensure_ascii=False)
+
+    # Wellness
+    well_r = sb.table('wellness_days').select('date, data').order('date', desc=True).execute()
+    days   = {row['date']: row['data'] for row in well_r.data}
+    with open(os.path.join(data_dir, 'wellness.json'), 'w', encoding='utf-8') as f:
+        json.dump({'last_sync': last_sync, 'days': days}, f, ensure_ascii=False)
+
+    print(f"   → Cache local mis à jour ({total} activités, {len(days)} jours wellness)")
+
 # ── Sync principal ─────────────────────────────────────────────────────────────
 def run_sync():
     _load_env()
@@ -49,6 +73,12 @@ def run_sync():
     # Importer et appeler _run_sync() depuis api/sync.py
     mod = _import_sync()
     result = mod._run_sync()
+
+    # Mettre à jour les fichiers locaux pour le serveur Flask
+    try:
+        _dump_local_cache()
+    except Exception as e:
+        print(f"   ⚠️  Cache local non mis à jour : {e}")
 
     # Affichage du résultat
     if result:

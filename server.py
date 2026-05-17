@@ -36,6 +36,23 @@ def data(filename):
     os.makedirs(data_dir, exist_ok=True)
     return send_from_directory(data_dir, filename)
 
+# ── API : données locales ────────────────────────────────────────────────────
+@app.route('/api/activities')
+def api_activities():
+    f = os.path.join(BASE, 'data', 'activities.json')
+    if not os.path.exists(f):
+        return jsonify({'error': 'Pas de données — lance sync_now.py'}), 404
+    with open(f) as fp:
+        return jsonify(json.load(fp))
+
+@app.route('/api/wellness')
+def api_wellness():
+    f = os.path.join(BASE, 'data', 'wellness.json')
+    if not os.path.exists(f):
+        return jsonify({'error': 'Pas de données — lance sync_now.py'}), 404
+    with open(f) as fp:
+        return jsonify(json.load(fp))
+
 # ── API : déclencher une synchro Garmin ──────────────────────────────────────
 TOKEN_DIR = os.path.join(BASE, '.garth_tokens')
 
