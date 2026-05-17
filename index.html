@@ -789,6 +789,25 @@
 </div><!-- /app-shell -->
 
 <!-- ════════════════════════════════════════════════
+     KPI DETAIL MODAL (bottom sheet)
+════════════════════════════════════════════════ -->
+<div id="kpi-modal-bg" onclick="closeKpiModal(event)">
+  <div id="kpi-modal">
+    <div id="kpi-modal-header">
+      <div id="kpi-modal-drag"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:0 20px 16px">
+        <div>
+          <div id="kpi-modal-label"></div>
+          <div id="kpi-modal-value"></div>
+        </div>
+        <button onclick="closeKpiModal()" style="background:var(--surface2);border:none;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;color:var(--muted);display:flex;align-items:center;justify-content:center">✕</button>
+      </div>
+    </div>
+    <div id="kpi-modal-body"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
      SYNC MODAL
 ════════════════════════════════════════════════ -->
 <div class="modal-bg" id="sync-modal">

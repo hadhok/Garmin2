@@ -307,58 +307,190 @@ function renderRunKPIs() {
     seancesPerWeek = +(runs12w.length / 12).toFixed(1);
   }
 
+  // ── Rich modal bodies ──────────────────────────────────────────────────────
+  const vo2Body = `
+    <h4>Définition</h4>
+    <p>Le VO2max est le volume maximal d'oxygène (en ml) que votre corps peut consommer par minute et par kilo de poids. C'est le meilleur indicateur objectif de votre capacité cardiorespiratoire. Garmin l'estime automatiquement via la fréquence cardiaque et la vitesse de course.</p>
+    <h4>Échelle de référence (coureurs)</h4>
+    ${kpiScaleHtml([
+      { range:'< 35',  label:'Très faible', color:'#94a3b8', active: vo2 !== null && vo2 < 35 },
+      { range:'35–42', label:'Faible',      color:'#6b7280', active: vo2 !== null && vo2 >= 35 && vo2 < 42 },
+      { range:'42–50', label:'Moyen',       color:'#22c55e', active: vo2 !== null && vo2 >= 42 && vo2 < 50 },
+      { range:'50–58', label:'Bon',         color:'#3b82f6', active: vo2 !== null && vo2 >= 50 && vo2 < 58 },
+      { range:'58–65', label:'Très bon',    color:'#f97316', active: vo2 !== null && vo2 >= 58 && vo2 < 65 },
+      { range:'65+',   label:'Élite',       color:'#ef4444', active: vo2 !== null && vo2 >= 65 },
+    ])}
+    <p style="font-size:12px">▲▼ Le delta affiché sur la carte compare votre dernière course à la précédente.</p>`;
+
+  const marathonBody = `
+    <h4>Définition</h4>
+    <p>Allure théorique au marathon estimée via la méthode <strong>Jack Daniels VDOT</strong>. À partir de votre VO2max, la formule calcule les allures cibles pour chaque distance standard. C'est une estimation — les conditions réelles (météo, dénivelé, fatigue) peuvent faire varier le résultat.</p>
+    <h4>Repères d'allure marathon</h4>
+    ${kpiScaleHtml([
+      { range:'< 3h00',    label:'Élite / Compétition',  color:'#ef4444', active: marathonTime && marathonTime.paceSec < 256  },
+      { range:'3h00–3h30', label:'Très performant',       color:'#f97316', active: marathonTime && marathonTime.paceSec >= 256  && marathonTime.paceSec < 298 },
+      { range:'3h30–4h00', label:'Bon niveau',            color:'#3b82f6', active: marathonTime && marathonTime.paceSec >= 298  && marathonTime.paceSec < 341 },
+      { range:'4h00–4h30', label:'Niveau intermédiaire',  color:'#22c55e', active: marathonTime && marathonTime.paceSec >= 341  && marathonTime.paceSec < 384 },
+      { range:'4h30–5h30', label:'Finisher',              color:'#6b7280', active: marathonTime && marathonTime.paceSec >= 384  && marathonTime.paceSec < 469 },
+      { range:'> 5h30',    label:'Marcheur / Débutant',   color:'#94a3b8', active: marathonTime && marathonTime.paceSec >= 469  },
+    ])}
+    <p style="font-size:12px">Calculé depuis votre VO2max Garmin via la table VDOT de Jack Daniels (Running Formula).</p>`;
+
+  const ctlBody = `
+    <h4>Définition</h4>
+    <p>Le CTL (Chronic Training Load) représente votre <strong>endurance de fond</strong> : c'est la moyenne exponentielle du TRIMP sur les 42 derniers jours. Plus il est élevé, plus votre organisme est adapté à l'effort prolongé.</p>
+    <h4>Niveaux CTL</h4>
+    ${kpiScaleHtml([
+      { range:'0–10',  label:'Très faible — débutant ou arrêt prolongé', color:'#94a3b8', active: last.ctl < 10 },
+      { range:'10–20', label:'Faible — reprise ou entraînement léger',    color:'#6b7280', active: last.ctl >= 10 && last.ctl < 20 },
+      { range:'20–35', label:'Correct — pratique régulière',              color:'#22c55e', active: last.ctl >= 20 && last.ctl < 35 },
+      { range:'35–50', label:'Bonne base — coureur entraîné',             color:'#3b82f6', active: last.ctl >= 35 && last.ctl < 50 },
+      { range:'50–65', label:'Très bon — préparation avancée',            color:'#f97316', active: last.ctl >= 50 && last.ctl < 65 },
+      { range:'65+',   label:'Excellent — niveau compétition',            color:'#ef4444', active: last.ctl >= 65 },
+    ])}
+    <p style="font-size:12px">Calculé via le TRIMP de Banister (durée × intensité FC relative). Constante de décroissance : 42 jours.</p>`;
+
+  const atlBody = `
+    <h4>Définition</h4>
+    <p>L'ATL (Acute Training Load) mesure votre <strong>charge de la semaine</strong> : moyenne exponentielle du TRIMP sur les 7 derniers jours. Il reflète la fatigue accumulée récemment. Un ATL élevé indique un bloc d'entraînement intense.</p>
+    <h4>Niveaux ATL</h4>
+    ${kpiScaleHtml([
+      { range:'0–10',  label:'Faible charge — semaine légère ou récup',  color:'#22c55e', active: last.atl < 10 },
+      { range:'10–25', label:'Charge modérée — entraînement équilibré',  color:'#3b82f6', active: last.atl >= 10 && last.atl < 25 },
+      { range:'25–40', label:'Charge élevée — bloc intensif',            color:'#f97316', active: last.atl >= 25 && last.atl < 40 },
+      { range:'40+',   label:'Surcharge — surveiller la récupération',   color:'#ef4444', active: last.atl >= 40 },
+    ])}
+    <p style="font-size:12px">Si l'ATL dépasse largement le CTL pendant plusieurs jours, le risque de blessure augmente.</p>`;
+
+  const tsbSign = last.tsb >= 0 ? '+' : '';
+  const tsbBody = `
+    <h4>Définition</h4>
+    <p>Le TSB (Training Stress Balance), ou <strong>forme du moment</strong>, est la différence CTL − ATL. Un TSB positif signifie que vous êtes reposé (sous-charge récente). Un TSB négatif indique de la fatigue accumulée — c'est normal en période d'entraînement.</p>
+    <h4>Interprétation du TSB</h4>
+    ${kpiScaleHtml([
+      { range:'> +10', label:'Très frais — sous-charge, risque de désentraînement', color:'#94a3b8', active: last.tsb > 10 },
+      { range:'+5/+10',label:'Frais — idéal avant compétition',                     color:'#3b82f6', active: last.tsb >= 5 && last.tsb <= 10 },
+      { range:'-5/+5', label:'Équilibré — prêt à performer',                        color:'#22c55e', active: last.tsb > -5 && last.tsb < 5 },
+      { range:'-10/−5',label:'Légèrement fatigué — progression active',             color:'#f97316', active: last.tsb >= -10 && last.tsb <= -5 },
+      { range:'-20/−10',label:'Surcompensation — zone de progression optimale',     color:'#f97316', active: last.tsb >= -20 && last.tsb < -10 },
+      { range:'< -20', label:'Surcharge — récupération nécessaire',                 color:'#ef4444', active: last.tsb < -20 },
+    ])}
+    <p style="font-size:12px">Actuellement : <strong>${tsbSign}${last.tsb.toFixed(1)} pts</strong> — ${tsbStatus}</p>`;
+
+  const dist7Body = `
+    <h4>Définition</h4>
+    <p>Volume total de course sur les <strong>7 derniers jours glissants</strong> (toutes sorties ≥ ${MIN_DIST} km). C'est un indicateur simple de la charge hebdomadaire en kilomètres.</p>
+    <h4>Repères de volume hebdomadaire</h4>
+    ${kpiScaleHtml([
+      { range:'< 15 km',  label:'Volume faible — entretien ou reprise', color:'#94a3b8', active: dist7 < 15 },
+      { range:'15–30 km', label:'Volume modéré — pratique régulière',   color:'#22c55e', active: dist7 >= 15 && dist7 < 30 },
+      { range:'30–50 km', label:'Volume élevé — entraînement soutenu',  color:'#3b82f6', active: dist7 >= 30 && dist7 < 50 },
+      { range:'50–70 km', label:'Volume très élevé — prépa marathon',   color:'#f97316', active: dist7 >= 50 && dist7 < 70 },
+      { range:'70+ km',   label:'Volume compétition / ultra',           color:'#ef4444', active: dist7 >= 70 },
+    ])}`;
+
+  const streakBody = `
+    <h4>Définition</h4>
+    <p>Nombre de <strong>semaines consécutives</strong> avec au moins une course ≥ ${MIN_DIST} km, en remontant depuis aujourd'hui. C'est le meilleur indicateur de régularité à long terme.</p>
+    <h4>Interprétation du streak</h4>
+    ${kpiScaleHtml([
+      { range:'1–3 sem.',   label:'Démarrage — continuez !',            color:'#94a3b8', active: streak >= 1  && streak < 4  },
+      { range:'4–8 sem.',   label:'Régularité en cours',                color:'#6b7280', active: streak >= 4  && streak < 9  },
+      { range:'9–16 sem.',  label:'Bonne constance — 2+ mois',         color:'#22c55e', active: streak >= 9  && streak < 17 },
+      { range:'17–26 sem.', label:'Très régulier — 4+ mois',           color:'#3b82f6', active: streak >= 17 && streak < 27 },
+      { range:'27–52 sem.', label:'Remarquable — plus d\'un semestre', color:'#f97316', active: streak >= 27 && streak < 53 },
+      { range:'52+ sem.',   label:'Légendaire — plus d\'un an !',      color:'#ef4444', active: streak >= 53 },
+    ])}`;
+
+  const freqBody = `
+    <h4>Définition</h4>
+    <p>Nombre moyen de courses par semaine calculé sur les <strong>12 dernières semaines</strong> (84 jours glissants). Mesure la fréquence d'entraînement récente indépendamment du volume.</p>
+    <h4>Fréquence recommandée</h4>
+    ${kpiScaleHtml([
+      { range:'< 1 /sem',   label:'Occasionnel — < 1 sortie/semaine',    color:'#94a3b8', active: seancesPerWeek < 1   },
+      { range:'1–2 /sem',   label:'Régulier — entretien forme',          color:'#6b7280', active: seancesPerWeek >= 1  && seancesPerWeek < 2   },
+      { range:'2–3 /sem',   label:'Entraîné — progression possible',     color:'#22c55e', active: seancesPerWeek >= 2  && seancesPerWeek < 3   },
+      { range:'3–5 /sem',   label:'Sérieux — plan structuré conseillé',  color:'#3b82f6', active: seancesPerWeek >= 3  && seancesPerWeek < 5   },
+      { range:'5+ /sem',    label:'Compétition — surveiller récupération', color:'#f97316',active: seancesPerWeek >= 5   },
+    ])}
+    <p style="font-size:12px">Au-delà de 5 séances/semaine sans phases de récupération, le risque de blessure augmente significativement.</p>`;
+
+  // ── Cards ──────────────────────────────────────────────────────────────────
   const cards = [
     { label: 'VO2max',
       val: vo2 ? `${vo2}<span class="kpi-unit"> ml/kg/min</span>` : '–',
       sub: vo2Delta !== null ? `<div class="kpi-delta ${vo2Delta >= 0 ? 'up' : 'down'}">${vo2Delta >= 0 ? '▲' : '▼'} ${Math.abs(vo2Delta)}</div>` : '',
-      tip: `Consommation maximale d'oxygène mesurée par Garmin. Plus la valeur est élevée, meilleure est votre capacité aérobie. Le delta (▲▼) compare la dernière séance à la précédente.` },
+      body: vo2Body },
     { label: 'Allure Marathon',
-      val: marathonTime ? secToPace(marathonTime.paceSec) : '–',
+      val: marathonTime ? `${secToPace(marathonTime.paceSec)}<span class="kpi-unit"> /km</span>` : '–',
       sub: '<div class="kpi-delta">estimé VDOT</div>',
-      tip: `Allure marathon estimée par la méthode Jack Daniels (VDOT). Calculée depuis votre VO2max actuel. C'est une estimation théorique — les conditions réelles peuvent varier.` },
+      body: marathonBody },
     { label: 'CTL run',
       val: kd(last.ctl.toFixed(1), ' pts'),
       sub: `<span class="kpi-level" style="color:${ctlLevel.color};background:${ctlLevel.bg}">${ctlLevel.label}</span>`,
-      tip: `Endurance de fond (42 jours).\n• &lt; 10 : Très faible\n• 10–20 : Faible\n• 20–35 : Correct\n• 35–50 : Bonne base\n• 50–65 : Très bon\n• 65+ : Excellent\n\nActuellement : ${ctlLevel.label}` },
+      body: ctlBody },
     { label: 'ATL run',
       val: kd(last.atl.toFixed(1), ' pts'),
       sub: `<span class="kpi-level" style="color:${atlLevel.color};background:${atlLevel.bg}">${atlLevel.label}</span>`,
-      tip: `Charge de la semaine (7 jours).\n• &lt; 10 : Faible charge\n• 10–25 : Modérée\n• 25–40 : Élevée\n• 40+ : Surcharge\n\nActuellement : ${atlLevel.label}` },
+      body: atlBody },
     { label: 'TSB run',
-      val: kd(last.tsb.toFixed(1), ' pts'),
+      val: `${tsbSign}${kd(last.tsb.toFixed(1), ' pts')}`,
       sub: `<div class="kpi-delta ${last.tsb >= -10 ? 'up' : 'down'}">${last.tsb >= 0 ? 'Frais' : 'Fatigué'}</div>`,
-      tip: `Balance (Forme) = CTL − ATL. Positif → Frais. Négatif → Fatigué.\n• > +5 : trop frais, sous-charge\n• −5 à −10 : zone optimale de progression\n• < −20 : surcharge, risque blessure\n\nActuellement : ${tsbStatus}` },
+      body: tsbBody },
     { label: 'Distance 7j',
       val: kd(dist7.toFixed(1), ' km'),
       sub: '',
-      tip: `Distance totale parcourue en course à pied sur les 7 derniers jours (toutes courses ≥ ${MIN_DIST} km).` },
+      body: dist7Body },
     { label: 'Streak',
       val: `${streak}<span class="kpi-unit"> sem.</span>`,
       sub: '',
-      tip: `Nombre de semaines consécutives avec au moins une course, en comptant à rebours depuis aujourd'hui. Indique la régularité de l'entraînement.` },
+      body: streakBody },
     { label: 'Séances/sem',
       val: `${seancesPerWeek}<span class="kpi-unit">/sem</span>`,
       sub: '<div class="kpi-delta">12 dernières sem.</div>',
-      tip: `Nombre moyen de courses par semaine calculé sur les 12 dernières semaines (84 jours). Mesure la fréquence d'entraînement récente.` },
+      body: freqBody },
   ];
 
-  el.innerHTML = cards.map(k => `
-    <div class="kpi-card" onclick="kpiTipToggle(this)">
+  // Stocker pour l'accès modal (évite les problèmes de quoting dans onclick)
+  runState._kpiCards = cards;
+
+  el.innerHTML = cards.map((k, i) => `
+    <div class="kpi-card" onclick="openKpiModal(${i})">
       <div class="kpi-info-btn">i</div>
-      <div class="kpi-tooltip">${k.tip.replace(/\n/g, '<br>')}</div>
       <div class="kpi-label">${k.label}</div>
       <div class="kpi-value">${k.val}</div>
       ${k.sub}
     </div>`).join('');
 }
 
-function kpiTipToggle(card) {
-  // Sur mobile (no-hover) : toggle. Sur desktop le CSS :hover suffit.
-  const isTouch = window.matchMedia('(hover: none)').matches;
-  if (!isTouch) return;
-  const isOpen = card.classList.contains('tip-open');
-  document.querySelectorAll('.kpi-card.tip-open').forEach(c => c.classList.remove('tip-open'));
-  if (!isOpen) card.classList.add('tip-open');
+/* ── KPI Modal helpers ── */
+function kpiScaleHtml(rows) {
+  return '<div class="modal-scale">' + rows.map(r => {
+    const dot   = `<div class="modal-scale-dot" style="background:${r.color}"></div>`;
+    const range = `<div class="modal-scale-range">${r.range}</div>`;
+    const lbl   = `<div class="modal-scale-lbl" style="color:${r.active ? r.color : 'var(--text)'}">${r.label}</div>`;
+    const you   = r.active ? '<div class="modal-scale-you">vous</div>' : '';
+    return `<div class="modal-scale-row${r.active ? ' active' : ''}">${dot}${range}${lbl}${you}</div>`;
+  }).join('') + '</div>';
+}
+
+function openKpiModal(idx) {
+  const data = runState._kpiCards?.[idx];
+  if (!data) return;
+  const bg = document.getElementById('kpi-modal-bg');
+  if (!bg) return;
+  document.getElementById('kpi-modal-label').textContent = data.label;
+  document.getElementById('kpi-modal-value').innerHTML   = data.val;
+  document.getElementById('kpi-modal-body').innerHTML    = data.body;
+  bg.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeKpiModal(event) {
+  if (event && event.target !== document.getElementById('kpi-modal-bg')) return;
+  const bg = document.getElementById('kpi-modal-bg');
+  if (bg) bg.classList.remove('open');
+  document.body.style.overflow = '';
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1673,9 +1805,7 @@ function renderRunning() {
   if (arrowEl) arrowEl.textContent = runState.sortDir === -1 ? '▼' : '▲';
 }
 
-/* ── Fermer les tooltips KPI en tapant en dehors (mobile) ── */
-document.addEventListener('click', e => {
-  if (!e.target.closest('.kpi-card')) {
-    document.querySelectorAll('.kpi-card.tip-open').forEach(c => c.classList.remove('tip-open'));
-  }
+/* ── Fermer le modal KPI avec la touche Escape ── */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeKpiModal();
 });
