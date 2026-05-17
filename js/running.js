@@ -267,6 +267,20 @@ function renderRunKPIs() {
                     last.tsb >= -20 ? 'Zone de surcompensation — progression optimale' :
                     'Surcharge — récupération nécessaire';
 
+  // Niveaux CTL (endurance de fond)
+  const ctlLevel = last.ctl < 10  ? { label: 'Très faible',   color: '#94a3b8', bg: 'rgba(148,163,184,0.15)' } :
+                   last.ctl < 20  ? { label: 'Faible',         color: '#6b7280', bg: 'rgba(107,114,128,0.12)' } :
+                   last.ctl < 35  ? { label: 'Correct',        color: '#22c55e', bg: 'rgba(34,197,94,0.12)'   } :
+                   last.ctl < 50  ? { label: 'Bonne base',     color: '#3b82f6', bg: 'rgba(59,130,246,0.12)'  } :
+                   last.ctl < 65  ? { label: 'Très bon',       color: '#f97316', bg: 'rgba(249,115,22,0.12)'  } :
+                                    { label: 'Excellent',       color: '#ef4444', bg: 'rgba(239,68,68,0.12)'   };
+
+  // Niveaux ATL (charge de la semaine)
+  const atlLevel = last.atl < 10 ? { label: 'Faible charge',   color: '#22c55e', bg: 'rgba(34,197,94,0.12)'  } :
+                   last.atl < 25 ? { label: 'Charge modérée',  color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' } :
+                   last.atl < 40 ? { label: 'Charge élevée',   color: '#f97316', bg: 'rgba(249,115,22,0.12)' } :
+                                   { label: 'Surcharge',        color: '#ef4444', bg: 'rgba(239,68,68,0.12)'  };
+
   // Streak : semaines consécutives avec ≥1 course (en remontant depuis aujourd'hui)
   let streak = 0;
   {
@@ -304,12 +318,12 @@ function renderRunKPIs() {
       tip: `Allure marathon estimée par la méthode Jack Daniels (VDOT). Calculée depuis votre VO2max actuel. C'est une estimation théorique — les conditions réelles peuvent varier.` },
     { label: 'CTL run',
       val: kd(last.ctl.toFixed(1), ' pts'),
-      sub: '',
-      tip: `Charge Chronique (Fitness) — moyenne exponentielle sur 42 jours. Représente votre endurance de fond. Plus c'est élevé, plus vous êtes entraîné sur le long terme.` },
+      sub: `<span class="kpi-level" style="color:${ctlLevel.color};background:${ctlLevel.bg}">${ctlLevel.label}</span>`,
+      tip: `Endurance de fond (42 jours).\n• &lt; 10 : Très faible\n• 10–20 : Faible\n• 20–35 : Correct\n• 35–50 : Bonne base\n• 50–65 : Très bon\n• 65+ : Excellent\n\nActuellement : ${ctlLevel.label}` },
     { label: 'ATL run',
       val: kd(last.atl.toFixed(1), ' pts'),
-      sub: '',
-      tip: `Charge Aiguë (Fatigue) — moyenne exponentielle sur 7 jours. Reflète la charge des derniers jours. Une ATL élevée signifie une semaine intense, donc plus de fatigue.` },
+      sub: `<span class="kpi-level" style="color:${atlLevel.color};background:${atlLevel.bg}">${atlLevel.label}</span>`,
+      tip: `Charge de la semaine (7 jours).\n• &lt; 10 : Faible charge\n• 10–25 : Modérée\n• 25–40 : Élevée\n• 40+ : Surcharge\n\nActuellement : ${atlLevel.label}` },
     { label: 'TSB run',
       val: kd(last.tsb.toFixed(1), ' pts'),
       sub: `<div class="kpi-delta ${last.tsb >= -10 ? 'up' : 'down'}">${last.tsb >= 0 ? 'Frais' : 'Fatigué'}</div>`,
