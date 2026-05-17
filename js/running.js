@@ -3,7 +3,22 @@
    ══════════════════════════════════════════════════════════ */
 
 const HR_REST  = 62;
+const HR_MAX   = 177;
 const MIN_DIST = 3;   // km
+
+// Zones FC en % HRmax (Z1=49-58, Z2=58-69, Z3=69-80, Z4=80-90, Z5=90-100)
+const HR_ZONES = [
+  { z:1, label:'Z1 Récup',    pctMin:0.49, pctMax:0.58, color:'#94a3b8' },
+  { z:2, label:'Z2 Endurance',pctMin:0.58, pctMax:0.69, color:'#22c55e' },
+  { z:3, label:'Z3 Tempo',    pctMin:0.69, pctMax:0.80, color:'#3b82f6' },
+  { z:4, label:'Z4 Seuil',    pctMin:0.80, pctMax:0.90, color:'#f97316' },
+  { z:5, label:'Z5 VO2max',   pctMin:0.90, pctMax:1.00, color:'#ef4444' },
+];
+
+function hrZoneBounds(z) {
+  const zone = HR_ZONES[z - 1];
+  return { min: Math.round(zone.pctMin * HR_MAX), max: Math.round(zone.pctMax * HR_MAX) };
+}
 
 const runState = {
   period: '6m',
@@ -35,13 +50,24 @@ function secToTime(s) {
     : `${m}'${sec.toString().padStart(2,'0')}"`;
 }
 
-/* ── TRIMP de Banister ── */
+/* ── TRIMP de Banister (zones FC calibrées) ── */
 function computeTRIMP(run) {
-  const hrMax = run.hr_max || 185;
   if (!run.hr_avg || !run.duration_min) return 0;
-  const ratio = (run.hr_avg - HR_REST) / (hrMax - HR_REST);
+  const ratio = (run.hr_avg - HR_REST) / (HR_MAX - HR_REST);
   if (ratio <= 0) return 0;
   return Math.round(run.duration_min * ratio * 0.64 * Math.exp(1.92 * ratio));
+}
+
+// TRIMP théorique pour une session définie par zone, durée et % en zone
+function trimpForSession(durationMin, zoneNum, pctInZone = 0.8) {
+  const zone = HR_ZONES[zoneNum - 1];
+  const hrAvg = Math.round(((zone.pctMin + zone.pctMax) / 2) * HR_MAX);
+  const ratio  = (hrAvg - HR_REST) / (HR_MAX - HR_REST);
+  const mainTrimp = durationMin * pctInZone * ratio * 0.64 * Math.exp(1.92 * ratio);
+  // Échauffement/récup en Z2
+  const warmRatio  = ((HR_ZONES[1].pctMin + HR_ZONES[1].pctMax) / 2 * HR_MAX - HR_REST) / (HR_MAX - HR_REST);
+  const warmTrimp  = durationMin * (1 - pctInZone) * warmRatio * 0.64 * Math.exp(1.92 * warmRatio);
+  return Math.round(mainTrimp + warmTrimp);
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -111,6 +137,85 @@ function computeTrainingPaces(vdot) {
     const fastSec = 1000 / vFast * 60;
     return { ...z, slowSec, fastSec };
   });
+}
+
+/* ══════════════════════════════════════════════════════════
+   RENDER : Plan de la semaine
+   ══════════════════════════════════════════════════════════ */
+function renderWeekPlan() {
+  const el = document.getElementById('run-week-plan');
+  if (!el) return;
+
+  const p = generateWeekPlan();
+
+  const WEEK_COLORS = { recovery:'#22c55e', normal:'#3b82f6', loading:'#f97316' };
+  const WEEK_LABELS = { recovery:'Semaine de récupération', normal:'Semaine normale', loading:'Semaine de charge' };
+  const weekColor   = WEEK_COLORS[p.weekType];
+  const weekLabel   = WEEK_LABELS[p.weekType];
+
+  const tsbArrow = p.endTSB > p.startTSB
+    ? `<span style="color:#22c55e">▲ ${(p.endTSB - p.startTSB).toFixed(1)}</span>`
+    : `<span style="color:#ef4444">▼ ${(p.endTSB - p.startTSB).toFixed(1)}</span>`;
+
+  el.innerHTML = `
+    <!-- En-tête -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <span style="background:${weekColor};color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px">${weekLabel}</span>
+      <span style="font-size:12px;color:var(--muted)">${p.reason}</span>
+    </div>
+
+    <!-- Jours -->
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:16px">
+      ${p.plan.map(s => `
+        <div style="border:1.5px solid ${s.zone ? s.color : 'var(--border)'};border-radius:10px;padding:8px 4px;text-align:center;background:${s.zone ? s.color+'12' : 'var(--surface2)'}">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:4px;text-transform:uppercase">${s.day}</div>
+          <div style="font-size:20px;margin-bottom:4px">${s.icon}</div>
+          <div style="font-size:10px;font-weight:600;color:${s.zone ? s.color : 'var(--muted)'};line-height:1.3">${s.label}</div>
+          ${s.dur ? `<div style="font-size:10px;color:var(--muted);margin-top:3px">${s.dur} min</div>` : ''}
+          ${s.trimp ? `<div style="font-size:9px;color:var(--muted)">TRIMP ${s.trimp}</div>` : ''}
+        </div>`).join('')}
+    </div>
+
+    <!-- Détails des séances -->
+    <div style="margin-bottom:14px">
+      ${p.plan.filter(s=>s.zone).map(s=>`
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-top:1px solid var(--border);font-size:12px">
+          <span style="width:28px;text-align:center;font-size:15px;flex-shrink:0">${s.icon}</span>
+          <div style="flex:1">
+            <span style="font-weight:600">${s.day} — ${s.label}</span>
+            <span style="color:var(--muted);margin-left:8px">${s.desc}</span>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-variant-numeric:tabular-nums;font-weight:500">${s.pace}</div>
+            <div style="font-size:10px;color:${s.color}">${HR_ZONES[s.zone-1]?.label||''} · ${hrZoneBounds(s.zone).min}–${hrZoneBounds(s.zone).max} bpm</div>
+          </div>
+        </div>`).join('')}
+    </div>
+
+    <!-- Simulation CTL/ATL + Stats -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="background:var(--surface2);border-radius:10px;padding:12px;font-size:12px">
+        <div style="font-weight:600;margin-bottom:8px;font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:.5px">Projection fin de semaine</div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>CTL</span><span>${p.startCTL} → <b>${p.endCTL}</b></span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>ATL</span><span>${p.startATL} → <b>${p.endATL}</b></span></div>
+        <div style="display:flex;justify-content:space-between"><span>TSB</span><span>${p.startTSB} → <b>${p.endTSB}</b> ${tsbArrow}</span></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:12px;font-size:12px">
+        <div style="font-weight:600;margin-bottom:8px;font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:.5px">Charge &amp; Polarisation</div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>TRIMP total</span><span><b>${p.totalTrimp}</b> pts</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Z1-Z2 (base)</span><span style="color:#22c55e"><b>${p.z12pct}%</b></span></div>
+        <div style="display:flex;justify-content:space-between"><span>Z4-Z5 (qualité)</span><span style="color:#f97316"><b>${p.z45pct}%</b></span></div>
+      </div>
+    </div>
+
+    <!-- Bases du calcul -->
+    <div style="margin-top:10px;padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:12px">
+      <span>VDOT ${p.vdot}</span>
+      <span>HRmax ${HR_MAX} bpm · FC repos ${HR_REST} bpm</span>
+      ${p.lastHRV ? `<span>HRV ${p.lastHRV} ms</span>` : ''}
+      ${p.lastBB  ? `<span>Battery ${p.lastBB}%</span>` : ''}
+      <span>TSB cible fin semaine : ${p.tsbTarget}</span>
+    </div>`;
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -583,6 +688,170 @@ function renderFormeDiagram() {
 }
 
 /* ══════════════════════════════════════════════════════════
+   GÉNÉRATEUR DE PLAN HEBDOMADAIRE
+   ══════════════════════════════════════════════════════════ */
+
+// Catalogue de sessions disponibles (TRIMP via trimpForSession)
+function sessionCatalog(vdot) {
+  const v = vdot || 43;
+  const zones = computeTrainingPaces(v);
+  const zPace = (name) => {
+    const z = zones.find(z => z.label.startsWith(name));
+    return z ? `${secToPace(z.fastSec)}–${secToPace(z.slowSec)}/km` : '';
+  };
+  return [
+    { id:'rest',     label:'Repos',             icon:'😴', zone:0,  dur:0,   trimp:0,
+      desc:'Récupération complète',              pace:'–',            color:'#94a3b8' },
+    { id:'recov',    label:'Footing récupération', icon:'🚶', zone:1, dur:30,  trimp:trimpForSession(30,1,1),
+      desc:'Footing très lent, jambes légères',  pace: zPace('Récup'), color:'#94a3b8' },
+    { id:'easy',     label:'Endurance facile',   icon:'🏃', zone:2,  dur:45,  trimp:trimpForSession(45,2,0.85),
+      desc:'Conversation possible tout le long', pace: zPace('Endur'), color:'#22c55e' },
+    { id:'easy_long',label:'Sortie longue',       icon:'🏃', zone:2,  dur:65,  trimp:trimpForSession(65,2,0.85),
+      desc:'Allure endurance, dernier tiers Z3', pace: zPace('Endur'), color:'#22c55e' },
+    { id:'tempo',    label:'Tempo',               icon:'⚡', zone:3,  dur:45,  trimp:trimpForSession(45,3,0.55),
+      desc:'15 min éch. + 20 min Z3 + 10 min retour', pace: zPace('Marat'), color:'#3b82f6' },
+    { id:'threshold',label:'Seuil',               icon:'🔥', zone:4,  dur:50,  trimp:trimpForSession(50,4,0.45),
+      desc:'15 min éch. + 3×8 min Z4 (2 min récup)', pace: zPace('Seuil'), color:'#f97316' },
+    { id:'interval', label:'Fractionné',          icon:'💥', zone:5,  dur:55,  trimp:trimpForSession(55,5,0.35),
+      desc:'15 min éch. + 6×3 min Z5 (90 s récup)', pace: zPace('Inter'), color:'#ef4444' },
+  ];
+}
+
+function simulateCTL_ATL(ctl0, atl0, loads7) {
+  let ctl = ctl0, atl = atl0;
+  loads7.forEach(l => {
+    ctl = ctl + (l - ctl) / 42;
+    atl = atl + (l - atl) / 7;
+  });
+  return { ctl: +ctl.toFixed(1), atl: +atl.toFixed(1), tsb: +(ctl - atl).toFixed(1) };
+}
+
+function generateWeekPlan() {
+  // ── État actuel ──────────────────────────────────────────
+  const formCurve = computeRunForm();          // CTL/ATL running
+  const allLoad   = {};
+  getAll().forEach(a => {
+    const d = (a.date||'').slice(0,10);
+    if (d) allLoad[d] = (allLoad[d]||0) + (a.training_load||0);
+  });
+  let ctl=0, atl=0;
+  for (let i=179; i>=0; i--) {
+    const d = new Date(TODAY); d.setDate(d.getDate()-i);
+    const iso = d.toISOString().slice(0,10);
+    const l = allLoad[iso]||0;
+    ctl = ctl + (l-ctl)/42;
+    atl = atl + (l-atl)/7;
+  }
+  const tsb = ctl - atl;
+
+  // ── Wellness récent ──────────────────────────────────────
+  const well = state.wellness?.days || {};
+  const wellDays = Object.values(well).sort((a,b) => b.date.localeCompare(a.date));
+  const lastHRV  = wellDays.find(w => w.hrv_weekly_avg > 0)?.hrv_weekly_avg || null;
+  const lastBB   = wellDays[0]?.body_battery_end || null;
+
+  // ── VO2max courant ───────────────────────────────────────
+  const runs = getRuns();
+  const withVo2 = runs.filter(r=>r.vo2max>0).sort((a,b)=>b.date.localeCompare(a.date));
+  const vdot = withVo2[0]?.vo2max || 43;
+
+  // ── TRIMP 7 jours précédents ─────────────────────────────
+  const prev7Trimp = runs
+    .filter(r => { const d=new Date(r.date); const lim=new Date(TODAY); lim.setDate(lim.getDate()-7); return d>=lim; })
+    .reduce((s,r) => s+computeTRIMP(r), 0);
+
+  // ── Type de semaine ──────────────────────────────────────
+  let weekType, tsbTarget, loadFactor, qualitySessions, reason;
+
+  const fatigue = tsb < -20 ? 'high' : tsb < -10 ? 'medium' : 'low';
+  const hrvLow  = lastHRV && lastHRV < 40;
+  const bbLow   = lastBB  && lastBB  < 30;
+
+  if (fatigue === 'high' || (fatigue === 'medium' && (hrvLow || bbLow))) {
+    weekType       = 'recovery';
+    tsbTarget      = -5;
+    loadFactor     = 0.60;
+    qualitySessions= 0;
+    reason = `TSB ${tsb.toFixed(1)} (surcharge) ${hrvLow?'+ HRV basse':''} ${bbLow?'+ Battery faible':''}`.trim();
+  } else if (fatigue === 'medium') {
+    weekType       = 'normal';
+    tsbTarget      = -15;
+    loadFactor     = 1.05;
+    qualitySessions= 1;
+    reason = `TSB ${tsb.toFixed(1)} — progression modérée`;
+  } else {
+    weekType       = 'loading';
+    tsbTarget      = -20;
+    loadFactor     = 1.10;
+    qualitySessions= 2;
+    reason = `TSB ${tsb.toFixed(1)} — semaine de charge`;
+  }
+
+  // ── Catalogue de sessions ────────────────────────────────
+  const cat = sessionCatalog(vdot);
+  const S   = (id) => cat.find(s=>s.id===id);
+
+  // ── Construction du plan 7 jours ─────────────────────────
+  // Modèle polarisé : 80% Z1-Z2 / 20% Z4-Z5
+  // Structure type : repos / easy / repos / qualité / repos / long / repos
+  let plan;
+  if (weekType === 'recovery') {
+    plan = [
+      { day:'Lun', ...S('rest')     },
+      { day:'Mar', ...S('recov')    },
+      { day:'Mer', ...S('rest')     },
+      { day:'Jeu', ...S('easy')     },
+      { day:'Ven', ...S('rest')     },
+      { day:'Sam', ...S('easy')     },
+      { day:'Dim', ...S('rest')     },
+    ];
+  } else if (weekType === 'normal') {
+    plan = [
+      { day:'Lun', ...S('rest')      },
+      { day:'Mar', ...S('easy')      },
+      { day:'Mer', ...S('tempo')     },
+      { day:'Jeu', ...S('rest')      },
+      { day:'Ven', ...S('easy')      },
+      { day:'Sam', ...S('easy_long') },
+      { day:'Dim', ...S('rest')      },
+    ];
+  } else {
+    plan = [
+      { day:'Lun', ...S('rest')      },
+      { day:'Mar', ...S('easy')      },
+      { day:'Mer', ...S('threshold') },
+      { day:'Jeu', ...S('easy')      },
+      { day:'Ven', ...S('rest')      },
+      { day:'Sam', ...S('easy_long') },
+      { day:'Dim', ...S('interval')  },
+    ];
+  }
+
+  // ── Simulation CTL/ATL sur la semaine ────────────────────
+  const weekLoads = plan.map(s => s.trimp || 0);
+  const endState  = simulateCTL_ATL(ctl, atl, weekLoads);
+
+  // ── Distribution des zones (80/20) ──────────────────────
+  const totalTrimp = weekLoads.reduce((s,v)=>s+v, 0);
+  const zDist = plan.reduce((acc, s) => {
+    if (!s.zone) return acc;
+    acc[s.zone] = (acc[s.zone]||0) + s.trimp;
+    return acc;
+  }, {});
+  const z12pct = Math.round(((zDist[1]||0)+(zDist[2]||0)) / Math.max(totalTrimp,1) * 100);
+  const z45pct = Math.round(((zDist[4]||0)+(zDist[5]||0)) / Math.max(totalTrimp,1) * 100);
+
+  return {
+    weekType, reason, tsbTarget,
+    plan,
+    startCTL: +ctl.toFixed(1), startATL: +atl.toFixed(1), startTSB: +tsb.toFixed(1),
+    endCTL: endState.ctl, endATL: endState.atl, endTSB: endState.tsb,
+    totalTrimp, z12pct, z45pct, vdot,
+    lastHRV, lastBB,
+  };
+}
+
+/* ══════════════════════════════════════════════════════════
    CLASSIFICATION DES TYPES DE COURSES
    ══════════════════════════════════════════════════════════ */
 function classifyRun(r) {
@@ -810,6 +1079,7 @@ function renderRunTypesGrid() {
    ══════════════════════════════════════════════════════════ */
 function renderRunning() {
   renderRunKPIs();
+  renderWeekPlan();
   renderRunFormChart();
   renderRunPronostics();
   renderRunPaces();
