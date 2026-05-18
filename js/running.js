@@ -784,7 +784,6 @@ function renderRunEfficiencyChart() {
 
   // Efficience Factor = vitesse (m/min) / FC moy
   const efData = data.filter(p => p.speed && p.y > 0);
-  const efIndicator = document.getElementById('run-ef-indicator');
   if (efIndicator && efData.length) {
     const efValues = efData.map(p => p.speed / p.y);
     const efAvg = efValues.reduce((s, v) => s + v, 0) / efValues.length;
