@@ -252,9 +252,16 @@ function renderRunKPIs() {
   const form = computeRunForm();
   const last = form[form.length - 1] || { ctl: 0, atl: 0, tsb: 0 };
 
-  // Distance 7j
+  // Distance 7j + calories + intensity OMS
   const d7 = new Date(TODAY); d7.setDate(d7.getDate() - 7);
-  const dist7 = runs.filter(r => new Date(r.date) >= d7).reduce((s, r) => s + (r.distance_km || 0), 0);
+  const runs7 = runs.filter(r => new Date(r.date) >= d7);
+  const dist7  = runs7.reduce((s, r) => s + (r.distance_km || 0), 0);
+  const kcal7  = runs7.reduce((s, r) => s + (r.calories || 0), 0);
+  // OMS : intensity_min de TOUTES activités (modéré + 2×vigoureux), objectif 150/semaine
+  const intMin7 = getAll().filter(a => new Date(a.date) >= d7).reduce((s, a) => s + (a.intensity_min || 0), 0);
+  const omsGoal = 150;
+  const omsPct  = Math.min(100, Math.round(intMin7 / omsGoal * 100));
+  const omsColor = omsPct >= 100 ? '#22c55e' : omsPct >= 50 ? '#f97316' : '#ef4444';
 
   // Allure marathon estimée
   const marathonTime = vo2 ? computePronostics(vo2).find(p => p.label === 'Marathon') : null;
@@ -415,6 +422,32 @@ function renderRunKPIs() {
     ])}
     <p style="font-size:12px">Au-delà de 5 séances/semaine sans phases de récupération, le risque de blessure augmente significativement.</p>`;
 
+  const caloriesBody = `
+    <h4>Définition</h4>
+    <p>Dépense calorique totale de vos <strong>courses à pied sur les 7 derniers jours</strong>. Garmin estime les calories brûlées en combinant votre fréquence cardiaque, votre poids et l'intensité de l'effort.</p>
+    <h4>Repères de dépense hebdomadaire (running)</h4>
+    ${kpiScaleHtml([
+      { range:'< 500 kcal',    label:'Faible — 1 sortie légère',          color:'#94a3b8', active: kcal7 > 0   && kcal7 < 500  },
+      { range:'500–1 200 kcal',label:'Modéré — 2–3 sorties régulières',   color:'#22c55e', active: kcal7 >= 500  && kcal7 < 1200 },
+      { range:'1 200–2 500 kcal',label:'Élevé — entraînement structuré',  color:'#3b82f6', active: kcal7 >= 1200 && kcal7 < 2500 },
+      { range:'2 500–4 000 kcal',label:'Très élevé — prépa marathon',     color:'#f97316', active: kcal7 >= 2500 && kcal7 < 4000 },
+      { range:'4 000+ kcal',   label:'Compétition / trail longue distance',color:'#ef4444', active: kcal7 >= 4000 },
+    ])}
+    <p style="font-size:12px">Calories brûlées sur les courses ≥ ${MIN_DIST} km uniquement. Garmin tient compte de la FC et du poids corporel.</p>`;
+
+  const omsBody = `
+    <h4>Définition</h4>
+    <p>L'OMS recommande <strong>150 min/semaine d'activité modérée</strong> (ou 75 min d'activité vigoureuse). Garmin calcule un score combiné : 1 min modérée = 1 pt, 1 min vigoureuse = 2 pts. L'objectif est <strong>150 pts/semaine</strong>. Toutes activités confondues.</p>
+    <h4>Niveaux d'atteinte de l'objectif OMS</h4>
+    ${kpiScaleHtml([
+      { range:'0–50 min',   label:'Insuffisant — moins d\'1/3 de l\'objectif', color:'#ef4444', active: intMin7 < 50  },
+      { range:'50–100 min', label:'En progrès — moins de la moitié',            color:'#f97316', active: intMin7 >= 50  && intMin7 < 100 },
+      { range:'100–150 min',label:'Proche — encore un effort',                  color:'#f59e0b', active: intMin7 >= 100 && intMin7 < 150 },
+      { range:'150–300 min',label:'Objectif atteint',                           color:'#22c55e', active: intMin7 >= 150 && intMin7 < 300 },
+      { range:'300+ min',   label:'Double objectif — excellent',                color:'#3b82f6', active: intMin7 >= 300 },
+    ])}
+    <p style="font-size:12px">Score actuel : <strong>${Math.round(intMin7)} / ${omsGoal} min</strong> (${omsPct}% de l'objectif hebdomadaire).</p>`;
+
   // ── Cards ──────────────────────────────────────────────────────────────────
   const cards = [
     { label: 'VO2max',
@@ -449,6 +482,14 @@ function renderRunKPIs() {
       val: `${seancesPerWeek}<span class="kpi-unit">/sem</span>`,
       sub: '<div class="kpi-delta">12 dernières sem.</div>',
       body: freqBody },
+    { label: 'Énergie 7j',
+      val: kcal7 ? `${Math.round(kcal7).toLocaleString('fr-FR')}<span class="kpi-unit"> kcal</span>` : '–',
+      sub: '',
+      body: caloriesBody },
+    { label: 'OMS Activité',
+      val: kd(Math.round(intMin7), ' min'),
+      sub: `<div style="margin-top:5px"><div style="height:4px;background:var(--surface2);border-radius:2px;overflow:hidden"><div style="height:100%;width:${omsPct}%;background:${omsColor};border-radius:2px"></div></div><div style="font-size:10px;color:${omsColor};margin-top:3px;font-weight:600">${omsPct}% / objectif 150</div></div>`,
+      body: omsBody },
   ];
 
   // Stocker pour l'accès modal (évite les problèmes de quoting dans onclick)
@@ -1380,7 +1421,7 @@ function renderRunStatsTable() {
 
     if (!rs.length) {
       return `<tr><td style="color:var(--accent);font-weight:500">${label}</td>
-        <td colspan="7" style="color:var(--muted);font-style:italic">Pas d'activités</td></tr>`;
+        <td colspan="8" style="color:var(--muted);font-style:italic">Pas d'activités</td></tr>`;
     }
 
     const n    = rs.length;
@@ -1388,6 +1429,7 @@ function renderRunStatsTable() {
     const dur  = rs.reduce((s, r) => s + (r.duration_min || 0), 0);
     const elev = rs.reduce((s, r) => s + (r.elevation_m || 0), 0);
     const trimp= rs.reduce((s, r) => s + computeTRIMP(r), 0);
+    const kcal = rs.reduce((s, r) => s + (r.calories || 0), 0);
     const hrAvg= rs.filter(r => r.hr_avg).reduce((s, r) => s + r.hr_avg, 0) / (rs.filter(r => r.hr_avg).length || 1);
 
     // Allure moyenne pondérée par distance
@@ -1411,6 +1453,7 @@ function renderRunStatsTable() {
       <td>${hrAvg > 0 ? Math.round(hrAvg) + ' bpm' : '–'}</td>
       <td>${elev > 0 ? '+' + Math.round(elev) + ' m' : '–'}</td>
       <td style="font-weight:600;color:#3b82f6">${trimp}</td>
+      <td style="color:var(--muted)">${kcal > 0 ? Math.round(kcal).toLocaleString('fr-FR') + ' kcal' : '–'}</td>
     </tr>`;
   }).join('');
 }
@@ -1778,6 +1821,234 @@ async function pushPlanToGarmin(btn) {
 }
 
 /* ══════════════════════════════════════════════════════════
+   RENDER : Zones FC stacked par semaine (polarisation)
+   ══════════════════════════════════════════════════════════ */
+function renderRunZonesEvolution() {
+  const allRuns = getRuns().filter(r => r.hr_zones_pct && r.duration_min);
+
+  // 12 dernières semaines (lundi → dimanche)
+  const weekLabels = [];
+  const zonesByWeek = Array.from({ length: 5 }, () => []);
+
+  for (let w = 11; w >= 0; w--) {
+    const monday = new Date(TODAY);
+    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7) - w * 7);
+    monday.setHours(0, 0, 0, 0);
+    const sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6); sunday.setHours(23, 59, 59);
+
+    weekLabels.push(monday.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
+
+    const weekRuns = allRuns.filter(r => {
+      const d = new Date(r.date + 'T12:00:00');
+      return d >= monday && d <= sunday;
+    });
+
+    const zones = [0, 0, 0, 0, 0];
+    if (weekRuns.length) {
+      const totDur = weekRuns.reduce((s, r) => s + r.duration_min, 0);
+      weekRuns.forEach(r => r.hr_zones_pct.forEach((pct, i) => { zones[i] += (pct * r.duration_min) / totDur; }));
+    }
+    zones.forEach((v, i) => zonesByWeek[i].push(+v.toFixed(1)));
+  }
+
+  // Indicateur de polarisation sur les 4 dernières semaines
+  const polarEl = document.getElementById('run-zones-polar-indicator');
+  if (polarEl) {
+    const recent = allRuns.filter(r => {
+      const cutoff = new Date(TODAY); cutoff.setDate(cutoff.getDate() - 28);
+      return new Date(r.date) >= cutoff;
+    });
+    if (recent.length) {
+      const totDur = recent.reduce((s, r) => s + r.duration_min, 0);
+      const z = [0, 0, 0, 0, 0];
+      recent.forEach(r => r.hr_zones_pct.forEach((pct, i) => { z[i] += (pct * r.duration_min) / totDur; }));
+      const endurance = z[0] + z[1];
+      const greyZone  = z[2];
+      const intense   = z[3] + z[4];
+      const isGood    = endurance >= 65 && greyZone <= 20;
+      polarEl.innerHTML = `<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px">
+        <span><span style="color:#22c55e;font-weight:700">${endurance.toFixed(0)}%</span> Z1+Z2</span>
+        <span><span style="color:#3b82f6;font-weight:700">${greyZone.toFixed(0)}%</span> Z3</span>
+        <span><span style="color:#ef4444;font-weight:700">${intense.toFixed(0)}%</span> Z4+Z5</span>
+        <span style="padding:1px 8px;border-radius:4px;font-weight:600;background:${isGood ? 'rgba(34,197,94,0.12)' : 'rgba(249,115,22,0.12)'};color:${isGood ? '#16a34a' : '#ea580c'}">
+          ${isGood ? 'Polarisation ✓' : 'Zone grise élevée'}
+        </span>
+      </div>`;
+    }
+  }
+
+  const colors = ['#94a3b8', '#22c55e', '#3b82f6', '#f97316', '#ef4444'];
+  const zLabels = ['Z1 Récup', 'Z2 Endurance', 'Z3 Tempo', 'Z4 Seuil', 'Z5 VO2max'];
+
+  mkChart('chart-run-zones-evolution', {
+    type: 'bar',
+    data: {
+      labels: weekLabels,
+      datasets: zLabels.map((label, i) => ({
+        label, data: zonesByWeek[i],
+        backgroundColor: colors[i],
+        borderWidth: 0,
+      })),
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 }, padding: 10 } },
+        tooltip: { callbacks: { label: c => `${c.dataset.label} : ${c.raw}%` } },
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } },
+        y: { stacked: true, max: 100, grid: { color: '#e5e7eb' }, ticks: { callback: v => v + '%', font: { size: 10 } } },
+      },
+    },
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
+   RENDER : Dénivelé — D+ mensuel + scatter charge
+   ══════════════════════════════════════════════════════════ */
+function renderRunElevationCharts() {
+  const MOIS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+
+  // D+ par mois — 12 derniers mois (tous runs, pas seulement période globale)
+  const allRuns = getRuns();
+  const months = [];
+  for (let m = 11; m >= 0; m--) {
+    const d = new Date(TODAY); d.setDate(1); d.setMonth(d.getMonth() - m);
+    months.push(d.toISOString().slice(0, 7));
+  }
+  const elevByMonth = {};
+  allRuns.forEach(r => {
+    const key = r.date.slice(0, 7);
+    if (elevByMonth[key] !== undefined || months.includes(key))
+      elevByMonth[key] = (elevByMonth[key] || 0) + (r.elevation_m || 0);
+  });
+  const elevData   = months.map(k => Math.round(elevByMonth[k] || 0));
+  const elevLabels = months.map(k => {
+    const [y, m] = k.split('-');
+    return MOIS[+m - 1] + (+y !== TODAY.getFullYear() ? ` ${y.slice(2)}` : '');
+  });
+
+  mkChart('chart-run-elev-monthly', {
+    type: 'bar',
+    data: { labels: elevLabels, datasets: [{
+      label: 'D+', data: elevData,
+      backgroundColor: elevData.map((_, i) => i === elevData.length - 1 ? '#6366f1' : 'rgba(99,102,241,0.45)'),
+      borderRadius: 4,
+    }]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `+${c.raw} m` } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+        y: { grid: { color: '#e5e7eb' }, ticks: { callback: v => `+${v}m`, font: { size: 10 } } },
+      },
+    },
+  });
+
+  // Scatter : dénivelé vs training_load (période globale)
+  const periodRuns = getRunsForGlobalPeriod().filter(r => r.elevation_m > 0 && r.training_load > 0);
+  if (periodRuns.length >= 3) {
+    mkChart('chart-run-elev-scatter', {
+      type: 'scatter',
+      data: { datasets: [{
+        data: periodRuns.map(r => ({ x: Math.round(r.elevation_m), y: r.training_load, label: r.date, name: r.name || '' })),
+        backgroundColor: 'rgba(99,102,241,0.55)', pointRadius: 5, pointHoverRadius: 7,
+      }]},
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: c => `${c.raw.label} — +${c.raw.x}m / charge ${c.raw.y}` } },
+        },
+        scales: {
+          x: { grid: { color: '#e5e7eb' }, title: { display: true, text: 'Dénivelé (m)', color: '#94a3b8', font: { size: 10 } } },
+          y: { grid: { color: '#e5e7eb' }, title: { display: true, text: 'Training Load', color: '#94a3b8', font: { size: 10 } } },
+        },
+      },
+    });
+  }
+
+  // Stats textuelles
+  const statsEl = document.getElementById('run-elev-stats');
+  if (statsEl) {
+    const withElev = allRuns.filter(r => r.elevation_m > 0);
+    if (!withElev.length) { statsEl.innerHTML = '<p style="color:var(--muted);font-size:13px">Pas de données de dénivelé.</p>'; return; }
+    const totalElev = withElev.reduce((s, r) => s + r.elevation_m, 0);
+    const avgElev   = Math.round(totalElev / withElev.length);
+    const maxRun    = withElev.reduce((best, r) => (r.elevation_m || 0) > (best.elevation_m || 0) ? r : best, withElev[0]);
+    const row = (label, val) => `<div style="display:flex;justify-content:space-between;padding:7px 0;border-top:1px solid var(--border);font-size:13px"><span style="color:var(--muted)">${label}</span><span style="font-weight:600">${val}</span></div>`;
+    statsEl.innerHTML =
+      row('D+ total (tout l\'historique)', `+${Math.round(totalElev).toLocaleString('fr-FR')} m`) +
+      row('D+ moyen par sortie', `+${avgElev} m`) +
+      row('Record D+ en une sortie', `+${Math.round(maxRun.elevation_m)} m`) +
+      `<div style="font-size:11px;color:var(--muted);padding-top:6px;border-top:1px solid var(--border);margin-top:2px">${new Date(maxRun.date + 'T12:00:00').toLocaleDateString('fr-FR')} — ${maxRun.name || '–'}</div>`;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   RENDER : Réserve cardiaque (hr_max − hr_avg) dans le temps
+   ══════════════════════════════════════════════════════════ */
+function renderRunCardiacReserve() {
+  const runs = getRunsForGlobalPeriod()
+    .filter(r => r.hr_max && r.hr_avg && r.hr_max > r.hr_avg)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  if (runs.length < 3) {
+    const el = document.getElementById('run-cardiac-info');
+    if (el) el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:6px 0">Pas assez de données (FC max requise).</div>';
+    return;
+  }
+
+  const reserves = runs.map(r => r.hr_max - r.hr_avg);
+  const avg = Math.round(reserves.reduce((s, v) => s + v, 0) / reserves.length);
+  const half = Math.floor(reserves.length / 2);
+  const avgOld = reserves.slice(0, half).reduce((s, v) => s + v, 0) / half;
+  const avgNew = reserves.slice(half).reduce((s, v) => s + v, 0) / (reserves.length - half);
+  const delta  = avgNew - avgOld;
+
+  const infoEl = document.getElementById('run-cardiac-info');
+  if (infoEl) {
+    const trendLabel = delta < -2 ? '↘ Amélioration' : delta > 2 ? '↗ Dégradation' : '→ Stable';
+    const trendColor = delta < -2 ? '#22c55e' : delta > 2 ? '#ef4444' : '#94a3b8';
+    infoEl.innerHTML = `<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;margin-bottom:8px">
+      <span style="color:var(--muted)">Moy. : <strong style="color:var(--text)">${avg} bpm</strong></span>
+      <span style="color:${trendColor};font-weight:600">${trendLabel}</span>
+      <span style="color:var(--muted);font-size:11px">↘ baisse = meilleure efficience cardiaque</span>
+    </div>`;
+  }
+
+  const labels = runs.map(r => new Date(r.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
+
+  mkChart('chart-run-cardiac-reserve', {
+    type: 'line',
+    data: { labels, datasets: [
+      {
+        label: 'Réserve cardiaque', data: reserves,
+        borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.08)',
+        fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#ef4444', borderWidth: 2,
+      },
+      {
+        label: 'Moyenne', data: Array(reserves.length).fill(avg),
+        borderColor: 'rgba(239,68,68,0.35)', backgroundColor: 'transparent',
+        borderDash: [5, 3], pointRadius: 0, borderWidth: 1.5,
+      },
+    ]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => c.dataset.label === 'Moyenne' ? null : `Réserve : ${c.raw} bpm (FC max − FC moy)` } },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 10 } } },
+        y: { grid: { color: '#e5e7eb' }, title: { display: true, text: 'bpm (FC max − FC moy)', color: '#94a3b8', font: { size: 10 } } },
+      },
+    },
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
    ENTRY POINT
    ══════════════════════════════════════════════════════════ */
 function renderRunning() {
@@ -1791,9 +2062,12 @@ function renderRunning() {
   safe(renderRunPaces);
   safe(renderRunVO2Chart);
   safe(renderRunZonesChart);
+  safe(renderRunZonesEvolution);
   safe(renderRunPaceTrend);
   safe(renderRunEfficiencyChart);
+  safe(renderRunCardiacReserve);
   safe(renderRunTRIMP);
+  safe(renderRunElevationCharts);
   safe(renderRunStatsTable);
   const yearEl = document.getElementById('run-year-label');
   if (yearEl) yearEl.textContent = runState.year;

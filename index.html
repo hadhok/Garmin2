@@ -695,6 +695,15 @@
               <div class="chart-wrap" style="height:180px"><canvas id="chart-run-pace-trend"></canvas></div>
             </div>
           </div>
+          <div class="health-grid" style="margin-top:0">
+            <div class="card health-full">
+              <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+                <div class="section-header" style="margin:0">Polarisation zones FC — évolution hebdomadaire</div>
+                <div id="run-zones-polar-indicator"></div>
+              </div>
+              <div class="chart-wrap" style="height:200px"><canvas id="chart-run-zones-evolution"></canvas></div>
+            </div>
+          </div>
         </div>
 
         <!-- TRIMP + Allure/FC -->
@@ -709,6 +718,30 @@
               <div class="section-header" style="margin:0 0 12px">Efficience (Allure × FC)</div>
               <div class="chart-wrap" style="height:180px"><canvas id="chart-run-efficiency"></canvas></div>
               <div id="run-ef-indicator"></div>
+            </div>
+            <div class="card">
+              <div class="section-header" style="margin:0 0 8px">Réserve cardiaque</div>
+              <div id="run-cardiac-info"></div>
+              <div class="chart-wrap" style="height:160px"><canvas id="chart-run-cardiac-reserve"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dénivelé & Profil -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">Dénivelé &amp; Profil <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="health-grid">
+            <div class="card health-full">
+              <div class="section-header" style="margin:0 0 12px">D+ cumulé par mois</div>
+              <div class="chart-wrap" style="height:160px"><canvas id="chart-run-elev-monthly"></canvas></div>
+            </div>
+            <div class="card">
+              <div class="section-header" style="margin:0 0 12px">Dénivelé ↔ Charge d'entraînement</div>
+              <div class="chart-wrap" style="height:180px"><canvas id="chart-run-elev-scatter"></canvas></div>
+            </div>
+            <div class="card">
+              <div class="section-header" style="margin:0 0 12px">Statistiques dénivelé</div>
+              <div id="run-elev-stats"></div>
             </div>
           </div>
         </div>
@@ -731,7 +764,7 @@
             <table class="acts-table" id="run-stats-table">
               <thead><tr>
                 <th>Mois</th><th>Sorties</th><th>Distance</th><th>Durée</th>
-                <th>Allure moy</th><th>FC moy</th><th>Dénivelé</th><th>TRIMP</th>
+                <th>Allure moy</th><th>FC moy</th><th>Dénivelé</th><th>TRIMP</th><th>Calories</th>
               </tr></thead>
               <tbody id="run-stats-body"></tbody>
             </table>
