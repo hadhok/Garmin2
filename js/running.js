@@ -681,7 +681,7 @@ function renderRunPaces() {
    RENDER : VO2max trend
    ══════════════════════════════════════════════════════════ */
 function renderRunVO2Chart() {
-  const runs = getRuns().filter(r => r.vo2max > 0).sort((a, b) => a.date.localeCompare(b.date));
+  const runs = getRunsForGlobalPeriod().filter(r => r.vo2max > 0).sort((a, b) => a.date.localeCompare(b.date));
   if (runs.length < 2) return;
   const labels = runs.map(r => new Date(r.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
   mkChart('chart-run-vo2', {
@@ -909,7 +909,7 @@ function renderRunTable() {
   const col = runState.sortCol;
   const dir = runState.sortDir;
 
-  const runs = getRuns().map(r => ({ ...r, _trimp: computeTRIMP(r) })).sort((a, b) => {
+  const runs = getRunsForGlobalPeriod().map(r => ({ ...r, _trimp: computeTRIMP(r) })).sort((a, b) => {
     let va, vb;
     if (col === 'date')          { va = a.date;              vb = b.date; }
     else if (col === 'distance_km')   { va = a.distance_km || 0;    vb = b.distance_km || 0; }
@@ -1633,16 +1633,17 @@ function renderRunVolumeChart() {
    RENDER : Tendance allure mensuelle
    ══════════════════════════════════════════════════════════ */
 function renderRunPaceTrend() {
-  const MONTHS = 12;
+  const MONTHS = runState.globalPeriod === '3m' ? 3 : runState.globalPeriod === '6m' ? 6 : 12;
   const labels = [], paces = [];
   const MOIS_FR = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+  const allRuns = getRunsForGlobalPeriod();
 
   for (let m = MONTHS - 1; m >= 0; m--) {
     const d = new Date(TODAY);
     d.setDate(1);
     d.setMonth(d.getMonth() - m);
     const key = d.toISOString().slice(0, 7);
-    const monthRuns = getRuns().filter(r => r.date.startsWith(key) && r.pace_min_km && r.distance_km);
+    const monthRuns = allRuns.filter(r => r.date.startsWith(key) && r.pace_min_km && r.distance_km);
 
     labels.push(`${MOIS_FR[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`);
     if (monthRuns.length) {
@@ -1802,13 +1803,14 @@ async function pushPlanToGarmin(btn) {
    RENDER : Zones FC stacked par semaine (polarisation)
    ══════════════════════════════════════════════════════════ */
 function renderRunZonesEvolution() {
-  const allRuns = getRuns().filter(r => r.hr_zones_pct && r.duration_min);
+  const allRuns = getRunsForGlobalPeriod().filter(r => r.hr_zones_pct && r.duration_min);
 
-  // 12 dernières semaines (lundi → dimanche)
+  // Nombre de semaines selon la période sélectionnée
+  const numWeeks = runState.globalPeriod === '3m' ? 13 : runState.globalPeriod === '6m' ? 26 : runState.globalPeriod === '1y' ? 52 : 12;
   const weekLabels = [];
   const zonesByWeek = Array.from({ length: 5 }, () => []);
 
-  for (let w = 11; w >= 0; w--) {
+  for (let w = numWeeks - 1; w >= 0; w--) {
     const monday = new Date(TODAY);
     monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7) - w * 7);
     monday.setHours(0, 0, 0, 0);
