@@ -398,6 +398,27 @@
             </div>
             <div class="chart-wrap" style="height:160px"><canvas id="chart-sleep-score"></canvas></div>
           </div>
+          <div class="card" id="sleep-hr-section" style="display:none">
+            <div class="card-header">
+              <span class="card-title">FC nocturne <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">bpm</span></span>
+              <span id="badge-sleep-hr" class="stat-badge"></span>
+            </div>
+            <div class="chart-wrap"><canvas id="chart-sleep-hr"></canvas></div>
+          </div>
+          <div class="card" id="sleep-resp-section" style="display:none">
+            <div class="card-header">
+              <span class="card-title">Respiration nocturne <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">r/min</span></span>
+              <span id="badge-sleep-resp" class="stat-badge"></span>
+            </div>
+            <div class="chart-wrap"><canvas id="chart-sleep-resp"></canvas></div>
+          </div>
+          <div class="card health-full" id="sleep-stress-section" style="display:none">
+            <div class="card-header">
+              <span class="card-title">Stress nocturne</span>
+              <span id="badge-sleep-stress" class="stat-badge"></span>
+            </div>
+            <div class="chart-wrap" style="height:140px"><canvas id="chart-sleep-stress"></canvas></div>
+          </div>
         </div>
 
         <!-- HRV & HR -->
@@ -417,6 +438,10 @@
             </div>
             <div class="chart-wrap"><canvas id="chart-rhr"></canvas></div>
           </div>
+          <div class="card health-full" id="hrv-status-section" style="display:none">
+            <div class="card-header"><span class="card-title">Statut HRV Garmin</span></div>
+            <div id="hrv-status-content" style="padding-top:6px"></div>
+          </div>
         </div>
 
         <!-- Body Battery -->
@@ -428,6 +453,21 @@
               <span id="badge-bb" class="stat-badge"></span>
             </div>
             <div class="chart-wrap" style="height:180px"><canvas id="chart-battery"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Statut & Readiness -->
+        <div id="readiness-section" style="display:none">
+          <div class="section-header">Statut &amp; Readiness</div>
+          <div class="health-grid">
+            <div class="card health-full">
+              <div class="card-header">
+                <span class="card-title">Score de readiness <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">/100</span></span>
+                <span id="badge-readiness" class="stat-badge"></span>
+              </div>
+              <div id="training-status-banner" style="margin-bottom:12px"></div>
+              <div class="chart-wrap" style="height:180px"><canvas id="chart-readiness"></canvas></div>
+            </div>
           </div>
         </div>
 

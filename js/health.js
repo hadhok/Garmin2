@@ -199,40 +199,54 @@ function renderCorrelationChart(days, acts) {
    ══════════════════════════════════════════════════════════ */
 function renderHealthKPIs(days) {
   const h = (label, val, unit='', color='') => `
-    <div class="kpi-card">
+    <div class="kpi-card" style="cursor:default">
       <div class="kpi-label">${label}</div>
       <div class="kpi-value" style="${color ? 'color:'+color : ''}">${val}<span class="kpi-unit">${unit}</span></div>
     </div>`;
 
-  const sleepAvg = avg(days,'sleep_total_min');
-  const sleepStr = sleepAvg ? `${Math.floor(sleepAvg/60)}h${String(Math.round(sleepAvg%60)).padStart(2,'0')}` : '–';
-  const deepAvg  = avg(days,'sleep_deep_min');
-  const remAvg   = avg(days,'sleep_rem_min');
-  const hrvAvg   = avg(days,'hrv_overnight_avg');
-  const bbHigh   = avg(days,'body_battery_high');
-  const bbLow    = avg(days,'body_battery_low');
-  const stressA  = avg(days,'stress_avg');
-  const stressC  = stressA < 25 ? 'var(--green)' : stressA < 50 ? 'var(--yellow)' : 'var(--red)';
-  const rhr      = avg(days,'resting_hr');
-  const stepsA   = avg(days,'steps');
+  const sleepAvg  = avg(days,'sleep_total_min');
+  const sleepStr  = sleepAvg ? `${Math.floor(sleepAvg/60)}h${String(Math.round(sleepAvg%60)).padStart(2,'0')}` : '–';
+  const deepAvg   = avg(days,'sleep_deep_min');
+  const remAvg    = avg(days,'sleep_rem_min');
+  const hrvAvg    = avg(days,'hrv_overnight_avg');
+  const bbHigh    = avg(days,'body_battery_high');
+  const bbLow     = avg(days,'body_battery_low');
+  const stressA   = avg(days,'stress_avg');
+  const stressC   = stressA < 25 ? 'var(--green)' : stressA < 50 ? 'var(--yellow)' : 'var(--red)';
+  const rhr       = avg(days,'resting_hr');
+  const stepsA    = avg(days,'steps');
+  const sleepHR   = avg(days,'sleep_hr_avg');
+  const resp      = avg(days,'sleep_respiration_avg');
+  const sleepStr2 = avg(days,'sleep_stress_avg');
 
   const weightDays = days.filter(d => d.weight_kg);
   const lastWeight = weightDays.length ? weightDays[weightDays.length-1].weight_kg : null;
   const lastBmi    = weightDays.length ? weightDays[weightDays.length-1].bmi : null;
+  const lastFat    = weightDays.length ? weightDays[weightDays.length-1].body_fat : null;
   const bmiColor   = lastBmi ? (lastBmi < 18.5 ? 'var(--swim)' : lastBmi < 25 ? 'var(--green)' : lastBmi < 30 ? 'var(--yellow)' : 'var(--red)') : '';
 
+  // Most recent readiness
+  const withReadiness = [...days].reverse().find(d => d.training_readiness_score);
+  const readiness = withReadiness?.training_readiness_score ?? null;
+  const readinessColor = readiness == null ? '' : readiness >= 70 ? 'var(--green)' : readiness >= 40 ? 'var(--yellow)' : 'var(--red)';
+
   document.getElementById('kpi-health').innerHTML =
-    (lastWeight ? h('Poids actuel', lastWeight, 'kg')   : '') +
-    (lastBmi    ? h('IMC',          lastBmi,    '', bmiColor) : '') +
-    h('Sommeil moy.',  sleepStr) +
-    h('Profond moy.',  deepAvg  ? Math.round(deepAvg)+'min' : '–') +
-    h('REM moy.',      remAvg   ? Math.round(remAvg)+'min'  : '–') +
-    h('HRV nuit moy.', hrvAvg   ? Math.round(hrvAvg)        : '–', 'ms') +
-    h('Body Battery ↑',bbHigh   ? Math.round(bbHigh)        : '–') +
-    h('Body Battery ↓',bbLow    ? Math.round(bbLow)         : '–') +
-    h('Stress moy.',   stressA  ? Math.round(stressA)       : '–', '', stressA ? stressC : '') +
-    h('FC repos moy.', rhr      ? Math.round(rhr)           : '–', 'bpm') +
-    h('Pas/jour moy.', stepsA   ? Math.round(stepsA).toLocaleString('fr') : '–');
+    (lastWeight ? h('Poids actuel',   lastWeight,          ' kg')              : '') +
+    (lastBmi    ? h('IMC',            lastBmi,             '',  bmiColor)       : '') +
+    (lastFat    ? h('Masse grasse',   lastFat,             ' %')               : '') +
+    h('Sommeil moy.',      sleepStr) +
+    h('Profond moy.',      deepAvg   ? Math.round(deepAvg)+'min' : '–') +
+    h('REM moy.',          remAvg    ? Math.round(remAvg)+'min'  : '–') +
+    (sleepHR    ? h('FC nocturne',    Math.round(sleepHR), ' bpm')             : '') +
+    (resp       ? h('Respiration nuit', resp.toFixed(1),   ' r/min')           : '') +
+    (sleepStr2  ? h('Stress nuit',    Math.round(sleepStr2), '')               : '') +
+    h('HRV nuit moy.',     hrvAvg    ? Math.round(hrvAvg)        : '–', ' ms') +
+    h('Body Battery ↑',    bbHigh    ? Math.round(bbHigh)        : '–') +
+    h('Body Battery ↓',    bbLow     ? Math.round(bbLow)         : '–') +
+    h('Stress moy.',       stressA   ? Math.round(stressA)       : '–', '', stressA ? stressC : '') +
+    h('FC repos moy.',     rhr       ? Math.round(rhr)           : '–', ' bpm') +
+    h('Pas/jour moy.',     stepsA    ? Math.round(stepsA).toLocaleString('fr') : '–') +
+    (readiness  ? h('Readiness',      Math.round(readiness), ' /100', readinessColor) : '');
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -278,15 +292,16 @@ function renderHealthCharts(days) {
       scales:{ x:xOpts, y:{grid:{color:'#e5e7eb'},title:{display:true,text:'bpm',color:'#64748b'}} } }
   });
 
-  /* Body Battery range */
+  /* Body Battery range + end of day */
   const bbHighAvg = avg(days,'body_battery_high');
   const bbLowAvg  = avg(days,'body_battery_low');
   setBadge('badge-bb', bbHighAvg ? `${Math.round(bbLowAvg)}→${Math.round(bbHighAvg)}` : '');
   mkChart('chart-battery', {
     type:'line',
     data:{ labels:L, datasets:[
-      { label:'Maximum', data:days.map(d=>d.body_battery_high), borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,0.15)', fill:'+1', tension:0.3, pointRadius:0, borderWidth:2 },
-      { label:'Minimum', data:days.map(d=>d.body_battery_low),  borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,0.05)', fill:false, tension:0.3, pointRadius:0, borderWidth:2 },
+      { label:'Maximum',         data:days.map(d=>d.body_battery_high), borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,0.15)', fill:'+1', tension:0.3, pointRadius:0, borderWidth:2 },
+      { label:'Minimum',         data:days.map(d=>d.body_battery_low),  borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,0.05)', fill:false, tension:0.3, pointRadius:0, borderWidth:2 },
+      { label:'Fin de journée',  data:days.map(d=>d.body_battery_end||null), borderColor:'#f97316', borderDash:[4,3], fill:false, tension:0.3, pointRadius:2, borderWidth:2, spanGaps:true },
     ]},
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{position:'bottom',labels:{color:'#64748b',boxWidth:10}} },
@@ -351,26 +366,41 @@ function renderHealthCharts(days) {
       scales:{ x:xOpts, y:{grid:{color:'#e5e7eb'}} } }
   });
 
-  /* Weight */
+  /* Weight + body fat */
   const weightData = days.map(d => d.weight_kg || null);
+  const fatData    = days.map(d => d.body_fat   || null);
   const hasWeight  = weightData.some(v => v !== null);
+  const hasFat     = fatData.some(v => v !== null);
   const weightSection = document.getElementById('weight-section');
   if (hasWeight && weightSection) {
     weightSection.style.display = '';
     const lastW = weightData.filter(Boolean);
-    setBadge('badge-weight', lastW.length ? lastW[lastW.length-1]+' kg' : '');
+    const lastF = fatData.filter(Boolean);
+    setBadge('badge-weight', lastW.length ? lastW[lastW.length-1]+' kg' + (lastF.length ? ` · ${lastF[lastF.length-1]}% MG` : '') : '');
+    const fatMin = hasFat ? Math.max(0, Math.min(...lastF) - 2) : null;
+    const fatMax = hasFat ? Math.min(...lastF) + Math.max(...lastF) : null; // rough range
     mkChart('chart-weight', {
       type:'line',
-      data:{ labels:L, datasets:[{ label:'Poids', data:weightData,
-        borderColor:'#6366f1', backgroundColor:'rgba(99,102,241,0.1)',
-        fill:true, tension:0.3, spanGaps:true,
-        pointRadius:weightData.map(v=>v!==null?4:0),
-        pointBackgroundColor:'#6366f1', pointBorderColor:'#1a1a1a', pointBorderWidth:2, borderWidth:2,
-      }]},
+      data:{ labels:L, datasets:[
+        { label:'Poids', data:weightData, yAxisID:'y',
+          borderColor:'#6366f1', backgroundColor:'rgba(99,102,241,0.1)',
+          fill:true, tension:0.3, spanGaps:true,
+          pointRadius:weightData.map(v=>v!==null?4:0),
+          pointBackgroundColor:'#6366f1', pointBorderColor:'#1a1a1a', pointBorderWidth:2, borderWidth:2,
+        },
+        ...(hasFat ? [{ label:'Masse grasse', data:fatData, yAxisID:'y1',
+          borderColor:'#f97316', backgroundColor:'rgba(249,115,22,0.05)',
+          fill:false, tension:0.3, spanGaps:true, borderWidth:2,
+          pointRadius:fatData.map(v=>v!==null?3:0), pointBackgroundColor:'#f97316',
+        }] : [])
+      ]},
       options:{ responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>c.raw!==null?`${c.raw} kg`:null}} },
+        plugins:{ legend:{ display: hasFat, position:'bottom', labels:{color:'#64748b',boxWidth:10} },
+          tooltip:{callbacks:{label:c=>c.raw!==null?(c.dataset.yAxisID==='y1'?`${c.raw}% MG`:`${c.raw} kg`):null}}
+        },
         scales:{ x:xOpts,
-          y:{ min:Math.min(...lastW)-1, max:Math.max(...lastW)+1, grid:{color:'#e5e7eb'}, title:{display:true,text:'kg',color:'#64748b'} }
+          y:{ min:Math.min(...lastW)-1, max:Math.max(...lastW)+1, grid:{color:'#e5e7eb'}, title:{display:true,text:'kg',color:'#64748b'} },
+          ...(hasFat ? { y1:{ position:'right', min:Math.max(0, Math.min(...lastF)-3), max:Math.min(...lastF)+Math.max(...lastF)-Math.min(...lastF)+3, grid:{display:false}, title:{display:true,text:'% MG',color:'#64748b'} } } : {})
         }
       }
     });
@@ -396,6 +426,140 @@ function renderHealthCharts(days) {
 }
 
 /* ══════════════════════════════════════════════════════════
+   SLEEP PHYSIOLOGY (FC nocturne, Respiration, Stress nuit)
+   ══════════════════════════════════════════════════════════ */
+function renderSleepPhysioCharts(days) {
+  const L     = hlabels(days);
+  const xOpts = { grid:{display:false}, ticks:{maxTicksLimit: days.length > 30 ? 8 : 12} };
+
+  const show = (id, has) => { const el = document.getElementById(id); if (el) el.style.display = has ? '' : 'none'; };
+
+  const hasSleepHR = days.some(d => d.sleep_hr_avg);
+  show('sleep-hr-section', hasSleepHR);
+  if (hasSleepHR) {
+    setBadge('badge-sleep-hr', fmtAvg(days,'sleep_hr_avg') + ' bpm');
+    mkChart('chart-sleep-hr', { type:'line',
+      data:{ labels:L, datasets:[{ label:'FC nocturne', data:days.map(d=>d.sleep_hr_avg||null),
+        borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,0.08)', fill:true, tension:0.4, pointRadius:2, borderWidth:2, spanGaps:true }]},
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+        scales:{ x:xOpts, y:{grid:{color:'#e5e7eb'},title:{display:true,text:'bpm',color:'#64748b'}} } }
+    });
+  }
+
+  const hasResp = days.some(d => d.sleep_respiration_avg);
+  show('sleep-resp-section', hasResp);
+  if (hasResp) {
+    setBadge('badge-sleep-resp', fmtAvg(days,'sleep_respiration_avg',1) + ' r/min');
+    mkChart('chart-sleep-resp', { type:'line',
+      data:{ labels:L, datasets:[{ label:'Respiration', data:days.map(d=>d.sleep_respiration_avg||null),
+        borderColor:'#0ea5e9', backgroundColor:'rgba(14,165,233,0.08)', fill:true, tension:0.4, pointRadius:2, borderWidth:2, spanGaps:true }]},
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+        scales:{ x:xOpts, y:{grid:{color:'#e5e7eb'},title:{display:true,text:'r/min',color:'#64748b'}} } }
+    });
+  }
+
+  const hasSleepStress = days.some(d => d.sleep_stress_avg);
+  show('sleep-stress-section', hasSleepStress);
+  if (hasSleepStress) {
+    setBadge('badge-sleep-stress', fmtAvg(days,'sleep_stress_avg'));
+    mkChart('chart-sleep-stress', { type:'line',
+      data:{ labels:L, datasets:[{ label:'Stress nocturne', data:days.map(d=>d.sleep_stress_avg||null),
+        borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,0.08)', fill:true, tension:0.4, pointRadius:2, borderWidth:2, spanGaps:true }]},
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+        scales:{ x:xOpts, y:{min:0,max:100,grid:{color:'#e5e7eb'}} } }
+    });
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   HRV STATUS DISTRIBUTION
+   ══════════════════════════════════════════════════════════ */
+function renderHRVStatus(days) {
+  const section = document.getElementById('hrv-status-section');
+  const el      = document.getElementById('hrv-status-content');
+  if (!section || !el) return;
+
+  const STATUS = {
+    'BALANCED':       { label:'Équilibré',    color:'#22c55e' },
+    'UNBALANCED':     { label:'Déséquilibré', color:'#f59e0b' },
+    'LOW':            { label:'Faible',       color:'#ef4444' },
+    'POOR':           { label:'Mauvais',      color:'#dc2626' },
+    'GOOD':           { label:'Bon',          color:'#22c55e' },
+    'BALANCED_3':     { label:'Équilibré',    color:'#22c55e' },
+    'UNBALANCED_3':   { label:'Déséquilibré', color:'#f59e0b' },
+  };
+
+  const counts = {};
+  days.forEach(d => {
+    if (!d.hrv_status) return;
+    const key = String(d.hrv_status).toUpperCase();
+    counts[key] = (counts[key] || 0) + 1;
+  });
+
+  if (!Object.keys(counts).length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  const total = Object.values(counts).reduce((s, v) => s + v, 0);
+  el.innerHTML = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([key, count]) => {
+    const info = STATUS[key] || { label: key.charAt(0) + key.slice(1).toLowerCase(), color: '#6b7280' };
+    const pct  = Math.round(count / total * 100);
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:9px">
+      <span style="font-size:12px;font-weight:700;color:${info.color};min-width:100px">${info.label}</span>
+      <div style="flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:${info.color};border-radius:3px"></div>
+      </div>
+      <span style="font-size:11px;color:var(--muted);min-width:70px;text-align:right">${count} j. · ${pct}%</span>
+    </div>`;
+  }).join('');
+}
+
+/* ══════════════════════════════════════════════════════════
+   TRAINING READINESS & STATUS
+   ══════════════════════════════════════════════════════════ */
+function renderReadinessChart(days) {
+  const section = document.getElementById('readiness-section');
+  if (!section) return;
+
+  const hasReadiness = days.some(d => d.training_readiness_score);
+  if (!hasReadiness) { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  // Training status badge (most recent)
+  const bannerEl = document.getElementById('training-status-banner');
+  if (bannerEl) {
+    const withStatus = [...days].reverse().find(d => d.training_status);
+    if (withStatus?.training_status) {
+      const sInfo = typeof _statusInfo === 'function'
+        ? _statusInfo(withStatus.training_status)
+        : { label: withStatus.training_status, color: '#6b7280' };
+      bannerEl.innerHTML = `<span style="display:inline-flex;align-items:center;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;background:${sInfo.color}20;color:${sInfo.color}">Statut actuel : ${sInfo.label}</span>`;
+    } else {
+      bannerEl.innerHTML = '';
+    }
+  }
+
+  // Readiness line chart with colored points
+  const rAvg = avg(days, 'training_readiness_score');
+  setBadge('badge-readiness', rAvg ? Math.round(rAvg) + ' /100' : '');
+
+  const L     = hlabels(days);
+  const xOpts = { grid:{display:false}, ticks:{maxTicksLimit: days.length > 30 ? 8 : 12} };
+
+  mkChart('chart-readiness', { type:'line',
+    data:{ labels:L, datasets:[{ label:'Readiness', data:days.map(d=>d.training_readiness_score||null),
+      borderColor:'#22d3ee', backgroundColor:'rgba(34,211,238,0.1)', fill:true, tension:0.4, borderWidth:2, spanGaps:true,
+      pointRadius: days.map(d => d.training_readiness_score ? 3 : 0),
+      pointBackgroundColor: days.map(d => {
+        const r = d.training_readiness_score;
+        return !r ? '#888' : r >= 70 ? '#22c55e' : r >= 40 ? '#f59e0b' : '#ef4444';
+      }),
+    }]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:xOpts, y:{min:0,max:100,grid:{color:'#e5e7eb'},title:{display:true,text:'/100',color:'#64748b'}} } }
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
    MAIN RENDER
    ══════════════════════════════════════════════════════════ */
 function renderHealth() {
@@ -409,6 +573,9 @@ function renderHealth() {
   renderHealthKPIs(days);
   renderHealthCharts(days);
   renderSleepScoreChart(days);
+  renderSleepPhysioCharts(days);
+  renderHRVStatus(days);
+  renderReadinessChart(days);
   const allActs = getAll().filter(a => {
     const cutoff = new Date(TODAY); cutoff.setDate(cutoff.getDate() - state.healthDays);
     return new Date(a.start_time || a.date) >= cutoff;
