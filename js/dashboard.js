@@ -261,23 +261,28 @@ function renderDashboard() {
 
   if (state.tab === 'day') {
     renderKPIs('kpi-day', acts, prevActs);
+    renderDayBanner();
+    renderDayWellnessKPIs();
     renderActivityList('list-day', acts, 5);
     renderZones('zones-day', zones);
   }
   if (state.tab === 'week') {
     renderKPIs('kpi-week', acts, prevActs);
+    renderWeekWellnessBanner();
     renderWeekCells(getAll());
     renderWeekCharts(acts);
     renderActivityList('list-week', acts, 6);
   }
   if (state.tab === 'month') {
     renderKPIs('kpi-month', acts, prevActs);
+    renderWeightKPI('kpi-month-wellness');
     renderMonthCharts(acts);
     renderZones('zones-month', zones);
     renderActivityList('list-month', acts, 8);
   }
   if (state.tab === 'year') {
     renderKPIs('kpi-year', acts, prevActs);
+    renderWeightKPI('kpi-year-wellness');
     renderYearCharts(acts);
     renderTopActivities('list-year', acts, 6);
     renderYearActivityList('list-year-all', acts);
@@ -285,4 +290,218 @@ function renderDashboard() {
 
   // Diagramme de forme (toutes vues)
   if (typeof renderFormeDiagram === 'function') renderFormeDiagram();
+}
+
+/* ══════════════════════════════════════════════════════════
+   WELLNESS DASHBOARD — helpers
+   ══════════════════════════════════════════════════════════ */
+
+function _todayWellness() {
+  if (!state.wellness?.days) return null;
+  const todayIso = TODAY.toISOString().slice(0, 10);
+  const yest     = new Date(TODAY); yest.setDate(yest.getDate() - 1);
+  return state.wellness.days[todayIso] || state.wellness.days[yest.toISOString().slice(0, 10)] || null;
+}
+
+const _TRAINING_STATUS = {
+  productive:      { label: 'Productif',        color: '#22c55e' },
+  peaking:         { label: 'En pic',            color: '#6366f1' },
+  recovery:        { label: 'Récupération',      color: '#3b82f6' },
+  maintaining:     { label: 'Maintien',          color: '#94a3b8' },
+  detraining:      { label: 'Désentraînement',   color: '#f97316' },
+  overreaching:    { label: 'Surmenage',         color: '#ef4444' },
+  unproductive:    { label: 'Non productif',     color: '#f59e0b' },
+  below_goals:     { label: 'En dessous objectif', color: '#f59e0b' },
+  no_status:       { label: '–',                 color: '#94a3b8' },
+};
+
+function _statusInfo(raw) {
+  if (!raw) return null;
+  const key = String(raw).toLowerCase().replace(/[\s-]/g, '_');
+  return _TRAINING_STATUS[key] || { label: raw, color: '#94a3b8' };
+}
+
+/* ── 1. Bandeau Forme du jour (Day view) ── */
+function renderDayBanner() {
+  const el = document.getElementById('dash-day-banner');
+  if (!el) return;
+
+  const day = _todayWellness();
+  const rec = (typeof computeRecoveryScore === 'function') ? computeRecoveryScore() : null;
+  if (!day && !rec) { el.style.display = 'none'; return; }
+
+  const score     = rec?.score ?? null;
+  const scoreColor = score != null ? (score >= 70 ? '#22c55e' : score >= 40 ? '#f59e0b' : '#ef4444') : '#94a3b8';
+  const scoreLabel = score != null ? (score >= 70 ? 'Bonne forme' : score >= 40 ? 'Correct' : 'Fatigue') : '';
+  const deg        = score != null ? Math.round((score / 100) * 360) : 0;
+
+  const status    = _statusInfo(day?.training_status);
+  const readiness = day?.training_readiness_score ?? null;
+
+  const stat = (label, val, unit='') => val != null
+    ? `<div style="text-align:center"><div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px">${label}</div><div style="font-size:15px;font-weight:700;color:var(--text)">${val}<span style="font-size:10px;font-weight:400;color:var(--muted)"> ${unit}</span></div></div>`
+    : '';
+
+  const hrv = day?.hrv_overnight_avg ? Math.round(day.hrv_overnight_avg) : null;
+  const rhr = day?.resting_hr ? Math.round(day.resting_hr) : null;
+  const bb  = day?.body_battery_high ?? null;
+
+  el.style.display = '';
+  el.innerHTML = `
+    <div class="card" style="padding:14px 16px">
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        ${score != null ? `
+        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+          <div style="width:52px;height:52px;border-radius:50%;background:conic-gradient(${scoreColor} 0deg ${deg}deg,var(--surface2) ${deg}deg);display:flex;align-items:center;justify-content:center">
+            <div style="width:40px;height:40px;border-radius:50%;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center">
+              <span style="font-size:15px;font-weight:800;line-height:1;color:${scoreColor}">${score}</span>
+            </div>
+          </div>
+          <div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)">Récupération</div><div style="font-size:12px;font-weight:700;color:${scoreColor}">${scoreLabel}</div></div>
+        </div>
+        <div style="width:1px;height:38px;background:var(--border);flex-shrink:0"></div>` : ''}
+        <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">
+          ${stat('HRV', hrv, 'ms')}
+          ${stat('FC repos', rhr, 'bpm')}
+          ${stat('Body Bat.', bb != null ? Math.round(bb) : null, '%')}
+          ${readiness != null ? stat('Readiness', Math.round(readiness), '') : ''}
+        </div>
+        ${status ? `
+        <div style="margin-left:auto;flex-shrink:0">
+          <span style="padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;background:${status.color}20;color:${status.color}">${status.label}</span>
+        </div>` : ''}
+      </div>
+    </div>`;
+}
+
+/* ── 2. KPIs wellness du jour : Pas, Cal. actives, Sommeil ── */
+function renderDayWellnessKPIs() {
+  const el = document.getElementById('kpi-day-wellness');
+  if (!el) return;
+
+  const day = _todayWellness();
+  if (!day) { el.innerHTML = ''; return; }
+
+  const kpi = (label, val, unit, sub='') => `
+    <div class="kpi-card">
+      <div class="kpi-label">${label}</div>
+      <div class="kpi-value">${val}<span class="kpi-unit">${unit ? ' ' + unit : ''}</span></div>
+      ${sub}
+    </div>`;
+
+  let html = '';
+
+  // Pas du jour
+  const steps     = day.steps;
+  const stepsGoal = day.steps_goal || 6000;
+  if (steps) {
+    const pct   = Math.min(100, Math.round(steps / stepsGoal * 100));
+    const color = pct >= 100 ? '#22c55e' : pct >= 50 ? '#f97316' : '#ef4444';
+    const bar   = `<div style="margin-top:5px;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${color};border-radius:2px"></div></div><div style="font-size:10px;color:${color};margin-top:3px;font-weight:600">${pct}% / obj. ${stepsGoal.toLocaleString('fr-FR')}</div>`;
+    html += kpi('Pas du jour', steps.toLocaleString('fr-FR'), '', bar);
+  }
+
+  // Calories actives
+  if (day.calories_active) {
+    html += kpi('Cal. actives', Math.round(day.calories_active).toLocaleString('fr-FR'), 'kcal', '<div class="kpi-delta">mouvement quotidien</div>');
+  }
+
+  // Sommeil de la nuit
+  const sleepMin = day.sleep_total_min;
+  if (sleepMin) {
+    const h     = Math.floor(sleepMin / 60);
+    const m     = Math.round(sleepMin % 60);
+    const deep  = sleepMin && day.sleep_deep_min ? Math.round(day.sleep_deep_min / sleepMin * 100) : null;
+    const rem   = sleepMin && day.sleep_rem_min  ? Math.round(day.sleep_rem_min  / sleepMin * 100) : null;
+    const sub   = deep != null ? `<div class="kpi-delta">Profond ${deep}% · REM ${rem ?? '–'}%</div>` : '';
+    html += kpi('Sommeil nuit', `${h}h${String(m).padStart(2,'0')}`, '', sub);
+  }
+
+  el.innerHTML = html;
+}
+
+/* ── 3. Bandeau semaine : statut entraînement + stress moyen ── */
+function renderWeekWellnessBanner() {
+  const el = document.getElementById('dash-week-banner');
+  if (!el) return;
+
+  if (!state.wellness?.days) { el.style.display = 'none'; return; }
+
+  const { start, end } = getPeriodBounds();
+  const allDays  = Object.values(state.wellness.days);
+  const weekDays = allDays.filter(d => { const dt = new Date(d.date + 'T12:00:00'); return dt >= start && dt <= end; });
+
+  if (!weekDays.length) { el.style.display = 'none'; return; }
+
+  // Training status : valeur la plus récente disponible dans la semaine
+  const withStatus = [...weekDays].reverse().find(d => d.training_status);
+  const status     = _statusInfo(withStatus?.training_status);
+
+  // Stress moyen semaine
+  const stressVals = weekDays.map(d => d.stress_avg).filter(v => v != null && v > 0);
+  const stressAvg  = stressVals.length ? Math.round(stressVals.reduce((s, v) => s + v, 0) / stressVals.length) : null;
+
+  // Delta stress vs semaine précédente
+  const prevStart = new Date(start); prevStart.setDate(prevStart.getDate() - 7);
+  const prevEnd   = new Date(end);   prevEnd.setDate(prevEnd.getDate() - 7);
+  const prevVals  = allDays.filter(d => { const dt = new Date(d.date + 'T12:00:00'); return dt >= prevStart && dt <= prevEnd; })
+                            .map(d => d.stress_avg).filter(v => v != null && v > 0);
+  const prevStress = prevVals.length ? Math.round(prevVals.reduce((s, v) => s + v, 0) / prevVals.length) : null;
+  const stressDelta = stressAvg != null && prevStress != null ? stressAvg - prevStress : null;
+
+  const stressColor = stressAvg == null ? '#94a3b8' : stressAvg < 26 ? '#22c55e' : stressAvg < 51 ? '#3b82f6' : stressAvg < 76 ? '#f97316' : '#ef4444';
+  const stressLabel = stressAvg == null ? '' : stressAvg < 26 ? 'Repos' : stressAvg < 51 ? 'Faible' : stressAvg < 76 ? 'Modéré' : 'Élevé';
+
+  if (!status && stressAvg == null) { el.style.display = 'none'; return; }
+
+  el.style.display = '';
+  el.innerHTML = `
+    <div class="card" style="padding:12px 16px">
+      <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+        ${status ? `
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)">Statut Garmin</span>
+          <span style="padding:3px 12px;border-radius:20px;font-size:13px;font-weight:700;background:${status.color}20;color:${status.color}">${status.label}</span>
+        </div>
+        <div style="width:1px;height:30px;background:var(--border);flex-shrink:0"></div>` : ''}
+        ${stressAvg != null ? `
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)">Stress moy.</span>
+          <span style="font-size:20px;font-weight:800;color:${stressColor}">${stressAvg}</span>
+          <span style="font-size:11px;font-weight:600;color:${stressColor}">${stressLabel}</span>
+          ${stressDelta != null ? `<span style="font-size:11px;font-weight:600;color:${stressDelta <= 0 ? '#22c55e' : '#ef4444'}">${stressDelta > 0 ? '▲' : '▼'} ${Math.abs(stressDelta)} vs sem. préc.</span>` : ''}
+        </div>` : ''}
+      </div>
+    </div>`;
+}
+
+/* ── 4. KPI Poids courant (Mois / Année) ── */
+function renderWeightKPI(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) { return; }
+
+  if (!state.wellness?.days) { el.innerHTML = ''; return; }
+
+  const days       = Object.values(state.wellness.days).sort((a, b) => a.date.localeCompare(b.date));
+  const withWeight = days.filter(d => d.weight_kg);
+  if (!withWeight.length) { el.innerHTML = ''; return; }
+
+  const last    = withWeight[withWeight.length - 1];
+  const prev    = withWeight.length >= 2 ? withWeight[withWeight.length - 2] : null;
+  const delta   = prev ? +(last.weight_kg - prev.weight_kg).toFixed(1) : null;
+  const bmi     = last.bmi ? last.bmi.toFixed(1) : null;
+  const bmiColor = bmi ? (+bmi < 18.5 ? '#3b82f6' : +bmi < 25 ? '#22c55e' : +bmi < 30 ? '#f97316' : '#ef4444') : '';
+  const dateStr = new Date(last.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+
+  el.innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-label">Poids</div>
+      <div class="kpi-value">${last.weight_kg.toFixed(1)}<span class="kpi-unit"> kg</span></div>
+      ${delta != null ? `<div class="kpi-delta ${delta <= 0 ? 'up' : 'down'}">${delta > 0 ? '▲' : '▼'} ${Math.abs(delta)} kg</div>` : ''}
+    </div>
+    ${bmi ? `<div class="kpi-card">
+      <div class="kpi-label">IMC</div>
+      <div class="kpi-value" style="color:${bmiColor}">${bmi}</div>
+      <div class="kpi-delta" style="font-size:10px">${dateStr}</div>
+    </div>` : ''}`;
 }
