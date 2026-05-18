@@ -257,11 +257,6 @@ function renderRunKPIs() {
   const runs7 = runs.filter(r => new Date(r.date) >= d7);
   const dist7  = runs7.reduce((s, r) => s + (r.distance_km || 0), 0);
   const kcal7  = runs7.reduce((s, r) => s + (r.calories || 0), 0);
-  // OMS : intensity_min de TOUTES activités (modéré + 2×vigoureux), objectif 150/semaine
-  const intMin7 = getAll().filter(a => new Date(a.date) >= d7).reduce((s, a) => s + (a.intensity_min || 0), 0);
-  const omsGoal = 150;
-  const omsPct  = Math.min(100, Math.round(intMin7 / omsGoal * 100));
-  const omsColor = omsPct >= 100 ? '#22c55e' : omsPct >= 50 ? '#f97316' : '#ef4444';
 
   // Allure marathon estimée
   const marathonTime = vo2 ? computePronostics(vo2).find(p => p.label === 'Marathon') : null;
@@ -435,19 +430,6 @@ function renderRunKPIs() {
     ])}
     <p style="font-size:12px">Calories brûlées sur les courses ≥ ${MIN_DIST} km uniquement. Garmin tient compte de la FC et du poids corporel.</p>`;
 
-  const omsBody = `
-    <h4>Définition</h4>
-    <p>L'OMS recommande <strong>150 min/semaine d'activité modérée</strong> (ou 75 min d'activité vigoureuse). Garmin calcule un score combiné : 1 min modérée = 1 pt, 1 min vigoureuse = 2 pts. L'objectif est <strong>150 pts/semaine</strong>. Toutes activités confondues.</p>
-    <h4>Niveaux d'atteinte de l'objectif OMS</h4>
-    ${kpiScaleHtml([
-      { range:'0–50 min',   label:'Insuffisant — moins d\'1/3 de l\'objectif', color:'#ef4444', active: intMin7 < 50  },
-      { range:'50–100 min', label:'En progrès — moins de la moitié',            color:'#f97316', active: intMin7 >= 50  && intMin7 < 100 },
-      { range:'100–150 min',label:'Proche — encore un effort',                  color:'#f59e0b', active: intMin7 >= 100 && intMin7 < 150 },
-      { range:'150–300 min',label:'Objectif atteint',                           color:'#22c55e', active: intMin7 >= 150 && intMin7 < 300 },
-      { range:'300+ min',   label:'Double objectif — excellent',                color:'#3b82f6', active: intMin7 >= 300 },
-    ])}
-    <p style="font-size:12px">Score actuel : <strong>${Math.round(intMin7)} / ${omsGoal} min</strong> (${omsPct}% de l'objectif hebdomadaire).</p>`;
-
   // ── Cards ──────────────────────────────────────────────────────────────────
   const cards = [
     { label: 'VO2max',
@@ -486,10 +468,6 @@ function renderRunKPIs() {
       val: kcal7 ? `${Math.round(kcal7).toLocaleString('fr-FR')}<span class="kpi-unit"> kcal</span>` : '–',
       sub: '',
       body: caloriesBody },
-    { label: 'OMS Activité',
-      val: kd(Math.round(intMin7), ' min'),
-      sub: `<div style="margin-top:5px"><div style="height:4px;background:var(--surface2);border-radius:2px;overflow:hidden"><div style="height:100%;width:${omsPct}%;background:${omsColor};border-radius:2px"></div></div><div style="font-size:10px;color:${omsColor};margin-top:3px;font-weight:600">${omsPct}% / objectif 150</div></div>`,
-      body: omsBody },
   ];
 
   // Stocker pour l'accès modal (évite les problèmes de quoting dans onclick)

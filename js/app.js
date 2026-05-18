@@ -247,7 +247,16 @@ function renderKPIs(containerId, acts, prevActs=null) {
     ? `${Math.floor(k.duration/60)}h${String(Math.round(k.duration%60)).padStart(2,'0')}`
     : `${Math.round(k.duration)}min`;
   const load = k.training_load > 0 ? Math.round(k.training_load) : '–';
-  const iMin = k.intensity_min > 0 ? k.intensity_min : '–';
+
+  // OMS : objectif 150 min/semaine, proratisé selon la période affichée
+  const periodDays = state.tab === 'day' ? 1 : state.tab === 'week' ? 7 : state.tab === 'month' ? 30 : 365;
+  const omsTarget  = Math.round(150 / 7 * periodDays);
+  const omsVal     = Math.round(k.intensity_min);
+  const omsPct     = omsVal > 0 ? Math.min(100, Math.round(omsVal / omsTarget * 100)) : 0;
+  const omsColor   = omsPct >= 100 ? '#22c55e' : omsPct >= 50 ? '#f97316' : '#ef4444';
+  const omsBar     = omsVal > 0
+    ? `<div style="margin-top:5px;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden"><div style="height:100%;width:${omsPct}%;background:${omsColor};border-radius:2px"></div></div><div style="font-size:10px;color:${omsColor};margin-top:3px;font-weight:600">${omsPct}% / obj. ${omsTarget} min</div>`
+    : '';
 
   document.getElementById(containerId).innerHTML =
     h('Activités',     k.activities,                                   '',    '', delta(k.activities, prevK?.activities)) +
@@ -255,7 +264,7 @@ function renderKPIs(containerId, acts, prevActs=null) {
     h('Temps actif',   dur,                                            '',    '', delta(k.duration, prevK?.duration)) +
     h('Calories',      Math.round(k.calories).toLocaleString('fr'),   'kcal','', delta(k.calories, prevK?.calories)) +
     h('Charge totale', load,                                           'pts', '', k.training_load > 0 ? delta(k.training_load, prevK?.training_load) : '') +
-    h('Min intensité', iMin,                                           'min', '', k.intensity_min > 0 ? delta(k.intensity_min, prevK?.intensity_min) : '') +
+    h('OMS Activité',  omsVal || '–', omsVal ? ' min' : '',           '',    omsBar) +
     h('Dénivelé +',    Math.round(k.elevation),                       'm',   '', delta(k.elevation, prevK?.elevation)) +
     (k.hr_avg  ? h('FC moy.',  k.hr_avg,  'bpm') : '') +
     (k.vo2max  ? h('VO2max',   k.vo2max,  'ml/kg') : '');
