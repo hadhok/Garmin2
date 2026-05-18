@@ -78,6 +78,11 @@
         <span class="nav-label">Running</span>
         <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
+      <button class="nav-item" data-view="help" onclick="switchView('help')">
+        <span class="nav-icon">📖</span>
+        <span class="nav-label">Aide</span>
+        <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
     </div>
 
     <div class="sidebar-footer">
@@ -870,6 +875,11 @@
 
       </div><!-- /view-running -->
 
+      <!-- ════════════════════════════════════════════════
+           VIEW : AIDE
+      ════════════════════════════════════════════════ -->
+      <div id="view-help" class="view"></div>
+
     </main>
   </div><!-- /main-area -->
 </div><!-- /app-shell -->
@@ -975,6 +985,7 @@
 <script src="/js/health.js"></script>
 <script src="/js/profile.js"></script>
 <script src="/js/running.js"></script>
+<script src="/js/help.js"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js', { scope: '/' }));
