@@ -2097,6 +2097,153 @@ function renderRunning() {
   safe(renderRunTable);
   const arrowEl = document.getElementById(`sort-${runState.sortCol}`);
   if (arrowEl) arrowEl.textContent = runState.sortDir === -1 ? '▼' : '▲';
+  safe(populateCompareSelectors);
+}
+
+/* ══════════════════════════════════════════════════════════
+   COMPARER DEUX SESSIONS
+   ══════════════════════════════════════════════════════════ */
+function populateCompareSelectors() {
+  const runs = getRuns().sort((a, b) => b.date.localeCompare(a.date));
+  const opts = runs.map(r => {
+    const date = new Date(r.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: '2-digit' });
+    const dist = r.distance_km ? `${r.distance_km.toFixed(1)} km` : '';
+    const pace = r.pace_min_km ? ` · ${r.pace_min_km}/km` : '';
+    const name = r.name ? ` — ${r.name.slice(0, 28)}` : '';
+    return `<option value="${r.id}">${date} ${dist}${pace}${name}</option>`;
+  }).join('');
+
+  ['compare-sel-a', 'compare-sel-b'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">— Choisir une course —</option>' + opts;
+    if (prev) sel.value = prev;
+  });
+}
+
+function updateRunCompare() {
+  const idA = document.getElementById('compare-sel-a')?.value;
+  const idB = document.getElementById('compare-sel-b')?.value;
+  const el  = document.getElementById('compare-result');
+  if (!el) return;
+
+  if (!idA || !idB) { el.innerHTML = ''; return; }
+  if (idA === idB) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0">Sélectionne deux courses différentes.</div>';
+    return;
+  }
+
+  const runs = getRuns();
+  const a = runs.find(r => String(r.id) === String(idA));
+  const b = runs.find(r => String(r.id) === String(idB));
+  if (!a || !b) return;
+
+  const trimpA = computeTRIMP(a), trimpB = computeTRIMP(b);
+  const paceSecA = paceToSec(a.pace_min_km), paceSecB = paceToSec(b.pace_min_km);
+
+  // Métrique : [label, valA, valB, unitA, unitB, lowerIsBetter]
+  const metrics = [
+    ['Distance',      a.distance_km?.toFixed(2),   b.distance_km?.toFixed(2),   'km', 'km', false],
+    ['Durée',         a.duration_min ? secToTime(a.duration_min * 60) : null, b.duration_min ? secToTime(b.duration_min * 60) : null, '', '', true],
+    ['Allure moy.',   a.pace_min_km, b.pace_min_km, '/km', '/km', true],
+    ['FC moy.',       a.hr_avg,      b.hr_avg,      'bpm', 'bpm', true],
+    ['FC max',        a.hr_max,      b.hr_max,      'bpm', 'bpm', true],
+    ['Dénivelé +',    a.elevation_m ? `+${Math.round(a.elevation_m)}` : null, b.elevation_m ? `+${Math.round(b.elevation_m)}` : null, 'm', 'm', false],
+    ['Vitesse moy.',  a.pace_min_km ? (60 / paceSecA * 60).toFixed(1) : null, b.pace_min_km ? (60 / paceSecB * 60).toFixed(1) : null, 'km/h', 'km/h', false],
+    ['Charge',        a.training_load ? Math.round(a.training_load) : null, b.training_load ? Math.round(b.training_load) : null, 'pts', 'pts', false],
+    ['TRIMP',         Math.round(trimpA) || null, Math.round(trimpB) || null, 'pts', 'pts', false],
+    ['TE aérobie',    a.aerobic_te,  b.aerobic_te,  '', '', false],
+    ['Calories',      a.calories,    b.calories,    'kcal', 'kcal', false],
+  ].filter(([, vA, vB]) => vA != null && vB != null);
+
+  // Helper : valeur numérique pour comparaison
+  const toNum = (v, lowerBetter) => {
+    if (typeof v === 'string' && v.includes(':')) return paceToSec(v);
+    return parseFloat(v);
+  };
+
+  const rows = metrics.map(([label, vA, vB, uA, uB, lowerBetter]) => {
+    const nA = toNum(vA, lowerBetter), nB = toNum(vB, lowerBetter);
+    const max = Math.max(nA, nB) || 1;
+    const wA = Math.round((nA / max) * 100);
+    const wB = Math.round((nB / max) * 100);
+    const aWins = lowerBetter ? nA < nB : nA > nB;
+    const bWins = lowerBetter ? nB < nA : nB > nA;
+    const badge = aWins
+      ? `<span class="compare-winner compare-win-a">A</span>`
+      : bWins ? `<span class="compare-winner compare-win-b">B</span>` : '';
+
+    return `<tr>
+      <td class="compare-val-a">
+        <div class="compare-bar-wrap" style="justify-content:flex-end">
+          ${badge && aWins ? badge : ''}
+          <span>${vA}<span style="font-weight:400;font-size:11px;color:var(--muted)"> ${uA}</span></span>
+          <div class="compare-bar-a" style="width:${wA}px;max-width:80px"></div>
+        </div>
+      </td>
+      <td class="compare-metric">${label}</td>
+      <td class="compare-val-b">
+        <div class="compare-bar-wrap">
+          <div class="compare-bar-b" style="width:${wB}px;max-width:80px"></div>
+          <span>${vB}<span style="font-weight:400;font-size:11px;color:var(--muted)"> ${uB}</span></span>
+          ${badge && bWins ? badge : ''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Zones FC
+  let zonesHtml = '';
+  if (a.hr_zones_pct && b.hr_zones_pct) {
+    const zColors = ['#94a3b8', '#22c55e', '#3b82f6', '#f97316', '#ef4444'];
+    const zLabels = ['Z1', 'Z2', 'Z3', 'Z4', 'Z5'];
+    zonesHtml = `
+      <div class="compare-zones-title">Zones FC</div>
+      <div class="compare-zones-wrap">
+        ${zLabels.map((z, i) => {
+          const pA = (a.hr_zones_pct[i] || 0).toFixed(1);
+          const pB = (b.hr_zones_pct[i] || 0).toFixed(1);
+          return `<div class="compare-zones-row">
+            <div class="compare-zones-lbl">${z}</div>
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:6px;font-size:11px">
+                <span style="color:#3b82f6;width:34px;text-align:right">${pA}%</span>
+                <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;position:relative">
+                  <div style="position:absolute;top:0;left:0;height:50%;width:${pA}%;background:${zColors[i]};opacity:0.9;border-radius:2px"></div>
+                  <div style="position:absolute;bottom:0;left:0;height:50%;width:${pB}%;background:${zColors[i]};opacity:0.5;border-radius:2px"></div>
+                </div>
+                <span style="color:#f97316;width:34px">${pB}%</span>
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
+        <div style="display:flex;justify-content:center;gap:20px;margin-top:6px;font-size:11px">
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#3b82f6;margin-right:4px"></span>Session A</span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#f97316;opacity:0.6;margin-right:4px"></span>Session B</span>
+        </div>
+      </div>`;
+  }
+
+  // En-tête sessions
+  const dateA = new Date(a.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long' });
+  const dateB = new Date(b.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long' });
+
+  el.innerHTML = `
+    <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <div style="flex:1;min-width:140px;padding:10px 12px;border-radius:8px;background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.2)">
+        <div style="font-size:10px;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">A</div>
+        <div style="font-size:13px;font-weight:600">${a.name || 'Course'}</div>
+        <div style="font-size:11px;color:var(--muted)">${dateA}</div>
+      </div>
+      <div style="flex:1;min-width:140px;padding:10px 12px;border-radius:8px;background:rgba(249,115,22,0.07);border:1px solid rgba(249,115,22,0.2)">
+        <div style="font-size:10px;font-weight:700;color:#f97316;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">B</div>
+        <div style="font-size:13px;font-weight:600">${b.name || 'Course'}</div>
+        <div style="font-size:11px;color:var(--muted)">${dateB}</div>
+      </div>
+    </div>
+    <table class="compare-table"><tbody>${rows}</tbody></table>
+    ${zonesHtml}`;
 }
 
 /* ── Fermer le modal KPI avec la touche Escape ── */
