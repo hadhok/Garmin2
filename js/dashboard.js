@@ -2,31 +2,30 @@
    DASHBOARD.JS — Period-based views (Day/Week/Month/Year)
    ══════════════════════════════════════════════════════════ */
 
-/* ── Activity list (card style, used in side panels) ── */
-function renderActivityList(containerId, acts, limit=8) {
+/* ── Activity cards (compact horizontal tiles) ── */
+function _actCard(a) {
+  const id     = String(a.id);
+  ACT_MAP[id]  = a;
+  const main   = a.distance_km > 0 ? `${a.distance_km} km` : fmt_dur(a.duration_min);
+  const sub    = [fmt_dur(a.duration_min), a.calories ? `${Math.round(a.calories)} kcal` : ''].filter(Boolean).join(' · ');
+  const dateStr = a.date ? new Date(a.date + 'T12:00:00').toLocaleDateString('fr-FR', {day:'numeric', month:'short'}) : '';
+  return `<div class="act-card" onclick="openDetail('${id}')">
+    <div class="act-card-top">
+      <div class="act-icon ${a.type || 'other'}">${a.icon || '⚡'}</div>
+      <span class="act-card-date">${dateStr}</span>
+    </div>
+    <div class="act-card-name">${a.name || a.type_label || ''}</div>
+    <div class="act-card-main">${main}</div>
+    <div class="act-card-sub">${sub}</div>
+  </div>`;
+}
+
+function renderActivityCards(containerId, acts, limit = 8) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  if (!acts.length) { el.innerHTML = '<div class="empty">Aucune activité sur cette période</div>'; return; }
-  el.innerHTML = acts.slice(0, limit).map(a => {
-    ACT_MAP[a.id] = a;
-    const main   = a.distance_km > 0 ? `${a.distance_km} km` : fmt_dur(a.duration_min);
-    const cal    = a.calories ? `${Math.round(a.calories)} kcal` : '';
-    const load   = a.training_load > 0 ? `⚡${Math.round(a.training_load)}` : '';
-    const te     = a.te_label || '';
-    const sub    = [fmt_dur(a.duration_min), cal, load, te].filter(Boolean).join(' · ');
-    const dateStr = a.date ? new Date(a.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : '';
-    return `<div class="activity-item" onclick="openDetail(${a.id})">
-      <div class="act-icon ${a.type||'other'}">${a.icon||'⚡'}</div>
-      <div>
-        <div class="act-name">${a.name}</div>
-        <div class="act-date">${dateStr}</div>
-      </div>
-      <div class="act-stats">
-        <div class="act-main">${main}</div>
-        <div class="act-sub">${sub}</div>
-      </div>
-    </div>`;
-  }).join('');
+  if (!acts.length) { el.className = ''; el.innerHTML = '<div class="empty">Aucune activité sur cette période</div>'; return; }
+  el.className = 'acts-row';
+  el.innerHTML = acts.slice(0, limit).map(_actCard).join('');
 }
 
 function renderYearActivityList(containerId, acts) {
@@ -35,16 +34,16 @@ function renderYearActivityList(containerId, acts) {
   const countEl = document.getElementById('year-count');
   if (countEl) countEl.textContent = `— ${acts.length} activités`;
   if (!acts.length) { el.innerHTML = '<div class="empty">Aucune activité sur cette période</div>'; return; }
-
   el.innerHTML = acts.map(a => {
-    ACT_MAP[a.id] = a;
+    const id     = String(a.id);
+    ACT_MAP[id]  = a;
     const main   = a.distance_km > 0 ? `${a.distance_km} km` : fmt_dur(a.duration_min);
     const cal    = a.calories ? `${Math.round(a.calories)} kcal` : '';
     const load   = a.training_load > 0 ? `⚡${Math.round(a.training_load)}` : '';
     const sub    = [fmt_dur(a.duration_min), cal, load, a.te_label].filter(Boolean).join(' · ');
-    const dateStr = a.date ? new Date(a.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : '';
-    return `<div class="activity-item" onclick="openDetail(${a.id})">
-      <div class="act-icon ${a.type||'other'}">${a.icon||'⚡'}</div>
+    const dateStr = a.date ? new Date(a.date + 'T12:00:00').toLocaleDateString('fr-FR', {day:'numeric', month:'short'}) : '';
+    return `<div class="activity-item" onclick="openDetail('${id}')">
+      <div class="act-icon ${a.type || 'other'}">${a.icon || '⚡'}</div>
       <div>
         <div class="act-name">${a.name}</div>
         <div class="act-date">${dateStr}</div>
@@ -57,28 +56,26 @@ function renderYearActivityList(containerId, acts) {
   }).join('');
 }
 
-function renderTopActivities(containerId, acts, limit=6) {
+function renderTopActivities(containerId, acts, limit = 6) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  if (!acts.length) { el.innerHTML = '<div class="empty">Aucune activité</div>'; return; }
-  const sorted = [...acts].sort((a,b) => (b.training_load||0) - (a.training_load||0));
+  if (!acts.length) { el.className = ''; el.innerHTML = '<div class="empty">Aucune activité</div>'; return; }
+  const sorted = [...acts].sort((a, b) => (b.training_load || 0) - (a.training_load || 0));
+  el.className = 'acts-row';
   el.innerHTML = sorted.slice(0, limit).map(a => {
-    ACT_MAP[a.id] = a;
+    const id     = String(a.id);
+    ACT_MAP[id]  = a;
     const load   = a.training_load > 0 ? Math.round(a.training_load) : '–';
-    const te     = a.aerobic_te > 0 ? `TE ${a.aerobic_te.toFixed(1)}` : '';
     const dist   = a.distance_km > 0 ? `${a.distance_km} km` : fmt_dur(a.duration_min);
-    const cal    = a.calories ? `${Math.round(a.calories)} kcal` : '';
-    const dateStr = a.date ? new Date(a.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : '';
-    return `<div class="activity-item" onclick="openDetail(${a.id})">
-      <div class="act-icon ${a.type||'other'}">${a.icon||'⚡'}</div>
-      <div>
-        <div class="act-name">${a.name}</div>
-        <div class="act-date">${dateStr} · ${dist} · ${cal}</div>
+    const dateStr = a.date ? new Date(a.date + 'T12:00:00').toLocaleDateString('fr-FR', {day:'numeric', month:'short'}) : '';
+    return `<div class="act-card" onclick="openDetail('${id}')">
+      <div class="act-card-top">
+        <div class="act-icon ${a.type || 'other'}">${a.icon || '⚡'}</div>
+        <span class="act-card-date">${dateStr}</span>
       </div>
-      <div class="act-stats">
-        <div class="act-main" style="color:var(--accent)">${load}<span style="font-size:11px;font-weight:400;color:var(--muted)"> pts</span></div>
-        <div class="act-sub">${te || a.te_label || ''}</div>
-      </div>
+      <div class="act-card-name">${a.name || a.type_label || ''}</div>
+      <div class="act-card-main" style="color:var(--accent)">${load}<span style="font-size:11px;font-weight:400;color:var(--muted)"> pts</span></div>
+      <div class="act-card-sub">${dist}${a.te_label ? ' · ' + a.te_label : ''}</div>
     </div>`;
   }).join('');
 }
@@ -263,7 +260,7 @@ function renderDashboard() {
     renderKPIs('kpi-day', acts, prevActs);
     renderDayBanner();
     renderDayWellnessKPIs();
-    renderActivityList('list-day', acts, 5);
+    renderActivityCards('list-day', acts, 5);
     renderZones('zones-day', zones);
   }
   if (state.tab === 'week') {
@@ -271,14 +268,14 @@ function renderDashboard() {
     renderWeekWellnessBanner();
     renderWeekCells(getAll());
     renderWeekCharts(acts);
-    renderActivityList('list-week', acts, 6);
+    renderActivityCards('list-week', acts, 6);
   }
   if (state.tab === 'month') {
     renderKPIs('kpi-month', acts, prevActs);
     renderWeightKPI('kpi-month-wellness');
     renderMonthCharts(acts);
     renderZones('zones-month', zones);
-    renderActivityList('list-month', acts, 8);
+    renderActivityCards('list-month', acts, 8);
   }
   if (state.tab === 'year') {
     renderKPIs('kpi-year', acts, prevActs);
@@ -383,7 +380,7 @@ function renderDayWellnessKPIs() {
   if (!day) { el.innerHTML = ''; return; }
 
   const kpi = (label, val, unit, sub='') => `
-    <div class="kpi-card">
+    <div class="kpi-card" style="cursor:default">
       <div class="kpi-label">${label}</div>
       <div class="kpi-value">${val}<span class="kpi-unit">${unit ? ' ' + unit : ''}</span></div>
       ${sub}
@@ -494,12 +491,12 @@ function renderWeightKPI(containerId) {
   const dateStr = new Date(last.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 
   el.innerHTML = `
-    <div class="kpi-card">
+    <div class="kpi-card" style="cursor:default">
       <div class="kpi-label">Poids</div>
       <div class="kpi-value">${last.weight_kg.toFixed(1)}<span class="kpi-unit"> kg</span></div>
       ${delta != null ? `<div class="kpi-delta ${delta <= 0 ? 'up' : 'down'}">${delta > 0 ? '▲' : '▼'} ${Math.abs(delta)} kg</div>` : ''}
     </div>
-    ${bmi ? `<div class="kpi-card">
+    ${bmi ? `<div class="kpi-card" style="cursor:default">
       <div class="kpi-label">IMC</div>
       <div class="kpi-value" style="color:${bmiColor}">${bmi}</div>
       <div class="kpi-delta" style="font-size:10px">${dateStr}</div>

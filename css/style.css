@@ -862,6 +862,27 @@ body.loading main::before {
    ACTIVITY LIST (card style — for side panels)
    ══════════════════════════════════════════════════════════ */
 .activity-list { display: flex; flex-direction: column; }
+
+/* ── Activity compact cards (dashboard horizontal tiles) ── */
+.acts-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.act-card {
+  flex: 1 1 150px;
+  min-width: 140px;
+  max-width: 220px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color .1s, background .1s;
+}
+.act-card:hover { background: var(--surface); border-color: var(--border2); box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.act-card-top  { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.act-card-date { font-size: 10px; color: var(--muted); }
+.act-card-name { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
+.act-card-main { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.act-card-sub  { font-size: 11px; color: var(--muted); }
+@media (max-width: 768px) { .act-card { flex: 1 1 calc(50% - 5px); max-width: none; } }
 .activity-item {
   display: grid;
   grid-template-columns: 36px 1fr auto;

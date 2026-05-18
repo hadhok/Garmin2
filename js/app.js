@@ -266,7 +266,7 @@ function renderKPIs(containerId, acts, prevActs=null) {
   }
 
   const h = (label, val, unit='', sub='', deltaHtml='') => `
-    <div class="kpi-card">
+    <div class="kpi-card" style="cursor:default">
       <div class="kpi-label">${label}</div>
       <div class="kpi-value">${val}<span class="kpi-unit">${unit}</span></div>
       ${sub ? `<div class="kpi-delta">${sub}</div>` : ''}
@@ -335,7 +335,7 @@ function typeBadge(type, label) {
    ACTIVITY DETAIL MODAL
    ══════════════════════════════════════════════════════════ */
 function openDetail(id) {
-  const a = ACT_MAP[id]; if (!a) return;
+  const a = ACT_MAP[id] || ACT_MAP[String(id)]; if (!a) return;
   const dateStr = a.date ? new Date(a.date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) : '';
 
   const icon = document.getElementById('detail-icon');
