@@ -112,16 +112,46 @@ function _renderCoachItems(sectionId, dateId, itemsId, data) {
 
     if (dateEl && data.updated_at) {
       const d = new Date(data.updated_at + 'T12:00:00');
-      dateEl.textContent = 'Mis à jour le ' + d.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+      dateEl.textContent = d.toLocaleDateString('fr-FR', {day:'numeric', month:'long'});
     }
-    itemsEl.innerHTML = data.items.map(item => `
-      <div class="coach-item ${item.type||'tip'}">
-        <div class="coach-item-header">
-          <span class="coach-item-icon">${item.icon||'💬'}</span>
-          <span class="coach-item-title">${item.title||''}</span>
-        </div>
-        <div class="coach-item-text">${item.text||''}</div>
-      </div>`).join('');
+
+    // Coach name
+    const nameEl = section.querySelector('.coach-name');
+    if (nameEl && data.coach) nameEl.textContent = 'par ' + data.coach;
+
+    // Snapshot pills
+    const snap   = data.stats_snapshot || {};
+    const snapEl = document.getElementById(itemsId.replace('coach-items', 'coach-snap'));
+    if (snapEl) {
+      const PHASE = { progression:'En progression 📈', recovery:'Récupération 🔄', peak:'Pic de forme 🔥', base:'Construction 💪', maintenance:'Maintien ⚖️' };
+      const FATIGUE_LBL   = { fresh:'Frais', normal:'Normal', tired:'Fatigué', very_tired:'Très fatigué' };
+      const FATIGUE_COLOR = { fresh:'#22c55e', normal:'#6b7280', tired:'#d97706', very_tired:'#dc2626' };
+      const tsbColor = snap.tsb == null ? '#6b7280' : snap.tsb < -20 ? '#dc2626' : snap.tsb < -5 ? '#d97706' : snap.tsb > 5 ? '#3b82f6' : '#22c55e';
+      const bbColor  = snap.body_battery == null ? '#6b7280' : snap.body_battery < 25 ? '#dc2626' : snap.body_battery < 50 ? '#d97706' : '#22c55e';
+
+      const pills = [];
+      if (snap.phase)           pills.push(['Phase',        PHASE[snap.phase] || snap.phase,                              '#6b7280']);
+      if (snap.tsb != null)     pills.push(['TSB',          (snap.tsb > 0 ? '+' : '') + snap.tsb,                        tsbColor]);
+      if (snap.fatigue_level)   pills.push(['Fatigue',      FATIGUE_LBL[snap.fatigue_level] || snap.fatigue_level,       FATIGUE_COLOR[snap.fatigue_level] || '#6b7280']);
+      if (snap.body_battery != null) pills.push(['Body Battery', Math.round(snap.body_battery) + '%',                    bbColor]);
+
+      snapEl.innerHTML = pills.map(([lbl, val, color]) =>
+        `<div class="coach-snap-pill"><span class="coach-snap-lbl">${lbl}</span><span class="coach-snap-val" style="color:${color}">${val}</span></div>`
+      ).join('');
+      snapEl.style.display = pills.length ? 'flex' : 'none';
+    }
+
+    itemsEl.innerHTML = data.items.map(item => {
+      const text = (item.text || '').replace(/\n/g, '<br>');
+      return `
+        <div class="coach-item ${item.type || 'tip'}">
+          <div class="coach-item-header">
+            <span class="coach-item-icon">${item.icon || '💬'}</span>
+            <span class="coach-item-title">${item.title || ''}</span>
+          </div>
+          <div class="coach-item-text">${text}</div>
+        </div>`;
+    }).join('');
     section.style.display = '';
   } catch(e) { console.warn('coach render error', sectionId, e); }
 }
