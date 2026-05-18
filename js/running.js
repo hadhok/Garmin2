@@ -1591,25 +1591,37 @@ function renderRunPR() {
    RENDER : Volume hebdomadaire (bar chart)
    ══════════════════════════════════════════════════════════ */
 function renderRunVolumeChart() {
-  const WEEKS = 16;
+  const allRuns = getRunsForGlobalPeriod();
   const labels = [], volumes = [], colors = [];
 
-  for (let w = WEEKS - 1; w >= 0; w--) {
-    const monday = new Date(TODAY);
-    // Aller au lundi de la semaine courante
-    const dow = monday.getDay() === 0 ? 6 : monday.getDay() - 1;
-    monday.setDate(monday.getDate() - dow - w * 7);
-    const sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6);
+  // Affichage mensuel pour 1y/all, hebdomadaire sinon
+  const useMonthly = runState.globalPeriod === '1y' || runState.globalPeriod === 'all';
+  const MOIS_FR = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
 
-    const weekRuns = getRuns().filter(r => {
-      const d = new Date(r.date);
-      return d >= monday && d <= sunday;
-    });
-    const km = weekRuns.reduce((s, r) => s + (r.distance_km || 0), 0);
-
-    labels.push(monday.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
-    volumes.push(+km.toFixed(1));
-    colors.push(km === 0 ? 'rgba(148,163,184,0.3)' : km < 30 ? '#22c55e' : km < 50 ? '#f97316' : '#ef4444');
+  if (useMonthly) {
+    const nMonths = runState.globalPeriod === '1y' ? 12 : 24;
+    for (let m = nMonths - 1; m >= 0; m--) {
+      const d = new Date(TODAY); d.setDate(1); d.setMonth(d.getMonth() - m);
+      const key = d.toISOString().slice(0, 7);
+      const km = allRuns.filter(r => r.date.startsWith(key)).reduce((s, r) => s + (r.distance_km || 0), 0);
+      labels.push(`${MOIS_FR[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`);
+      volumes.push(+km.toFixed(1));
+      colors.push(km === 0 ? 'rgba(148,163,184,0.3)' : km < 80 ? '#22c55e' : km < 150 ? '#f97316' : '#ef4444');
+    }
+  } else {
+    const WEEKS = runState.globalPeriod === '3m' ? 13 : 26;
+    for (let w = WEEKS - 1; w >= 0; w--) {
+      const monday = new Date(TODAY);
+      const dow = monday.getDay() === 0 ? 6 : monday.getDay() - 1;
+      monday.setDate(monday.getDate() - dow - w * 7);
+      monday.setHours(0, 0, 0, 0);
+      const sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6); sunday.setHours(23, 59, 59);
+      const km = allRuns.filter(r => { const d = new Date(r.date + 'T12:00:00'); return d >= monday && d <= sunday; })
+        .reduce((s, r) => s + (r.distance_km || 0), 0);
+      labels.push(monday.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
+      volumes.push(+km.toFixed(1));
+      colors.push(km === 0 ? 'rgba(148,163,184,0.3)' : km < 30 ? '#22c55e' : km < 50 ? '#f97316' : '#ef4444');
+    }
   }
 
   mkChart('chart-run-volume', {
@@ -1622,7 +1634,7 @@ function renderRunVolumeChart() {
         tooltip: { callbacks: { label: c => `${c.raw} km` } }
       },
       scales: {
-        x: { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 10 } } },
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 13, font: { size: 10 } } },
         y: { grid: { color: '#e5e7eb' }, ticks: { callback: v => v + ' km', font: { size: 10 } }, beginAtZero: true }
       }
     }
