@@ -866,9 +866,9 @@ body.loading main::before {
 /* ── Activity compact cards (dashboard horizontal tiles) ── */
 .acts-row { display: flex; flex-wrap: wrap; gap: 10px; }
 .act-card {
-  flex: 1 1 150px;
-  min-width: 140px;
-  max-width: 220px;
+  flex: 1 1 140px;
+  min-width: 0;
+  max-width: 240px;
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: var(--radius);

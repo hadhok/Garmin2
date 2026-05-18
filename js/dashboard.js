@@ -200,14 +200,20 @@ function renderMonthCharts(acts) {
 
 function renderYearCharts(acts) {
   const { start } = getPeriodBounds();
-  const year = start.getFullYear();
-  const months = Array.from({length:12},(_,i)=>i);
+  const year  = start.getFullYear();
+  const now   = new Date();
   const types = Object.keys(TYPE_LABEL);
+
+  // Only show months that have data (or up to current month for current year)
+  const maxMonth  = year === now.getFullYear() ? now.getMonth() : 11;
+  const allMonths = Array.from({length: maxMonth + 1}, (_, i) => i);
+  const hasData   = allMonths.filter(m => acts.some(a => new Date(a.start_time).getMonth() === m));
+  const months    = hasData.length > 0 ? hasData : allMonths;
 
   mkChart('chart-year-dist', {
     type: 'bar',
     data: {
-      labels: MONTHS_FR,
+      labels: months.map(m => MONTHS_FR[m]),
       datasets: types.map(t => ({
         label: TYPE_LABEL[t],
         data: months.map(m => acts.filter(a=>a.type===t && new Date(a.start_time).getMonth()===m).reduce((s,a)=>s+(a.distance_km||0),0)),
@@ -220,7 +226,7 @@ function renderYearCharts(acts) {
   mkChart('chart-year-type', {
     type: 'bar',
     data: {
-      labels: MONTHS_FR,
+      labels: months.map(m => MONTHS_FR[m]),
       datasets: types.map(t => ({
         label: TYPE_LABEL[t],
         data: months.map(m => acts.filter(a=>a.type===t && new Date(a.start_time).getMonth()===m).length),
