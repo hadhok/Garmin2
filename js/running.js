@@ -242,11 +242,15 @@ function renderRunKPIs() {
     return;
   }
 
-  // VO2max le plus récent
-  const withVo2 = runs.filter(r => r.vo2max > 0).sort((a, b) => b.date.localeCompare(a.date));
-  const vo2 = withVo2[0]?.vo2max || null;
-  const vo2Prev = withVo2[1]?.vo2max || null;
-  const vo2Delta = vo2 && vo2Prev ? vo2 - vo2Prev : null;
+  // VO2max le plus récent — wellness (get_max_metrics) en priorité, activités en fallback
+  const wellnessDays = state.wellness?.days || {};
+  const vo2Points = [];
+  getRuns().filter(r => r.vo2max > 0).forEach(r => vo2Points.push({ date: r.date, vo2max: r.vo2max }));
+  Object.entries(wellnessDays).forEach(([date, day]) => { if (day.vo2max > 0) { const i = vo2Points.findIndex(p => p.date === date); if (i >= 0) vo2Points[i].vo2max = day.vo2max; else vo2Points.push({ date, vo2max: day.vo2max }); } });
+  vo2Points.sort((a, b) => b.date.localeCompare(a.date));
+  const vo2 = vo2Points[0]?.vo2max || null;
+  const vo2Prev = vo2Points[1]?.vo2max || null;
+  const vo2Delta = vo2 && vo2Prev ? +(vo2 - vo2Prev).toFixed(1) : null;
 
   // CTL/ATL/TSB running (dernière valeur)
   const form = computeRunForm();
@@ -681,22 +685,47 @@ function renderRunPaces() {
    RENDER : VO2max trend
    ══════════════════════════════════════════════════════════ */
 function renderRunVO2Chart() {
-  const runs = getRunsForGlobalPeriod().filter(r => r.vo2max > 0).sort((a, b) => a.date.localeCompare(b.date));
-  if (runs.length < 2) return;
-  const labels = runs.map(r => new Date(r.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
+  // Source principale : wellness_days (données get_max_metrics, plus fréquentes)
+  // Complément : activités (fallback si wellness vide)
+  const wellnessDays = state.wellness?.days || {};
+  const pointMap = {};
+
+  // Depuis les activités
+  getRuns().filter(r => r.vo2max > 0).forEach(r => { pointMap[r.date] = r.vo2max; });
+
+  // Depuis wellness (prioritaire — données get_max_metrics)
+  Object.entries(wellnessDays).forEach(([date, day]) => {
+    if (day.vo2max > 0) pointMap[date] = day.vo2max;
+  });
+
+  // Appliquer le filtre de période globale
+  const months = runState.globalPeriod === '3m' ? 3 : runState.globalPeriod === '6m' ? 6 : runState.globalPeriod === '1y' ? 12 : null;
+  const cutoff = months ? new Date(TODAY.getTime()) : null;
+  if (cutoff) cutoff.setMonth(cutoff.getMonth() - months);
+
+  const points = Object.entries(pointMap)
+    .filter(([date]) => !cutoff || new Date(date + 'T12:00:00') >= cutoff)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, vo2max]) => ({ date, vo2max }));
+
+  if (points.length < 2) return;
+
+  const labels = points.map(p => new Date(p.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
+  const values = points.map(p => p.vo2max);
+
   mkChart('chart-run-vo2', {
     type: 'line',
     data: { labels, datasets: [{
-      label: 'VO2max', data: runs.map(r => r.vo2max),
+      label: 'VO2max', data: values,
       borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.1)',
-      fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#8b5cf6', borderWidth: 2,
+      fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '#8b5cf6', borderWidth: 2,
     }]},
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `VO2max : ${c.raw} ml/kg/min` } } },
       scales: {
-        x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } },
-        y: { grid: { color: '#e5e7eb' }, min: Math.max(0, Math.min(...runs.map(r => r.vo2max)) - 5),
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } },
+        y: { grid: { color: '#e5e7eb' }, min: Math.max(0, Math.min(...values) - 3),
           title: { display: true, text: 'ml/kg/min', color: '#94a3b8', font: { size: 10 } } }
       }
     }

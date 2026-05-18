@@ -254,6 +254,40 @@ def _run_sync():
         except Exception:
             pass
 
+    # ── VO2max history via get_max_metrics (12 mois) ────────────────────────
+    try:
+        vo2_updates = {}
+        for months_back in range(0, 13):
+            try:
+                d = today - timedelta(days=30 * months_back)
+                metrics = client.get_max_metrics(d.strftime('%Y-%m-%d'))
+                for entry in (metrics or []):
+                    cal = entry.get('calendarDate')
+                    val = None
+                    v = entry.get('value') or {}
+                    if isinstance(v, dict):
+                        val = v.get('vo2MaxPreciseValue') or v.get('vo2MaxValue')
+                    if not val:
+                        val = entry.get('vo2MaxPreciseValue') or entry.get('vo2MaxValue')
+                    if cal and val and float(val) > 0:
+                        vo2_updates[cal] = round(float(val), 1)
+            except Exception:
+                continue
+        for date_str, vo2 in vo2_updates.items():
+            ex = sb.table('wellness_days').select('data').eq('date', date_str).limit(1).execute()
+            if ex.data:
+                merged = dict(ex.data[0].get('data') or {})
+                if merged.get('vo2max') != vo2:
+                    merged['vo2max'] = vo2
+                    sb.table('wellness_days').update({'data': merged}).eq('date', date_str).execute()
+            else:
+                sb.table('wellness_days').upsert({
+                    'date': date_str,
+                    'data': {'date': date_str, 'vo2max': vo2},
+                }).execute()
+    except Exception:
+        pass
+
     # ── Sauvegarder les tokens rafraîchis ────────────────────────────────────
     try:
         with open(os.path.join(token_dir, 'garmin_tokens.json')) as f:
