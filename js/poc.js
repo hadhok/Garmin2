@@ -3,8 +3,205 @@
    ══════════════════════════════════════════════════════════ */
 
 /* ──────────────────────────────────────────────────────────
+   0. RECOMMANDATION CONSOLIDÉE
+   Arbitre entre HRV, ACWR, score récupération et phase.
+   Hiérarchie de priorité :
+     1. ACWR > 1.5  → risque structurel, prime sur tout
+     2. Score récupération < 40 → fatigue systémique
+     3. HRV sous baseline − 0.5 SD → SNA non récupéré
+     4. Phase "surcharge" → idem ACWR
+     5. Sinon → signal HRV favorable autorise la charge
+   ────────────────────────────────────────────────────────── */
+function renderPocSynthesis() {
+  const el = document.getElementById('poc-synthesis');
+  if (!el) return;
+
+  /* ── Collecter les signaux ── */
+  const signals = [];
+
+  /* Signal 1 : ACWR */
+  let acwrVal = null;
+  const allActs = state.data?.activities || [];
+  if (allActs.length) {
+    const trimpByDay = buildTRIMPMap(allActs);
+    function tSum(endDate, n) {
+      let s = 0;
+      for (let i = 0; i < n; i++) {
+        const d = new Date(endDate); d.setDate(d.getDate() - i);
+        s += trimpByDay[d.toLocaleDateString('sv-SE')] || 0;
+      }
+      return s;
+    }
+    const al = tSum(TODAY, 7) / 7;
+    const cl = tSum(TODAY, 28) / 28;
+    if (cl > 0.5) acwrVal = +(al / cl).toFixed(2);
+  }
+
+  /* Signal 2 : HRV trend vs baseline */
+  let hrvSignal = null; // 'green' | 'orange' | 'red' | null
+  let hrvDetail = null;
+  if (state.wellness?.days) {
+    const wDays = Object.values(state.wellness.days)
+      .filter(d => d.date && (d.hrv_rmssd || d.hrv_weekly_avg))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    if (wDays.length >= 14) {
+      const hrv = d => d.hrv_rmssd || d.hrv_weekly_avg || null;
+      const last = wDays.slice(-28);
+      const r7vals = wDays.slice(-7).map(hrv).filter(v => v != null);
+      const b28vals = last.map(hrv).filter(v => v != null);
+      if (r7vals.length && b28vals.length) {
+        const r7   = r7vals.reduce((s, v) => s + v, 0) / r7vals.length;
+        const mean = b28vals.reduce((s, v) => s + v, 0) / b28vals.length;
+        const sd   = Math.sqrt(b28vals.reduce((s, v) => s + (v - mean) ** 2, 0) / b28vals.length) || 1;
+        hrvDetail  = { r7: +r7.toFixed(1), mean: +mean.toFixed(1), upSD: +(mean + 0.5 * sd).toFixed(1), downSD: +(mean - 0.5 * sd).toFixed(1) };
+        if (r7 >= mean + 0.5 * sd)      hrvSignal = 'green';
+        else if (r7 <= mean - 0.5 * sd) hrvSignal = 'red';
+        else                             hrvSignal = 'orange';
+      }
+    }
+  }
+
+  /* Signal 3 : score récupération composite (recalcul rapide) */
+  let recovScore = null;
+  if (state.wellness?.days) {
+    const wDays = Object.values(state.wellness.days)
+      .filter(d => d.date).sort((a, b) => a.date.localeCompare(b.date));
+    const last28 = wDays.slice(-28);
+    const avg28  = arr => { const v = arr.filter(x => x != null); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; };
+    const b = {
+      hrv:     avg28(last28.map(d => d.hrv_rmssd || d.hrv_weekly_avg)),
+      hr_rest: avg28(last28.map(d => d.resting_hr)),
+    };
+    const today = wDays[wDays.length - 1];
+    if (today) {
+      const sc = [];
+      if (b.hrv && today.hrv_rmssd)   sc.push({ s: Math.min(100, Math.max(0, 50 + (today.hrv_rmssd - b.hrv) / b.hrv * 150)),   w: 0.30 });
+      if (b.hr_rest && today.resting_hr) sc.push({ s: Math.min(100, Math.max(0, 50 - (today.resting_hr - b.hr_rest) / b.hr_rest * 150)), w: 0.25 });
+      if (today.body_battery_high)     sc.push({ s: today.body_battery_high,                                                       w: 0.25 });
+      if (today.sleep_duration_h)      sc.push({ s: Math.min(100, Math.max(0, 50 + (today.sleep_duration_h - 7.5) / 1.5 * 50)),  w: 0.20 });
+      if (sc.length) {
+        const tw = sc.reduce((s, x) => s + x.w, 0);
+        recovScore = Math.round(sc.reduce((s, x) => s + x.s * x.w, 0) / tw);
+      }
+    }
+  }
+
+  /* ── Arbitrage avec hiérarchie de priorité ── */
+  const RECOS = {
+    rest: {
+      color: '#ef4444', bg: 'rgba(239,68,68,0.08)', border: '#ef4444',
+      icon: '🛑', title: 'Repos recommandé',
+      badge: 'REPOS',
+    },
+    easy: {
+      color: '#f97316', bg: 'rgba(249,115,22,0.08)', border: '#f97316',
+      icon: '🚶', title: 'Sortie légère uniquement',
+      badge: 'FACILE',
+    },
+    moderate: {
+      color: '#eab308', bg: 'rgba(234,179,8,0.08)', border: '#eab308',
+      icon: '🏃', title: 'Endurance fondamentale',
+      badge: 'MODÉRÉ',
+    },
+    hard: {
+      color: '#22c55e', bg: 'rgba(34,197,94,0.08)', border: '#22c55e',
+      icon: '⚡', title: 'Séance intense possible',
+      badge: 'INTENSE',
+    },
+  };
+
+  let reco, reasons = [], conflicts = [];
+
+  // Règle 1 : ACWR > 1.5 → risque structurel, surpasse même un HRV favorable
+  if (acwrVal !== null && acwrVal > 1.5) {
+    reco = acwrVal > 1.8 ? 'rest' : 'easy';
+    reasons.push(`ACWR ${acwrVal} — charge aiguë ${Math.round((acwrVal - 1) * 100)}% au-dessus de la baseline chronique`);
+    if (hrvSignal === 'green') {
+      conflicts.push(`Votre HRV (${hrvDetail?.r7} ms) signale un système nerveux récupéré, mais ce signal ne reflète pas la fatigue des tissus musculaires et tendineux. À ACWR > 1.5 le risque de blessure est 2–5× plus élevé (Gabbett 2016), même en se sentant bien.`);
+    }
+  }
+  // Règle 2 : score récupération très bas
+  else if (recovScore !== null && recovScore < 35) {
+    reco = 'rest';
+    reasons.push(`Score récupération ${recovScore}/100 — fatigue systémique (HRV, FC repos, sommeil, Body Battery)`);
+  }
+  // Règle 3 : HRV rouge + récupération faible
+  else if (hrvSignal === 'red' && (recovScore === null || recovScore < 55)) {
+    reco = 'easy';
+    reasons.push(`HRV trend 7j (${hrvDetail?.r7} ms) sous la baseline − 0.5 SD (${hrvDetail?.downSD} ms)`);
+    if (recovScore !== null) reasons.push(`Score récupération ${recovScore}/100`);
+  }
+  // Règle 4 : ACWR zone vigilance (1.3–1.5)
+  else if (acwrVal !== null && acwrVal > 1.3) {
+    reco = 'moderate';
+    reasons.push(`ACWR ${acwrVal} en zone vigilance — éviter tout volume supplémentaire`);
+    if (hrvSignal === 'green') {
+      conflicts.push(`HRV favorable mais ACWR élevé : préférez une séance courte en endurance plutôt qu'un entraînement intense.`);
+    }
+  }
+  // Règle 5 : tous signaux verts
+  else if (hrvSignal === 'green' && (recovScore === null || recovScore >= 60) && (acwrVal === null || acwrVal <= 1.3)) {
+    reco = 'hard';
+    reasons.push(`HRV trend 7j (${hrvDetail?.r7} ms) au-dessus de la baseline + 0.5 SD (${hrvDetail?.upSD} ms)`);
+    if (recovScore !== null) reasons.push(`Score récupération ${recovScore}/100`);
+    if (acwrVal !== null) reasons.push(`ACWR ${acwrVal} en zone optimale`);
+  }
+  // Règle 6 : signaux neutres
+  else {
+    reco = 'moderate';
+    reasons.push(hrvSignal === 'orange' ? `HRV dans la zone normale (${hrvDetail?.downSD}–${hrvDetail?.upSD} ms)` : 'Données HRV insuffisantes');
+    if (recovScore !== null) reasons.push(`Score récupération ${recovScore}/100`);
+    if (acwrVal !== null) reasons.push(`ACWR ${acwrVal}`);
+  }
+
+  const r = RECOS[reco];
+
+  /* ── Tableau de bord des signaux ── */
+  function sigBadge(label, val, color, detail) {
+    return `<div style="background:var(--surface2);border-left:3px solid ${color};border-radius:0 8px 8px 0;padding:8px 12px;font-size:12px">
+      <div style="color:var(--muted);font-size:10px;margin-bottom:2px">${label}</div>
+      <div style="font-weight:700;color:${color}">${val}</div>
+      ${detail ? `<div style="font-size:10px;color:var(--muted);margin-top:1px">${detail}</div>` : ''}
+    </div>`;
+  }
+
+  const acwrColor  = acwrVal === null ? '#6b7280' : acwrVal > 1.5 ? '#ef4444' : acwrVal > 1.3 ? '#f97316' : acwrVal < 0.8 ? '#3b82f6' : '#22c55e';
+  const hrvColor   = hrvSignal === 'green' ? '#22c55e' : hrvSignal === 'red' ? '#ef4444' : hrvSignal === 'orange' ? '#f97316' : '#6b7280';
+  const recovColor = recovScore === null ? '#6b7280' : recovScore >= 70 ? '#22c55e' : recovScore >= 40 ? '#f97316' : '#ef4444';
+
+  el.innerHTML = `
+    <div style="background:${r.bg};border:2px solid ${r.border};border-radius:14px;padding:16px 20px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="font-size:32px">${r.icon}</div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+            <span style="font-size:16px;font-weight:800;color:${r.color}">${r.title}</span>
+            <span style="font-size:10px;font-weight:700;background:${r.color};color:white;padding:2px 8px;border-radius:20px">${r.badge}</span>
+          </div>
+          <ul style="margin:0;padding:0 0 0 16px;font-size:12px;color:var(--text);line-height:1.7">
+            ${reasons.map(s => `<li>${s}</li>`).join('')}
+          </ul>
+        </div>
+      </div>
+      ${conflicts.length ? `
+        <div style="margin-top:12px;padding:10px 12px;background:rgba(0,0,0,0.06);border-radius:8px;font-size:12px;color:var(--text);line-height:1.6">
+          <span style="font-weight:700;color:${r.color}">⚠️ Pourquoi les signaux sont contradictoires :</span><br>
+          ${conflicts.join('<br>')}
+        </div>` : ''}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+      ${sigBadge('ACWR', acwrVal !== null ? acwrVal : '–', acwrColor,
+          acwrVal !== null ? (acwrVal > 1.5 ? 'Risque élevé' : acwrVal > 1.3 ? 'Vigilance' : acwrVal < 0.8 ? 'Sous-charge' : 'Optimal') : 'Données insuf.')}
+      ${sigBadge('HRV trend 7j', hrvDetail ? hrvDetail.r7 + ' ms' : '–', hrvColor,
+          hrvSignal === 'green' ? '↑ au-dessus baseline' : hrvSignal === 'red' ? '↓ sous baseline' : hrvSignal === 'orange' ? 'Zone normale' : 'Données insuf.')}
+      ${sigBadge('Score récupération', recovScore !== null ? recovScore + '/100' : '–', recovColor,
+          recovScore !== null ? (recovScore >= 70 ? 'Bonne' : recovScore >= 40 ? 'Partielle' : 'Insuffisante') : 'Données insuf.')}
+    </div>`;
+}
+
+/* ──────────────────────────────────────────────────────────
    1. SCORE DE RÉCUPÉRATION COMPOSITE
-   HRV 30% · FC repos 25% · Body Battery 25% · Sommeil 20%
+   HRV 30% - FC repos 25% - Body Battery 25% - Sommeil 20%
    Ref : Plews et al. (2013) IJSPP
    ────────────────────────────────────────────────────────── */
 function renderPocRecovery() {
@@ -614,6 +811,7 @@ function renderPocPaceReserve() {
    ────────────────────────────────────────────────────────── */
 function renderPOC() {
   const safe = (fn) => { try { fn(); } catch(e) { console.error('[POC]', fn.name, e); } };
+  safe(renderPocSynthesis);
   safe(renderPocRecovery);
   safe(renderPocHRV);
   safe(renderPocLongRatio);
