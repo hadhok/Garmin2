@@ -313,7 +313,7 @@ function renderRunKPIs() {
   const wellnessDays = state.wellness?.days || {};
   const vo2Points = [];
   getRuns().filter(r => r.vo2max > 0).forEach(r => vo2Points.push({ date: r.date, vo2max: r.vo2max }));
-  Object.entries(wellnessDays).forEach(([date, day]) => { if (day.vo2max > 0) { const i = vo2Points.findIndex(p => p.date === date); if (i >= 0) vo2Points[i].vo2max = day.vo2max; else vo2Points.push({ date, vo2max: day.vo2max }); } });
+  Object.entries(wellnessDays).forEach(([date, day]) => { if (day.vo2max > 0) { const i = vo2Points.findIndex(p => p.date === date); if (i >= 0) vo2Points[i].vo2max = Math.max(vo2Points[i].vo2max, day.vo2max); else vo2Points.push({ date, vo2max: day.vo2max }); } });
   vo2Points.sort((a, b) => b.date.localeCompare(a.date));
   const vo2 = vo2Points[0]?.vo2max || null;
   const vo2Prev = vo2Points[1]?.vo2max || null;
@@ -760,9 +760,9 @@ function renderRunVO2Chart() {
   // Depuis les activités
   getRuns().filter(r => r.vo2max > 0).forEach(r => { pointMap[r.date] = r.vo2max; });
 
-  // Depuis wellness (prioritaire — données get_max_metrics)
+  // Depuis wellness — garde le max si activité du même jour
   Object.entries(wellnessDays).forEach(([date, day]) => {
-    if (day.vo2max > 0) pointMap[date] = day.vo2max;
+    if (day.vo2max > 0) pointMap[date] = pointMap[date] ? Math.max(pointMap[date], day.vo2max) : day.vo2max;
   });
 
   // Appliquer le filtre de période globale

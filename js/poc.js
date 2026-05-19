@@ -28,7 +28,7 @@ function renderPocSynthesis() {
       let s = 0;
       for (let i = 0; i < n; i++) {
         const d = new Date(endDate); d.setDate(d.getDate() - i);
-        s += trimpByDay[d.toLocaleDateString('sv-SE')] || 0;
+        s += trimpByDay[localIso(d)] || 0;
       }
       return s;
     }
@@ -488,7 +488,7 @@ function renderPocLongRatio() {
     const d   = new Date(dateStr + 'T12:00:00');
     const dow = (d.getDay() + 6) % 7;
     const mon = new Date(d); mon.setDate(d.getDate() - dow);
-    return mon.toLocaleDateString('sv-SE');
+    return localIso(mon);
   }
 
   const weeks = {};
@@ -596,21 +596,21 @@ function renderPocPhase() {
     // Warm-up 90 days before window
     for (let i = 90 + weeksBack * 7; i >= weeksBack * 7; i--) {
       const d = new Date(TODAY); d.setDate(d.getDate() - i);
-      const t = dayTrimp(d.toLocaleDateString('sv-SE'));
+      const t = dayTrimp(localIso(d));
       ctl = ctl * kCTL + t * (1 - kCTL);
       atl = atl * kATL + t * (1 - kATL);
     }
     // Last 7 days of the window
     const trimpW = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(end); d.setDate(end.getDate() - i);
-      return dayTrimp(d.toLocaleDateString('sv-SE'));
+      return dayTrimp(localIso(d));
     });
     const al = trimpW.reduce((s, v) => s + v, 0) / 7;
     const cl = (() => {
       let sum = 0;
       for (let i = 0; i < 28; i++) {
         const d = new Date(end); d.setDate(end.getDate() - i);
-        sum += dayTrimp(d.toLocaleDateString('sv-SE'));
+        sum += dayTrimp(localIso(d));
       }
       return sum / 28;
     })();
@@ -722,7 +722,7 @@ function renderPocPaceReserve() {
     const d = new Date(dateStr + 'T12:00:00');
     const dow = (d.getDay() + 6) % 7;
     const mon = new Date(d); mon.setDate(d.getDate() - dow);
-    return mon.toLocaleDateString('sv-SE');
+    return localIso(mon);
   }
 
   const weekRPs = {};

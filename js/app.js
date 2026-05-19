@@ -289,6 +289,120 @@ function buildTRIMPMap(activities) {
 }
 
 /* ══════════════════════════════════════════════════════════
+   UNIFIED FORME CURVE — CTL / ATL / TSB
+   Même formule partout : EMA k=1/42 (CTL) et k=1/7 (ATL)
+   Source de charge : TRIMP (toutes activités avec FC)
+   ══════════════════════════════════════════════════════════ */
+function computeFormeCurve(acts, nDays = 90) {
+  const loadMap = buildTRIMPMap(acts || getAll());
+  const result = [];
+  let ctl = 0, atl = 0;
+  const warmup = nDays + 90;
+  for (let i = warmup; i >= 0; i--) {
+    const d = new Date(TODAY); d.setDate(d.getDate() - i);
+    const iso = localIso(d);
+    const load = loadMap[iso] || 0;
+    ctl = ctl + (load - ctl) / 42;
+    atl = atl + (load - atl) / 7;
+    if (i < nDays) result.push({ date: iso, ctl: +ctl.toFixed(1), atl: +atl.toFixed(1), tsb: +(ctl - atl).toFixed(1) });
+  }
+  return result;
+}
+
+/* ══════════════════════════════════════════════════════════
+   UNIFIED RECOVERY SCORE (0–100)
+   HRV 30% · FC repos 25% · Body Battery 25% · Sommeil 20%
+   Chaque composante normalisée vs baseline 28j
+   ══════════════════════════════════════════════════════════ */
+function computeRecoveryScoreDay(today, last28) {
+  if (!today || !last28?.length) return null;
+  function avg(fn) {
+    const v = last28.map(fn).filter(x => x != null && !isNaN(x));
+    return v.length ? v.reduce((s,x)=>s+x,0)/v.length : null;
+  }
+  const b = { hrv: avg(d=>d.hrv_rmssd||d.hrv_weekly_avg), hr: avg(d=>d.resting_hr), bb: avg(d=>d.body_battery_high), sleep: avg(d=>d.sleep_duration_h) };
+  const sc = [];
+  if (b.hrv  && today.hrv_rmssd)       sc.push({ s: Math.min(100,Math.max(0, 50 + (today.hrv_rmssd - b.hrv) / b.hrv * 150)),         w: 0.30 });
+  if (b.hr   && today.resting_hr)      sc.push({ s: Math.min(100,Math.max(0, 50 - (today.resting_hr - b.hr)  / b.hr  * 150)),         w: 0.25 });
+  if (today.body_battery_high != null) sc.push({ s: today.body_battery_high,                                                            w: 0.25 });
+  if (today.sleep_duration_h  != null) sc.push({ s: Math.min(100,Math.max(0, 50 + (today.sleep_duration_h - 7.5) / 1.5 * 50)),         w: 0.20 });
+  if (!sc.length) return null;
+  const tw = sc.reduce((s,x)=>s+x.w, 0);
+  return Math.round(sc.reduce((s,x)=>s+x.s*x.w, 0) / tw);
+}
+
+/* ══════════════════════════════════════════════════════════
+   UNIFIED DAILY RECOMMENDATION
+   Arbitre HRV vs ACWR vs recovery
+   Retourne { reco, reasons, conflicts, acwrVal, hrvSignal, hrvDetail, recovScore }
+   ══════════════════════════════════════════════════════════ */
+function computeDailyReco() {
+  const allActs = getAll();
+  const well    = state.wellness?.days;
+
+  /* ACWR */
+  let acwrVal = null;
+  if (allActs.length) {
+    const map = buildTRIMPMap(allActs);
+    const tSum = (end, n) => { let s=0; for(let i=0;i<n;i++){const d=new Date(end);d.setDate(d.getDate()-i);s+=map[localIso(d)]||0;} return s; };
+    const al = tSum(TODAY,7)/7, cl = tSum(TODAY,28)/28;
+    if (cl > 0.5) acwrVal = +(al/cl).toFixed(2);
+  }
+
+  /* HRV signal */
+  let hrvSignal = null, hrvDetail = null;
+  if (well) {
+    const wDays = Object.values(well).filter(d=>d.date&&(d.hrv_rmssd||d.hrv_weekly_avg)).sort((a,b)=>a.date.localeCompare(b.date));
+    if (wDays.length >= 14) {
+      const hrv = d => d.hrv_rmssd||d.hrv_weekly_avg||null;
+      const r7 = wDays.slice(-7).map(hrv).filter(v=>v!=null);
+      const b28= wDays.slice(-28).map(hrv).filter(v=>v!=null);
+      if (r7.length && b28.length) {
+        const r7m  = r7.reduce((s,v)=>s+v,0)/r7.length;
+        const mean = b28.reduce((s,v)=>s+v,0)/b28.length;
+        const sd   = Math.sqrt(b28.reduce((s,v)=>s+(v-mean)**2,0)/b28.length) || 1;
+        hrvDetail  = { r7:+r7m.toFixed(1), mean:+mean.toFixed(1), upSD:+(mean+0.5*sd).toFixed(1), downSD:+(mean-0.5*sd).toFixed(1) };
+        hrvSignal  = r7m >= mean+0.5*sd ? 'green' : r7m <= mean-0.5*sd ? 'red' : 'orange';
+      }
+    }
+  }
+
+  /* Recovery score */
+  let recovScore = null;
+  if (well) {
+    const wDays = Object.values(well).filter(d=>d.date).sort((a,b)=>a.date.localeCompare(b.date));
+    recovScore = computeRecoveryScoreDay(wDays[wDays.length-1], wDays.slice(-28));
+  }
+
+  /* Arbitrage */
+  let reco, reasons = [], conflicts = [];
+  if (acwrVal !== null && acwrVal > 1.5) {
+    reco = acwrVal > 1.8 ? 'rest' : 'easy';
+    reasons.push(`ACWR ${acwrVal} — charge aiguë ${Math.round((acwrVal-1)*100)}% au-dessus de la baseline chronique`);
+    if (hrvSignal === 'green') conflicts.push(`HRV favorable (${hrvDetail?.r7} ms) mais ne reflète pas la fatigue structurelle. À ACWR > 1.5 le risque de blessure est 2–5× plus élevé (Gabbett 2016).`);
+  } else if (recovScore !== null && recovScore < 35) {
+    reco = 'rest'; reasons.push(`Score récupération ${recovScore}/100 — fatigue systémique`);
+  } else if (hrvSignal === 'red' && (recovScore === null || recovScore < 55)) {
+    reco = 'easy'; reasons.push(`HRV trend 7j (${hrvDetail?.r7} ms) sous la baseline − 0.5 SD (${hrvDetail?.downSD} ms)`);
+    if (recovScore != null) reasons.push(`Score récupération ${recovScore}/100`);
+  } else if (acwrVal !== null && acwrVal > 1.3) {
+    reco = 'moderate'; reasons.push(`ACWR ${acwrVal} en zone vigilance — éviter un volume supplémentaire`);
+    if (hrvSignal === 'green') conflicts.push(`HRV favorable mais ACWR élevé : préférez une séance courte.`);
+  } else if (hrvSignal === 'green' && (recovScore === null || recovScore >= 60) && (acwrVal === null || acwrVal <= 1.3)) {
+    reco = 'hard';
+    reasons.push(`HRV trend 7j (${hrvDetail?.r7} ms) au-dessus de la baseline + 0.5 SD (${hrvDetail?.upSD} ms)`);
+    if (recovScore != null) reasons.push(`Score récupération ${recovScore}/100`);
+    if (acwrVal != null) reasons.push(`ACWR ${acwrVal} en zone optimale`);
+  } else {
+    reco = 'moderate';
+    reasons.push(hrvSignal === 'orange' ? `HRV dans la zone normale (${hrvDetail?.downSD}–${hrvDetail?.upSD} ms)` : 'HRV insuffisant (données manquantes)');
+    if (recovScore != null) reasons.push(`Score récupération ${recovScore}/100`);
+    if (acwrVal != null) reasons.push(`ACWR ${acwrVal}`);
+  }
+  return { reco, reasons, conflicts, acwrVal, hrvSignal, hrvDetail, recovScore };
+}
+
+/* ══════════════════════════════════════════════════════════
    KPI COMPUTATION
    ══════════════════════════════════════════════════════════ */
 function computeKPIs(acts) {
@@ -367,6 +481,7 @@ function computeZones(acts) {
     a.hr_zones_pct.forEach((pct,i) => { totals[i] += pct * dur; });
     totalDur += dur;
   });
+  if (!totalDur) return null;
   return totals.map(t => Math.round(t / totalDur));
 }
 
@@ -780,13 +895,10 @@ function generateMorningSummary() {
     else                      lines.push(`Score de forme bas (${readiness}/100) — journée de récupération conseillée.`);
   }
 
-  // Conseil final
-  const score = (readiness || 50) + (bb ? (bb-50)/2 : 0) + (hrv && avgHrv ? ((hrv-avgHrv)/avgHrv)*20 : 0);
-  let conseil;
-  if (score > 40)      conseil = '🟢 Conditions idéales pour une séance de qualité.';
-  else if (score > 10) conseil = '🟡 Séance modérée ou endurance de base recommandée.';
-  else                 conseil = '🔴 Privilégie la récupération active aujourd\'hui.';
-  lines.push(conseil);
+  // Conseil final — utilise computeDailyReco() pour cohérence
+  const reco = computeDailyReco();
+  const CONSEIL = { rest:'🔴 Privilégie la récupération active aujourd\'hui.', easy:'🟠 Sortie légère conseillée — pas de séance intense.', moderate:'🟡 Séance modérée ou endurance de base.', hard:'🟢 Conditions idéales pour une séance de qualité.' };
+  lines.push(CONSEIL[reco.reco] || '🟡 Écoute ton corps.');
 
   return lines;
 }
