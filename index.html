@@ -53,39 +53,29 @@
     </div>
 
     <div class="sidebar-section">
-      <button class="nav-item active" data-view="dashboard" onclick="switchView('dashboard')">
+      <button class="nav-item active" data-view="today" onclick="switchView('today')">
         <span class="nav-icon">🏠</span>
-        <span class="nav-label">Dashboard</span>
+        <span class="nav-label">Aujourd'hui</span>
         <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
-      <button class="nav-item" data-view="activities" onclick="switchView('activities')">
-        <span class="nav-icon">🏃</span>
-        <span class="nav-label">Activités</span>
+      <button class="nav-item" data-view="training" onclick="switchView('training')">
+        <span class="nav-icon">📈</span>
+        <span class="nav-label">Entraînement</span>
         <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
-      <button class="nav-item" data-view="health" onclick="switchView('health')">
+      <button class="nav-item" data-view="recovery" onclick="switchView('recovery')">
         <span class="nav-icon">💤</span>
-        <span class="nav-label">Santé</span>
+        <span class="nav-label">Récupération</span>
+        <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+      <button class="nav-item" data-view="history" onclick="switchView('history')">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">Historique</span>
         <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
       <button class="nav-item" data-view="profile" onclick="switchView('profile')">
         <span class="nav-icon">👤</span>
         <span class="nav-label">Profil</span>
-        <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
-      <button class="nav-item" data-view="running" onclick="switchView('running')">
-        <span class="nav-icon">🏁</span>
-        <span class="nav-label">Running</span>
-        <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
-      <button class="nav-item" data-view="poc" onclick="switchView('poc')">
-        <span class="nav-icon">🧪</span>
-        <span class="nav-label">POC</span>
-        <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
-      <button class="nav-item" data-view="help" onclick="switchView('help')">
-        <span class="nav-icon">📖</span>
-        <span class="nav-label">Aide</span>
         <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
     </div>
@@ -125,9 +115,9 @@
     <main>
 
       <!-- ════════════════════════════════════════════════
-           VIEW : DASHBOARD
+           VIEW : AUJOURD'HUI
       ════════════════════════════════════════════════ -->
-      <div id="view-dashboard" class="view active">
+      <div id="view-today" class="view active">
 
         <!-- Résumé matinal -->
         <div id="morning-summary" style="display:none;margin-bottom:16px;padding:14px 16px;border-radius:12px;background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(59,130,246,0.06));border:1px solid rgba(99,102,241,0.2)">
@@ -151,12 +141,10 @@
           <div class="coach-items" id="coach-items-dash"></div>
         </div>
 
-        <!-- Sub-tab bar -->
+        <!-- Sub-tab bar (Aujourd'hui : jour seulement — semaine/mois/année dans Entraînement) -->
         <div class="subtab-bar">
-          <button class="subtab" data-tab="day"   onclick="switchSubTab('day')">Jour</button>
-          <button class="subtab active" data-tab="week"  onclick="switchSubTab('week')">Semaine</button>
-          <button class="subtab" data-tab="month" onclick="switchSubTab('month')">Mois</button>
-          <button class="subtab" data-tab="year"  onclick="switchSubTab('year')">Année</button>
+          <button class="subtab active" data-tab="day" onclick="switchSubTab('day')">Aujourd'hui</button>
+          <button class="subtab" onclick="switchView('training')" style="color:var(--accent);opacity:.8">📈 Entraînement →</button>
         </div>
 
         <!-- Period navigation -->
@@ -205,6 +193,33 @@
                 <div id="zones-day"></div>
               </div>
             </div>
+          </div>
+        </div>
+
+      </div><!-- /view-today -->
+
+      <!-- ════════════════════════════════════════════════
+           VIEW : ENTRAÎNEMENT
+      ════════════════════════════════════════════════ -->
+      <div id="view-training" class="view">
+
+        <!-- Sub-tab bar -->
+        <div class="subtab-bar">
+          <button class="subtab active" data-tab="week"  onclick="switchSubTab('week')">Semaine</button>
+          <button class="subtab" data-tab="month" onclick="switchSubTab('month')">Mois</button>
+          <button class="subtab" data-tab="year"  onclick="switchSubTab('year')">Année</button>
+          <button class="subtab" data-tab="course" onclick="switchSubTab('course')">Course</button>
+        </div>
+
+        <!-- Period navigation (shared semaine/mois/année) -->
+        <div id="training-period-bar" class="period-bar">
+          <div class="period-nav">
+            <button class="btn-icon" onclick="movePeriod(-1)">‹</button>
+            <span class="period-label" id="period-label-training"></span>
+            <button class="btn-icon" onclick="movePeriod(1)">›</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <button class="btn-today" onclick="resetPeriod()">Aujourd'hui</button>
           </div>
         </div>
 
@@ -325,12 +340,12 @@
           <div class="chart-wrap" style="height:280px"><canvas id="chart-forme-diagram"></canvas></div>
         </div>
 
-      </div><!-- /view-dashboard -->
+      </div><!-- /view-training -->
 
       <!-- ════════════════════════════════════════════════
-           VIEW : ACTIVITÉS (table)
+           VIEW : HISTORIQUE (table des activités)
       ════════════════════════════════════════════════ -->
-      <div id="view-activities" class="view">
+      <div id="view-history" class="view">
 
         <!-- Period selector + filter -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
@@ -381,14 +396,52 @@
           </table>
         </div>
 
-      </div><!-- /view-activities -->
+      </div><!-- /view-history -->
 
       <!-- ════════════════════════════════════════════════
-           VIEW : SANTÉ
+           VIEW : RÉCUPÉRATION (ex-Santé + POC sections 0-2)
       ════════════════════════════════════════════════ -->
-      <div id="view-health" class="view">
+      <div id="view-recovery" class="view">
 
-        <!-- Recovery card -->
+        <!-- Recommandation du jour (unifiée — computeDailyReco) -->
+        <div class="card" style="margin-bottom:16px">
+          <div style="font-size:11px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">
+            🎯 Recommandation du jour — synthèse de tous les signaux
+          </div>
+          <div id="poc-synthesis"></div>
+        </div>
+
+        <!-- Score de récupération composite (POC section 1) -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">Score de Récupération Composite <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="health-grid">
+            <div class="card">
+              <div class="section-header" style="margin:0 0 12px">Score du jour (0–100)</div>
+              <div id="poc-recovery-score"></div>
+            </div>
+            <div class="card health-full">
+              <div class="section-header" style="margin:0 0 12px">Évolution 30 jours</div>
+              <div class="chart-wrap" style="height:180px"><canvas id="chart-poc-recovery"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- HRV-Guided Training (POC section 2) -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">HRV-Guided Training <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="health-grid">
+            <div class="card">
+              <div class="section-header" style="margin:0 0 12px">Recommandation HRV du jour</div>
+              <div id="poc-hrv-reco"></div>
+            </div>
+            <div class="card health-full">
+              <div class="section-header" style="margin:0 0 12px">HRV 90j — trend vs baseline</div>
+              <div class="chart-wrap" style="height:180px"><canvas id="chart-poc-hrv"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recovery card (health.js) -->
         <div id="recovery-section" style="display:none;margin-bottom:20px">
           <div class="card recovery-card" id="recovery-card-inner"></div>
         </div>
@@ -560,7 +613,7 @@
           </div>
         </div>
 
-      </div><!-- /view-health -->
+      </div><!-- /view-recovery -->
 
       <!-- ════════════════════════════════════════════════
            VIEW : PROFIL
@@ -953,68 +1006,10 @@
       </div><!-- /view-running -->
 
       <!-- ════════════════════════════════════════════════
-           VIEW : POC — Science du sport
+           VIEW : POC — sections 3-5 (dissolues dans Entraînement/Course)
+           Sections 0-2 déplacées dans view-recovery
       ════════════════════════════════════════════════ -->
       <div id="view-poc" class="view">
-
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-          <span style="font-size:22px">🧪</span>
-          <div>
-            <div style="font-size:18px;font-weight:800">Outils Science du Sport</div>
-            <div style="font-size:12px;color:var(--muted)">Métriques validées en recherche sportive — proof of concept</div>
-          </div>
-        </div>
-
-        <!-- 0. Recommandation consolidée -->
-        <div class="card" style="margin-top:16px;margin-bottom:4px">
-          <div style="font-size:11px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">
-            🎯 Recommandation du jour — synthèse de tous les signaux
-          </div>
-          <div id="poc-synthesis"></div>
-        </div>
-
-        <!-- 1. Score de récupération composite -->
-        <div class="section-header collapsible" onclick="toggleSection(this)" style="margin-top:20px">
-          1. Score de Récupération Composite <span class="chev">▾</span>
-        </div>
-        <div class="section-body">
-          <div class="health-grid">
-            <div class="card">
-              <div class="section-header" style="margin:0 0 12px">Score du jour (0–100)</div>
-              <div id="poc-recovery-score"></div>
-            </div>
-            <div class="card health-full">
-              <div class="section-header" style="margin:0 0 12px">Évolution 30 jours</div>
-              <div class="chart-wrap" style="height:180px"><canvas id="chart-poc-recovery"></canvas></div>
-            </div>
-          </div>
-          <div class="card" style="margin-top:0;font-size:12px;color:var(--muted);padding:12px 16px;line-height:1.7">
-            <b style="color:var(--text)">Méthodologie :</b> Score composite pondéré — HRV nuit (30%) · FC repos (25%) · Body Battery (25%) · Durée sommeil (20%).
-            Chaque composante est normalisée par rapport à la baseline 28j. Référence : Plews et al. (2013) <i>IJSPP</i>.
-          </div>
-        </div>
-
-        <!-- 2. HRV-guided training -->
-        <div class="section-header collapsible" onclick="toggleSection(this)">
-          2. HRV-Guided Training <span class="chev">▾</span>
-        </div>
-        <div class="section-body">
-          <div class="health-grid">
-            <div class="card">
-              <div class="section-header" style="margin:0 0 12px">Recommandation du jour</div>
-              <div id="poc-hrv-reco"></div>
-            </div>
-            <div class="card health-full">
-              <div class="section-header" style="margin:0 0 12px">HRV 90j — trend vs baseline</div>
-              <div class="chart-wrap" style="height:180px"><canvas id="chart-poc-hrv"></canvas></div>
-            </div>
-          </div>
-          <div class="card" style="margin-top:0;font-size:12px;color:var(--muted);padding:12px 16px;line-height:1.7">
-            <b style="color:var(--text)">Méthodologie :</b> Moyenne mobile HRV 7j comparée à la baseline 28j avec bandes ±1 SD.
-            HRV &gt; baseline + 0.5 SD → séance intense possible. HRV &lt; baseline − 0.5 SD → récupération conseillée.
-            Référence : Kiviniemi et al. (2007) <i>EJAP</i>.
-          </div>
-        </div>
 
         <!-- 3. Ratio longue sortie / volume -->
         <div class="section-header collapsible" onclick="toggleSection(this)">
@@ -1155,25 +1150,25 @@
      BOTTOM NAV (mobile)
 ════════════════════════════════════════════════ -->
 <nav class="bottom-nav" id="bottom-nav">
-  <button class="bottom-nav-item active" data-view="dashboard" onclick="switchView('dashboard')">
+  <button class="bottom-nav-item active" data-view="today" onclick="switchView('today')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-    Dashboard
+    Aujourd'hui
   </button>
-  <button class="bottom-nav-item" data-view="activities" onclick="switchView('activities')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
-    Activités
+  <button class="bottom-nav-item" data-view="training" onclick="switchView('training')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+    Entraînement
   </button>
-  <button class="bottom-nav-item" data-view="health" onclick="switchView('health')">
+  <button class="bottom-nav-item" data-view="recovery" onclick="switchView('recovery')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-    Santé
+    Récupération
+  </button>
+  <button class="bottom-nav-item" data-view="history" onclick="switchView('history')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+    Historique
   </button>
   <button class="bottom-nav-item" data-view="profile" onclick="switchView('profile')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     Profil
-  </button>
-  <button class="bottom-nav-item" data-view="running" onclick="switchView('running')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4a1 1 0 1 0 2 0 1 1 0 0 0-2 0"/><path d="m7 20 2-6 3 2 2-4"/><path d="m5 10 3-3 3 2 4-4"/></svg>
-    Running
   </button>
 </nav>
 

@@ -7,8 +7,8 @@ const ACT_MAP = {};
 
 /* ── Application state ── */
 const state = {
-  view:               'dashboard',  // dashboard | activities | health | profile
-  tab:                'week',       // day | week | month | year (within dashboard)
+  view:               'today',      // today | training | recovery | history | profile
+  tab:                'week',       // day | week | month | year | course (within training)
   offset:             0,
   filter:             'all',
   data:               null,
@@ -732,7 +732,16 @@ function switchView(view) {
   const viewEl = document.getElementById('view-' + view);
   if (viewEl) viewEl.classList.add('active');
 
-  const titles = { dashboard:'Dashboard', activities:'Activités', health:'Santé', profile:'Profil', running:'Running', poc:'🧪 POC', help:'Aide' };
+  const titles = {
+    today:    'Aujourd\'hui',
+    training: 'Entraînement',
+    recovery: 'Récupération',
+    history:  'Historique',
+    profile:  'Profil',
+    /* legacy aliases */
+    dashboard: 'Dashboard', activities: 'Activités', health: 'Santé',
+    running: 'Running', poc: 'Science du sport', help: 'Aide',
+  };
   const titleEl = document.getElementById('topbar-title');
   if (titleEl) titleEl.textContent = titles[view] || view;
 
@@ -743,6 +752,11 @@ function switchSubTab(tab) {
   state.tab = tab;
   state.offset = 0;
   document.querySelectorAll('.subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  /* Gérer le sous-onglet course : switche vers running */
+  if (tab === 'course') {
+    switchView('running');
+    return;
+  }
   renderAll();
 }
 
@@ -759,7 +773,40 @@ function setFilter(type) {
 /* ══════════════════════════════════════════════════════════
    RENDER DISPATCHER
    ══════════════════════════════════════════════════════════ */
+/* ── Wrappers pour la nouvelle navigation ── */
+function renderToday() {
+  /* Forcé en mode "day" pour la vue Aujourd'hui */
+  const savedTab = state.tab;
+  state.tab = 'day';
+  const periodLbl = document.getElementById('period-label');
+  if (periodLbl) periodLbl.textContent = formatPeriodLabel();
+  renderDashboard();
+  state.tab = savedTab;
+}
+
+function renderTraining() {
+  /* Semaine/mois/année : utilise state.tab courant */
+  if (state.tab === 'day') state.tab = 'week'; // default
+  const periodLbl = document.getElementById('period-label');
+  if (periodLbl) periodLbl.textContent = formatPeriodLabel();
+  const trainingPeriodLbl = document.getElementById('period-label-training');
+  if (trainingPeriodLbl) trainingPeriodLbl.textContent = formatPeriodLabel();
+  renderDashboard();
+}
+
 function renderAll() {
+  /* Nouveaux noms de vue */
+  if (state.view === 'today')    { renderToday();      return; }
+  if (state.view === 'training') { renderTraining();   return; }
+  if (state.view === 'recovery') {
+    renderHealth();
+    if (typeof renderPocSynthesis === 'function') { try { renderPocSynthesis(); } catch(e) { console.warn('[recovery] poc synthesis', e); } }
+    if (typeof renderPocRecovery  === 'function') { try { renderPocRecovery();  } catch(e) { console.warn('[recovery] poc recovery', e); } }
+    if (typeof renderPocHRV       === 'function') { try { renderPocHRV();       } catch(e) { console.warn('[recovery] poc hrv', e); } }
+    return;
+  }
+  if (state.view === 'history')  { renderActivities(); return; }
+  /* Aliases legacy */
   if (state.view === 'health')     { renderHealth();     return; }
   if (state.view === 'profile')    { renderProfile();    return; }
   if (state.view === 'activities') { renderActivities(); return; }
@@ -767,8 +814,9 @@ function renderAll() {
   if (state.view === 'poc')        { renderPOC();        return; }
   if (state.view === 'help')       { renderHelp();       return; }
 
-  /* Dashboard */
-  document.getElementById('period-label').textContent = formatPeriodLabel();
+  /* Dashboard (fallback) */
+  const periodLbl = document.getElementById('period-label');
+  if (periodLbl) periodLbl.textContent = formatPeriodLabel();
   renderDashboard();
 }
 
