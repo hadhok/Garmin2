@@ -720,7 +720,12 @@ ${morningHtml ? `<div class="morning"><div class="morning-title">☀️ Résumé
 /* ══════════════════════════════════════════════════════════
    NAVIGATION
    ══════════════════════════════════════════════════════════ */
-function switchView(view) {
+
+/* Ordre des 5 onglets principaux pour le swipe */
+const TAB_ORDER = ['today', 'training', 'recovery', 'history', 'profile'];
+
+function switchView(view, swipeDir) {
+  const prev = state.view;
   state.view = view;
 
   document.querySelectorAll('.nav-item').forEach(el => {
@@ -731,7 +736,15 @@ function switchView(view) {
   });
   document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
   const viewEl = document.getElementById('view-' + view);
-  if (viewEl) viewEl.classList.add('active');
+  if (viewEl) {
+    viewEl.classList.add('active');
+    /* Animation de transition directionnelle */
+    if (swipeDir && window.innerWidth <= 768) {
+      viewEl.classList.remove('slide-in-left', 'slide-in-right');
+      void viewEl.offsetWidth; // force reflow
+      viewEl.classList.add(swipeDir === 'left' ? 'slide-in-left' : 'slide-in-right');
+    }
+  }
 
   const titles = {
     today:    'Aujourd\'hui',
@@ -1067,6 +1080,53 @@ function toggleSidebar() {
   localStorage.setItem('sidebar-collapsed', collapsed ? '1' : '0');
 }
 
+/* ══════════════════════════════════════════════════════════
+   SWIPE NAVIGATION (mobile)
+   Swipe gauche → onglet suivant · Swipe droite → onglet précédent
+   Annulé si le geste commence dans un élément scrollable (chart, table, filter-bar)
+   ══════════════════════════════════════════════════════════ */
+function _initSwipeNav() {
+  const mainEl = document.querySelector('main');
+  if (!mainEl) return;
+
+  /* Sélecteurs qui ont leur propre scroll horizontal → ne pas intercepter */
+  const SCROLL_SELECTORS = '.filter-bar,.subtab-bar,.chart-wrap,.table-container,.health-period-bar,.heatmap-outer,.run-period-bar,.year-all-list,.acts-search-wrap,.compare-select';
+
+  let tx = 0, ty = 0, tracking = false;
+
+  mainEl.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) { tracking = false; return; }
+    if (e.target.closest(SCROLL_SELECTORS)) { tracking = false; return; }
+    tx = e.touches[0].clientX;
+    ty = e.touches[0].clientY;
+    tracking = true;
+  }, { passive: true });
+
+  mainEl.addEventListener('touchmove', e => {
+    if (!tracking) return;
+    const dx = Math.abs(e.touches[0].clientX - tx);
+    const dy = Math.abs(e.touches[0].clientY - ty);
+    /* Si le geste part en vertical → abandon (scroll normal) */
+    if (dy > dx && dy > 12) { tracking = false; }
+  }, { passive: true });
+
+  mainEl.addEventListener('touchend', e => {
+    if (!tracking) return;
+    tracking = false;
+    const dx = e.changedTouches[0].clientX - tx;
+    const dy = Math.abs(e.changedTouches[0].clientY - ty);
+    /* Seuil : au moins 60px horizontal, et moins oblique que 45° */
+    if (Math.abs(dx) < 60 || dy > Math.abs(dx) * 0.9) return;
+    const idx = TAB_ORDER.indexOf(state.view);
+    if (idx === -1) return;
+    if (dx < 0 && idx < TAB_ORDER.length - 1) {
+      switchView(TAB_ORDER[idx + 1], 'left');
+    } else if (dx > 0 && idx > 0) {
+      switchView(TAB_ORDER[idx - 1], 'right');
+    }
+  }, { passive: true });
+}
+
 async function init() {
   // Restaure l'état sidebar
   if (localStorage.getItem('sidebar-collapsed') === '1') {
@@ -1077,6 +1137,7 @@ async function init() {
   if (window.innerWidth <= 768) {
     document.querySelectorAll('.section-body').forEach(body => body.classList.add('closed'));
     document.querySelectorAll('.chev').forEach(chev => chev.style.transform = 'rotate(-90deg)');
+    _initSwipeNav();
   }
 
   // Handle PWA deep-link shortcuts (/#recovery, /#training)

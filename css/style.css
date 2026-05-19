@@ -356,6 +356,18 @@ main {
 .view { display: none; }
 .view.active { display: block; }
 
+/* Transitions de swipe (mobile uniquement) */
+@keyframes slideInFromRight {
+  from { transform: translateX(32px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes slideInFromLeft {
+  from { transform: translateX(-32px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+.view.slide-in-left  { animation: slideInFromRight .22s cubic-bezier(0.25,0.46,0.45,0.94); }
+.view.slide-in-right { animation: slideInFromLeft  .22s cubic-bezier(0.25,0.46,0.45,0.94); }
+
 /* ── Loading state ── */
 body.loading main::before {
   content: '';
@@ -1292,6 +1304,17 @@ body.loading main::before {
   .bottom-nav-item { padding: 6px 2px; font-size: 9px; }
   .bottom-nav-item svg { width: 18px; height: 18px; }
 }
+
+/* Indicateur de position swipe — barre active en haut de l'onglet sélectionné */
+.bottom-nav-item.active::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 20%; right: 20%;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 0 0 2px 2px;
+}
+.bottom-nav-item { position: relative; }
 
 /* ══════════════════════════════════════════════════════════
    ACTIVITIES — SEARCH & PAGINATION
