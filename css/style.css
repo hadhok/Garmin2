@@ -1518,6 +1518,15 @@ body.loading main::before {
   font-weight: 700;
   font-size: 14px;
 }
+.run-cal-compare-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 24px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .run-cal-compare-grid { grid-template-columns: 1fr; }
+}
 .run-cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);

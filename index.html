@@ -845,32 +845,36 @@
           </div>
         </div>
 
-        <!-- Calendrier visuel -->
-        <div class="section-header collapsible" onclick="toggleSection(this)">Calendrier <span class="chev">▾</span></div>
-        <div class="section-body">
-          <div class="card" id="run-calendar"></div>
-        </div>
-
-        <!-- Comparer deux sessions -->
-        <div class="section-header collapsible" onclick="toggleSection(this)">Comparer deux sessions <span class="chev">▾</span></div>
-        <div class="section-body">
-          <div class="card" id="run-compare-card">
-            <div class="compare-selectors">
-              <div class="compare-sel-wrap">
-                <div class="compare-sel-label compare-label-a">Session A</div>
-                <select id="compare-sel-a" onchange="updateRunCompare()" class="compare-select">
-                  <option value="">— Choisir une course —</option>
-                </select>
-              </div>
-              <div class="compare-vs">VS</div>
-              <div class="compare-sel-wrap">
-                <div class="compare-sel-label compare-label-b">Session B</div>
-                <select id="compare-sel-b" onchange="updateRunCompare()" class="compare-select">
-                  <option value="">— Choisir une course —</option>
-                </select>
+        <!-- Calendrier + Comparaison côte à côte -->
+        <div class="run-cal-compare-grid">
+          <div>
+            <div class="section-header collapsible" onclick="toggleSection(this)">Calendrier <span class="chev">▾</span></div>
+            <div class="section-body">
+              <div class="card" id="run-calendar"></div>
+            </div>
+          </div>
+          <div>
+            <div class="section-header collapsible" onclick="toggleSection(this)">Comparer deux sessions <span class="chev">▾</span></div>
+            <div class="section-body">
+              <div class="card" id="run-compare-card">
+                <div class="compare-selectors">
+                  <div class="compare-sel-wrap">
+                    <div class="compare-sel-label compare-label-a">Session A</div>
+                    <select id="compare-sel-a" onchange="updateRunCompare()" class="compare-select">
+                      <option value="">— Choisir une course —</option>
+                    </select>
+                  </div>
+                  <div class="compare-vs">VS</div>
+                  <div class="compare-sel-wrap">
+                    <div class="compare-sel-label compare-label-b">Session B</div>
+                    <select id="compare-sel-b" onchange="updateRunCompare()" class="compare-select">
+                      <option value="">— Choisir une course —</option>
+                    </select>
+                  </div>
+                </div>
+                <div id="compare-result"></div>
               </div>
             </div>
-            <div id="compare-result"></div>
           </div>
         </div>
 
