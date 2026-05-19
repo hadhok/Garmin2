@@ -77,11 +77,37 @@ function fmt_dur(min) {
 /* ══════════════════════════════════════════════════════════
    DATA LOADING
    ══════════════════════════════════════════════════════════ */
+const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+
+function cacheGet(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const { ts, data } = JSON.parse(raw);
+    if (Date.now() - ts > CACHE_TTL_MS) { localStorage.removeItem(key); return null; }
+    return data;
+  } catch { return null; }
+}
+
+function cacheSet(key, data) {
+  try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch {}
+}
+
+function cacheClear() {
+  ['cache_activities','cache_wellness'].forEach(k => localStorage.removeItem(k));
+}
+
 async function loadData() {
   try {
-    const r = await fetch('/api/activities');
-    if (!r.ok) throw new Error('not found');
-    state.data = await r.json();
+    const cached = cacheGet('cache_activities');
+    if (cached) {
+      state.data = cached;
+    } else {
+      const r = await fetch('/api/activities');
+      if (!r.ok) throw new Error('not found');
+      state.data = await r.json();
+      cacheSet('cache_activities', state.data);
+    }
     const ls = state.data.last_sync ? state.data.last_sync.slice(0,16).replace('T',' ') : '–';
     const labelEl = document.getElementById('sync-label');
     if (labelEl) labelEl.textContent = `Synchro : ${ls}`;
@@ -95,8 +121,10 @@ async function loadData() {
 
 async function loadWellness() {
   try {
+    const cached = cacheGet('cache_wellness');
+    if (cached) { state.wellness = cached; return; }
     const r = await fetch('/api/wellness');
-    if (r.ok) state.wellness = await r.json();
+    if (r.ok) { state.wellness = await r.json(); cacheSet('cache_wellness', state.wellness); }
   } catch {}
 }
 
@@ -428,6 +456,7 @@ async function runSync() {
       log.textContent = data.message;
       showToast(`Synchro OK — ${data.total||''} activités`, 'ok');
       closeSyncModal();
+      cacheClear();
       await Promise.all([loadData(), loadWellness()]);
       renderAll();
     } else {
