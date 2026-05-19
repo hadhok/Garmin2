@@ -400,6 +400,12 @@ body.loading main::before {
   font-weight: 700;
 }
 .btn-primary:hover { background: #8fb82a; }
+.btn-secondary {
+  background: var(--surface2); color: var(--text2); border: 1px solid var(--border2);
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: var(--radius); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s;
+}
+.btn-secondary:hover { border-color: var(--accent-dim); color: var(--text); }
 .btn-primary:disabled { opacity: 0.5; cursor: default; }
 
 .btn-ghost {

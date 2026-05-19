@@ -484,6 +484,101 @@ function showToast(msg, type='ok') {
 }
 
 /* ══════════════════════════════════════════════════════════
+   EXPORT PDF
+   ══════════════════════════════════════════════════════════ */
+function exportWeekPDF() {
+  const { start, end } = getPeriodBounds();
+  const fmt = d => d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+  const periodLabel = `${fmt(start)} – ${fmt(end)} ${end.getFullYear()}`;
+
+  const acts = getFiltered();
+  const k = computeKPIs(acts);
+
+  const dur = k.duration >= 60
+    ? `${Math.floor(k.duration/60)}h${String(Math.round(k.duration%60)).padStart(2,'0')}`
+    : `${Math.round(k.duration)} min`;
+
+  const rows = acts.map(a => {
+    const d = a.date ? new Date(a.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' }) : '';
+    const dist = a.distance_km > 0 ? `${a.distance_km} km` : '–';
+    const load = a.training_load > 0 ? Math.round(a.training_load) : '–';
+    return `<tr>
+      <td>${d}</td>
+      <td>${a.icon || ''} ${a.type_label || a.type || ''}</td>
+      <td>${a.name || ''}</td>
+      <td>${dist}</td>
+      <td>${fmt_dur(a.duration_min)}</td>
+      <td>${a.calories ? Math.round(a.calories) + ' kcal' : '–'}</td>
+      <td>${load}</td>
+    </tr>`;
+  }).join('');
+
+  const morningSummaryEl = document.getElementById('morning-summary-lines');
+  const morningHtml = morningSummaryEl ? morningSummaryEl.innerHTML : '';
+
+  const wellnessEl = document.getElementById('dash-week-banner');
+  const wellnessHtml = wellnessEl && wellnessEl.style.display !== 'none' ? wellnessEl.innerHTML : '';
+
+  const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Résumé semaine — ${periodLabel}</title>
+<style>
+  body { font-family: system-ui, sans-serif; color: #111; margin: 0; padding: 24px 32px; font-size: 13px; }
+  h1 { font-size: 20px; font-weight: 800; margin: 0 0 4px; }
+  .sub { color: #6b7280; font-size: 12px; margin-bottom: 20px; }
+  .kpi-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+  .kpi { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px 16px; min-width: 100px; }
+  .kpi-label { font-size: 10px; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 2px; }
+  .kpi-value { font-size: 20px; font-weight: 700; }
+  .kpi-unit { font-size: 12px; font-weight: 400; color: #6b7280; }
+  .morning { background: #f0f1ff; border-left: 3px solid #6366f1; padding: 10px 14px; border-radius: 6px; margin-bottom: 20px; font-size: 12px; line-height: 1.7; }
+  .morning-title { font-size: 10px; font-weight: 700; color: #6366f1; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  th { text-align: left; font-size: 10px; text-transform: uppercase; color: #6b7280; padding: 6px 8px; border-bottom: 2px solid #e5e7eb; }
+  td { padding: 7px 8px; border-bottom: 1px solid #f3f4f6; font-size: 12px; }
+  tr:last-child td { border-bottom: none; }
+  .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6b7280; letter-spacing: .06em; margin: 20px 0 8px; }
+  .footer { margin-top: 32px; font-size: 10px; color: #9ca3af; text-align: right; border-top: 1px solid #e5e7eb; padding-top: 8px; }
+  @media print { body { padding: 8mm 10mm; } }
+</style>
+</head>
+<body>
+<h1>Résumé de la semaine</h1>
+<div class="sub">${periodLabel}</div>
+
+${morningHtml ? `<div class="morning"><div class="morning-title">☀️ Résumé du matin</div>${morningHtml}</div>` : ''}
+
+<div class="kpi-row">
+  <div class="kpi"><div class="kpi-label">Activités</div><div class="kpi-value">${k.activities}</div></div>
+  <div class="kpi"><div class="kpi-label">Distance</div><div class="kpi-value">${k.distance.toFixed(1)}<span class="kpi-unit"> km</span></div></div>
+  <div class="kpi"><div class="kpi-label">Temps actif</div><div class="kpi-value">${dur}</div></div>
+  <div class="kpi"><div class="kpi-label">Calories</div><div class="kpi-value">${Math.round(k.calories).toLocaleString('fr')}<span class="kpi-unit"> kcal</span></div></div>
+  <div class="kpi"><div class="kpi-label">Charge</div><div class="kpi-value">${k.training_load > 0 ? Math.round(k.training_load) : '–'}<span class="kpi-unit"> pts</span></div></div>
+  <div class="kpi"><div class="kpi-label">Dénivelé +</div><div class="kpi-value">${Math.round(k.elevation)}<span class="kpi-unit"> m</span></div></div>
+  ${k.hr_avg ? `<div class="kpi"><div class="kpi-label">FC moy.</div><div class="kpi-value">${k.hr_avg}<span class="kpi-unit"> bpm</span></div></div>` : ''}
+</div>
+
+<div class="section-title">Activités de la semaine</div>
+<table>
+  <thead><tr><th>Date</th><th>Type</th><th>Nom</th><th>Distance</th><th>Durée</th><th>Calories</th><th>Charge</th></tr></thead>
+  <tbody>${rows || '<tr><td colspan="7" style="color:#9ca3af;text-align:center;padding:20px">Aucune activité cette semaine</td></tr>'}</tbody>
+</table>
+
+<div class="footer">Garmin Dashboard — généré le ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank');
+  if (!w) { showToast('Autorisez les popups pour exporter', 'err'); return; }
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => { w.print(); }, 400);
+}
+
+/* ══════════════════════════════════════════════════════════
    NAVIGATION
    ══════════════════════════════════════════════════════════ */
 function switchView(view) {
