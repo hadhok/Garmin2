@@ -153,6 +153,19 @@ function renderWeekPlan() {
 
   const p = generateWeekPlan();
 
+  // ── Dates réelles de la semaine courante ─────────────────────────────────
+  const dow = (TODAY.getDay() + 6) % 7; // 0=Lun … 6=Dim
+  const monday = new Date(TODAY); monday.setDate(TODAY.getDate() - dow); monday.setHours(0,0,0,0);
+  const DAY_OFFSETS = { 'Lun':0,'Mar':1,'Mer':2,'Jeu':3,'Ven':4,'Sam':5,'Dim':6 };
+
+  // ── Courses réelles cette semaine ────────────────────────────────────────
+  const weekRuns = getRuns().filter(r => {
+    const d = new Date(r.date + 'T12:00:00');
+    return d >= monday && d <= TODAY;
+  });
+  const runsByDate = {};
+  weekRuns.forEach(r => { runsByDate[r.date] = (runsByDate[r.date] || []); runsByDate[r.date].push(r); });
+
   const WEEK_COLORS = { recovery:'#22c55e', normal:'#3b82f6', loading:'#f97316' };
   const WEEK_LABELS = { recovery:'Semaine de récupération', normal:'Semaine normale', loading:'Semaine de charge' };
   const weekColor   = WEEK_COLORS[p.weekType];
@@ -162,23 +175,79 @@ function renderWeekPlan() {
     ? `<span style="color:#22c55e">▲ ${(p.endTSB - p.startTSB).toFixed(1)}</span>`
     : `<span style="color:#ef4444">▼ ${(p.endTSB - p.startTSB).toFixed(1)}</span>`;
 
+  // ── Carte jour ───────────────────────────────────────────────────────────
+  const dayCard = (s) => {
+    const offset   = DAY_OFFSETS[s.day];
+    const dayDate  = new Date(monday); dayDate.setDate(monday.getDate() + offset);
+    const dateIso  = dayDate.toISOString().slice(0, 10);
+    const isPast   = dayDate <= TODAY;
+    const isToday  = dateIso === TODAY.toISOString().slice(0, 10);
+    const actual   = runsByDate[dateIso] || [];
+    const hasRun   = actual.length > 0;
+    const planRest = !s.zone;
+
+    // Statut
+    let statusIcon, statusBg;
+    if (!isPast) {
+      statusIcon = ''; statusBg = 'transparent';
+    } else if (planRest && !hasRun) {
+      statusIcon = '✓'; statusBg = 'rgba(34,197,94,0.1)';
+    } else if (planRest && hasRun) {
+      statusIcon = '+'; statusBg = 'rgba(59,130,246,0.1)';
+    } else if (!planRest && hasRun) {
+      statusIcon = '✓'; statusBg = 'rgba(34,197,94,0.1)';
+    } else {
+      statusIcon = '✗'; statusBg = 'rgba(239,68,68,0.08)';
+    }
+
+    // Réalité
+    let realityHtml = '';
+    if (hasRun) {
+      const r = actual[0];
+      const dist = r.distance_km ? `${r.distance_km.toFixed(1)} km` : '';
+      const pace = r.pace_min_km ? `· ${r.pace_min_km}/km` : '';
+      const type = classifyRun(r);
+      const typeShort = type === 'Easy Run' ? 'Easy' : type === 'Tempo Run' ? 'Tempo' : type === 'Interval Training' ? 'Interval' : type === 'Long Run' ? 'Long' : 'Récup';
+      realityHtml = `
+        <div style="margin-top:5px;padding-top:5px;border-top:1px dashed var(--border)">
+          <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:2px">Réel</div>
+          <div style="font-size:10px;font-weight:600;color:var(--text)">${typeShort}</div>
+          <div style="font-size:9px;color:var(--muted)">${dist} ${pace}</div>
+        </div>`;
+    } else if (isPast && !planRest) {
+      realityHtml = `
+        <div style="margin-top:5px;padding-top:5px;border-top:1px dashed var(--border)">
+          <div style="font-size:9px;color:var(--muted);font-style:italic">Non réalisé</div>
+        </div>`;
+    }
+
+    const todayRing = isToday ? 'box-shadow:0 0 0 2px var(--accent);' : '';
+
+    return `<div style="border:1.5px solid ${s.zone ? s.color : 'var(--border)'};border-radius:10px;padding:8px 4px;text-align:center;background:${statusBg || (s.zone ? s.color+'12' : 'var(--surface2)')};${todayRing}position:relative">
+      ${statusIcon ? `<div style="position:absolute;top:3px;right:4px;font-size:9px;font-weight:700;color:${statusIcon==='✓'?'#22c55e':statusIcon==='✗'?'#ef4444':'#3b82f6'}">${statusIcon}</div>` : ''}
+      <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:2px;text-transform:uppercase">${s.day}</div>
+      <div style="font-size:18px;margin-bottom:2px">${s.icon}</div>
+      <div style="font-size:10px;font-weight:600;color:${s.zone ? s.color : 'var(--muted)'};line-height:1.3">${s.label}</div>
+      ${s.dur ? `<div style="font-size:9px;color:var(--muted);margin-top:2px">${s.dur}'</div>` : ''}
+      ${realityHtml}
+    </div>`;
+  };
+
   el.innerHTML = `
-    <!-- En-tête -->
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
       <span style="background:${weekColor};color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px">${weekLabel}</span>
       <span style="font-size:12px;color:var(--muted)">${p.reason}</span>
     </div>
 
-    <!-- Jours -->
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:16px">
-      ${p.plan.map(s => `
-        <div style="border:1.5px solid ${s.zone ? s.color : 'var(--border)'};border-radius:10px;padding:8px 4px;text-align:center;background:${s.zone ? s.color+'12' : 'var(--surface2)'}">
-          <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:4px;text-transform:uppercase">${s.day}</div>
-          <div style="font-size:20px;margin-bottom:4px">${s.icon}</div>
-          <div style="font-size:10px;font-weight:600;color:${s.zone ? s.color : 'var(--muted)'};line-height:1.3">${s.label}</div>
-          ${s.dur ? `<div style="font-size:10px;color:var(--muted);margin-top:3px">${s.dur} min</div>` : ''}
-          ${s.trimp ? `<div style="font-size:9px;color:var(--muted)">TRIMP ${s.trimp}</div>` : ''}
-        </div>`).join('')}
+      ${p.plan.map(s => dayCard(s)).join('')}
+    </div>
+
+    <!-- Légende -->
+    <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-bottom:14px">
+      <span><span style="color:#22c55e;font-weight:700">✓</span> Réalisé / Repos respecté</span>
+      <span><span style="color:#ef4444;font-weight:700">✗</span> Non réalisé</span>
+      <span><span style="color:#3b82f6;font-weight:700">+</span> Bonus non planifié</span>
     </div>
 
     <!-- Détails des séances -->
@@ -197,7 +266,6 @@ function renderWeekPlan() {
         </div>`).join('')}
     </div>
 
-    <!-- Simulation CTL/ATL + Stats -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div style="background:var(--surface2);border-radius:10px;padding:12px;font-size:12px">
         <div style="font-weight:600;margin-bottom:8px;font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:.5px">Projection fin de semaine</div>
@@ -213,7 +281,6 @@ function renderWeekPlan() {
       </div>
     </div>
 
-    <!-- Bases du calcul -->
     <div style="margin-top:10px;padding:8px 12px;background:var(--surface2);border-radius:8px;font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:12px">
       <span>VDOT ${p.vdot}</span>
       <span>HRmax ${HR_MAX} bpm · FC repos ${HR_REST} bpm</span>
