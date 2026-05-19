@@ -1727,3 +1727,13 @@ body.loading main::before {
   .compare-vs { margin-top: 0; }
   .compare-val-a, .compare-val-b { font-size: 12px; }
 }
+
+/* ══════════════════════════════════════════════════════════
+   SETTINGS INPUTS
+   ══════════════════════════════════════════════════════════ */
+.settings-input {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--border);
+  border-radius: 8px; background: var(--surface); color: var(--text);
+  font-size: 14px; font-weight: 600;
+}
+.settings-input:focus { outline: none; border-color: var(--accent); }

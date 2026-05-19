@@ -366,9 +366,14 @@ function renderHealthCharts(days) {
       scales:{ x:xOpts, y:{grid:{color:'#e5e7eb'}} } }
   });
 
-  /* Weight + body fat */
-  const weightData = days.map(d => d.weight_kg || null);
-  const fatData    = days.map(d => d.body_fat   || null);
+  /* Weight + body fat — use all available history, not just current period */
+  const allWDays  = Object.values(state.wellness?.days || {})
+    .sort((a,b) => a.date.localeCompare(b.date))
+    .filter(d => d.weight_kg);
+  const weightDays = allWDays.length >= 3 ? allWDays : days;
+  const wLabels    = weightDays.map(d => new Date(d.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'}));
+  const weightData = weightDays.map(d => d.weight_kg || null);
+  const fatData    = weightDays.map(d => d.body_fat   || null);
   const hasWeight  = weightData.some(v => v !== null);
   const hasFat     = fatData.some(v => v !== null);
   const weightSection = document.getElementById('weight-section');
@@ -381,7 +386,7 @@ function renderHealthCharts(days) {
     const fatMax = hasFat ? Math.min(...lastF) + Math.max(...lastF) : null; // rough range
     mkChart('chart-weight', {
       type:'line',
-      data:{ labels:L, datasets:[
+      data:{ labels:wLabels, datasets:[
         { label:'Poids', data:weightData, yAxisID:'y',
           borderColor:'#6366f1', backgroundColor:'rgba(99,102,241,0.1)',
           fill:true, tension:0.3, spanGaps:true,

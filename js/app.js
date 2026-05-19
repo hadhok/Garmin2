@@ -290,6 +290,8 @@ function renderKPIs(containerId, acts, prevActs=null) {
     ? `<div style="margin-top:5px;height:4px;background:var(--surface2);border-radius:2px;overflow:hidden"><div style="height:100%;width:${omsPct}%;background:${omsColor};border-radius:2px"></div></div><div style="font-size:10px;color:${omsColor};margin-top:3px;font-weight:600">${omsPct}% / obj. ${omsTarget} min</div>`
     : '';
 
+  const streak = computeAllActivitiesStreak();
+
   document.getElementById(containerId).innerHTML =
     h('Activités',     k.activities,                                   '',    '', delta(k.activities, prevK?.activities)) +
     h('Distance',      k.distance.toFixed(1),                         'km',  '', delta(k.distance, prevK?.distance)) +
@@ -298,6 +300,7 @@ function renderKPIs(containerId, acts, prevActs=null) {
     h('Charge totale', load,                                           'pts', '', k.training_load > 0 ? delta(k.training_load, prevK?.training_load) : '') +
     h('OMS Activité',  omsVal || '–', omsVal ? ' min' : '',           '',    omsBar) +
     h('Dénivelé +',    Math.round(k.elevation),                       'm',   '', delta(k.elevation, prevK?.elevation)) +
+    (streak > 0 ? h('Streak',  streak, ' sem.', 'toutes activités') : '') +
     (k.hr_avg  ? h('FC moy.',  k.hr_avg,  'bpm') : '') +
     (k.vo2max  ? h('VO2max',   k.vo2max,  'ml/kg') : '');
 }
@@ -521,6 +524,124 @@ const MOCK_ACTIVITIES = [
   {id:9, name:"Vélo 60km",         type:"bike",     icon:"🚴", date:"2026-04-08", start_time:"2026-04-08T09:00:00", duration_min:95,  distance_km:54.2, calories:1080, hr_avg:142, hr_max:168, elevation_m:610, training_load:102},
   {id:10,name:"Muscu jambes",      type:"strength", icon:"🏋️", date:"2026-04-04", start_time:"2026-04-04T18:30:00", duration_min:52,  distance_km:0,    calories:305,  hr_avg:128, hr_max:150, elevation_m:0,   training_load:40},
 ];
+
+/* ══════════════════════════════════════════════════════════
+   PARAMÈTRES HR
+   ══════════════════════════════════════════════════════════ */
+function saveHRSettings() {
+  const hrMax  = parseInt(document.getElementById('set-hr-max')?.value);
+  const hrRest = parseInt(document.getElementById('set-hr-rest')?.value);
+  if (hrMax  >= 140 && hrMax  <= 220) localStorage.setItem('hr_max',  hrMax);
+  if (hrRest >= 30  && hrRest <= 90)  localStorage.setItem('hr_rest', hrRest);
+  if (typeof applyHRSettings === 'function') applyHRSettings();
+  const msg = document.getElementById('settings-saved');
+  if (msg) { msg.style.display = 'block'; setTimeout(() => msg.style.display = 'none', 3000); }
+  renderAll();
+}
+
+function initSettingsInputs() {
+  const maxEl  = document.getElementById('set-hr-max');
+  const restEl = document.getElementById('set-hr-rest');
+  if (maxEl)  maxEl.value  = localStorage.getItem('hr_max')  || '177';
+  if (restEl) restEl.value = localStorage.getItem('hr_rest') || '62';
+}
+
+/* ══════════════════════════════════════════════════════════
+   STREAK TOUTES ACTIVITÉS
+   ══════════════════════════════════════════════════════════ */
+function computeAllActivitiesStreak() {
+  const acts = getAll();
+  const actDates = new Set(acts.map(a => a.date));
+  let streak = 0;
+  for (let w = 0; w < 260; w++) {
+    const monday = new Date(TODAY);
+    const dow = (TODAY.getDay() + 6) % 7;
+    monday.setDate(TODAY.getDate() - dow - w * 7);
+    let found = false;
+    for (let d = 0; d < 7; d++) {
+      const dd = new Date(monday); dd.setDate(monday.getDate() + d);
+      if (actDates.has(localIso(dd))) { found = true; break; }
+    }
+    if (!found) break;
+    streak++;
+  }
+  return streak;
+}
+
+/* ══════════════════════════════════════════════════════════
+   RÉSUMÉ MATINAL (règles)
+   ══════════════════════════════════════════════════════════ */
+function generateMorningSummary() {
+  const well = state.wellness?.days;
+  if (!well) return null;
+  const days = Object.values(well).sort((a,b) => b.date.localeCompare(a.date));
+  const today = days[0];
+  if (!today) return null;
+
+  const hrv      = today.hrv_overnight_avg;
+  const rhr      = today.resting_hr;
+  const bb       = today.body_battery_end || today.body_battery_high;
+  const sleep    = today.sleep_total_min;
+  const deep     = today.sleep_deep_min;
+  const readiness= today.training_readiness_score;
+  const stress   = today.sleep_stress_avg;
+
+  // Moyennes 7 jours pour contextualiser
+  const last7    = days.slice(0, 7);
+  const avgHrv   = last7.map(d=>d.hrv_overnight_avg).filter(Boolean).reduce((s,v,_,a)=>s+v/a.length,0);
+  const avgRhr   = last7.map(d=>d.resting_hr).filter(Boolean).reduce((s,v,_,a)=>s+v/a.length,0);
+  const avgSleep = last7.map(d=>d.sleep_total_min).filter(Boolean).reduce((s,v,_,a)=>s+v/a.length,0);
+
+  const lines = [];
+
+  // Sommeil
+  if (sleep) {
+    const h = Math.floor(sleep/60), m = sleep%60;
+    const sleepVsAvg = avgSleep ? (sleep - avgSleep) / avgSleep : 0;
+    if (sleep >= 420 && deep >= 90) lines.push(`Nuit excellente (${h}h${String(m).padStart(2,'0')} · ${Math.round(deep)}min sommeil profond).`);
+    else if (sleep >= 360)          lines.push(`Nuit correcte : ${h}h${String(m).padStart(2,'0')}.`);
+    else                            lines.push(`Nuit courte : ${h}h${String(m).padStart(2,'0')} — pense à anticiper la récupération.`);
+    if (sleepVsAvg < -0.15)         lines.push(`C'est ${Math.abs(Math.round(sleepVsAvg*100))}% sous ta moyenne habituelle.`);
+  }
+
+  // HRV
+  if (hrv && avgHrv) {
+    const delta = ((hrv - avgHrv) / avgHrv) * 100;
+    if (delta > 10)       lines.push(`HRV en hausse (${Math.round(hrv)} ms) — système nerveux bien récupéré.`);
+    else if (delta < -10) lines.push(`HRV en baisse (${Math.round(hrv)} ms vs moy. ${Math.round(avgHrv)} ms) — effort intense ou fatigue accumulée.`);
+    else                  lines.push(`HRV stable à ${Math.round(hrv)} ms.`);
+  }
+
+  // FC repos
+  if (rhr && avgRhr) {
+    if (rhr > avgRhr + 5) lines.push(`FC repos élevée (${rhr} bpm, +${rhr-Math.round(avgRhr)} vs moy.) — signe de fatigue ou de début de rhume.`);
+    else if (rhr <= avgRhr - 3) lines.push(`FC repos basse (${rhr} bpm) — bonne récupération.`);
+  }
+
+  // Body Battery
+  if (bb) {
+    if (bb >= 70)       lines.push(`Body Battery chargée à ${bb}% — énergie disponible pour une bonne séance.`);
+    else if (bb >= 40)  lines.push(`Body Battery à ${bb}% — niveau modéré.`);
+    else                lines.push(`Body Battery faible (${bb}%) — évite les efforts très intenses aujourd'hui.`);
+  }
+
+  // Readiness
+  if (readiness) {
+    if (readiness >= 70)      lines.push(`Score de forme : ${readiness}/100 — corps prêt pour l'effort.`);
+    else if (readiness >= 40) lines.push(`Score de forme modéré (${readiness}/100).`);
+    else                      lines.push(`Score de forme bas (${readiness}/100) — journée de récupération conseillée.`);
+  }
+
+  // Conseil final
+  const score = (readiness || 50) + (bb ? (bb-50)/2 : 0) + (hrv && avgHrv ? ((hrv-avgHrv)/avgHrv)*20 : 0);
+  let conseil;
+  if (score > 40)      conseil = '🟢 Conditions idéales pour une séance de qualité.';
+  else if (score > 10) conseil = '🟡 Séance modérée ou endurance de base recommandée.';
+  else                 conseil = '🔴 Privilégie la récupération active aujourd\'hui.';
+  lines.push(conseil);
+
+  return lines;
+}
 
 /* ══════════════════════════════════════════════════════════
    INIT

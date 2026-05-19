@@ -2,9 +2,14 @@
    RUNNING ANALYSIS
    ══════════════════════════════════════════════════════════ */
 
-const HR_REST  = 62;
-const HR_MAX   = 177;
-const MIN_DIST = 3;   // km
+let HR_REST  = parseInt(localStorage.getItem('hr_rest')  || '62');
+let HR_MAX   = parseInt(localStorage.getItem('hr_max')   || '177');
+const MIN_DIST = 3;
+
+function applyHRSettings() {
+  HR_REST = parseInt(localStorage.getItem('hr_rest')  || '62');
+  HR_MAX  = parseInt(localStorage.getItem('hr_max')   || '177');
+}
 
 // Zones FC en % HRmax (Z1=49-58, Z2=58-69, Z3=69-80, Z4=80-90, Z5=90-100)
 const HR_ZONES = [

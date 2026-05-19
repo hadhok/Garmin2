@@ -293,6 +293,19 @@ function renderDashboard() {
 
   // Diagramme de forme (toutes vues)
   if (typeof renderFormeDiagram === 'function') renderFormeDiagram();
+
+  // Résumé matinal (vue semaine + jour seulement)
+  if (state.tab === 'week' || state.tab === 'day') renderMorningSummary();
+}
+
+function renderMorningSummary() {
+  const el    = document.getElementById('morning-summary');
+  const lines = document.getElementById('morning-summary-lines');
+  if (!el || !lines) return;
+  const summary = typeof generateMorningSummary === 'function' ? generateMorningSummary() : null;
+  if (!summary || !summary.length) { el.style.display = 'none'; return; }
+  el.style.display = '';
+  lines.innerHTML  = summary.map(l => `<div>${l}</div>`).join('');
 }
 
 /* ══════════════════════════════════════════════════════════
