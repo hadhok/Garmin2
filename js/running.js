@@ -60,15 +60,8 @@ function secToTime(s) {
     : `${m}'${sec.toString().padStart(2,'0')}"`;
 }
 
-/* ── TRIMP de Banister (zones FC calibrées) ── */
-function computeTRIMP(run) {
-  if (!run.hr_avg || !run.duration_min) return 0;
-  const ratio = (run.hr_avg - HR_REST) / (HR_MAX - HR_REST);
-  if (ratio <= 0) return 0;
-  return Math.round(run.duration_min * ratio * 0.64 * Math.exp(1.92 * ratio));
-}
-
 // TRIMP théorique pour une session définie par zone, durée et % en zone
+// (computeTRIMP est global dans app.js — toutes activités avec FC)
 function trimpForSession(durationMin, zoneNum, pctInZone = 0.8) {
   const zone = HR_ZONES[zoneNum - 1];
   const hrAvg = Math.round(((zone.pctMin + zone.pctMax) / 2) * HR_MAX);
@@ -933,46 +926,54 @@ function renderRunEfficiencyChart() {
 function renderRunTRIMP() {
   const el = document.getElementById('run-trimp');
   if (!el) return;
-  const runs = getRuns().sort((a, b) => b.date.localeCompare(a.date));
 
-  // TRIMP 7j et 28j
+  /* Toutes activités avec FC — pas seulement les courses */
+  const allActs = getAll().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const withHR  = allActs.filter(a => a.hr_avg && a.duration_min);
+  const runs    = getRuns();
+
   const d7  = new Date(TODAY); d7.setDate(d7.getDate() - 7);
   const d28 = new Date(TODAY); d28.setDate(d28.getDate() - 28);
+
+  const acts7  = withHR.filter(a => new Date(a.date) >= d7);
+  const acts28 = withHR.filter(a => new Date(a.date) >= d28);
   const runs7  = runs.filter(r => new Date(r.date) >= d7);
-  const runs28 = runs.filter(r => new Date(r.date) >= d28);
 
-  const trimp7  = runs7.reduce((s, r) => s + computeTRIMP(r), 0);
-  const trimp28 = runs28.reduce((s, r) => s + computeTRIMP(r), 0);
+  const trimp7All  = acts7.reduce((s, a) => s + computeTRIMP(a), 0);
+  const trimp28All = acts28.reduce((s, a) => s + computeTRIMP(a), 0);
+  const trimp7Run  = runs7.reduce((s, r) => s + computeTRIMP(r), 0);
 
-  // Charge journalière 7j → monotonie
-  const loadMap7 = {};
-  runs7.forEach(r => {
-    const d = r.date.slice(0, 10);
-    loadMap7[d] = (loadMap7[d] || 0) + (r.training_load || 0);
-  });
+  // Monotonie sur TRIMP toutes activités (7j)
+  const trimpMap = buildTRIMPMap(allActs);
   const loads7 = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(TODAY); d.setDate(d.getDate() - i);
-    return loadMap7[d.toLocaleDateString("sv-SE")] || 0;
+    return trimpMap[d.toLocaleDateString('sv-SE')] || 0;
   });
-  const mean7 = loads7.reduce((s, v) => s + v, 0) / 7;
-  const std7  = Math.sqrt(loads7.reduce((s, v) => s + (v - mean7) ** 2, 0) / 7);
+  const mean7    = loads7.reduce((s, v) => s + v, 0) / 7;
+  const std7     = Math.sqrt(loads7.reduce((s, v) => s + (v - mean7) ** 2, 0) / 7);
   const monotonie = std7 > 0 ? +(mean7 / std7).toFixed(2) : 0;
-  const strain = +(trimp7 * monotonie).toFixed(0);
+  const strain    = +(trimp7All * monotonie).toFixed(0);
 
-  const row = (label, val, unit = '', note = '') => `
+  const row = (label, val, unit = '', note = '', noteColor = 'var(--muted)') => `
     <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--border);font-size:13px">
       <span style="color:var(--muted)">${label}</span>
-      <span style="font-weight:600">${val}<span style="font-weight:400;font-size:11px;color:var(--muted)"> ${unit}</span></span>
-      ${note ? `<span style="font-size:11px;color:var(--muted);margin-left:8px">${note}</span>` : ''}
+      <div style="text-align:right">
+        <span style="font-weight:600">${val}<span style="font-weight:400;font-size:11px;color:var(--muted)"> ${unit}</span></span>
+        ${note ? `<div style="font-size:10px;color:${noteColor}">${note}</div>` : ''}
+      </div>
     </div>`;
 
   const monoColor = monotonie < 1.5 ? '#22c55e' : monotonie < 2 ? '#f97316' : '#ef4444';
   const monoNote  = monotonie < 1.5 ? 'OK' : monotonie < 2 ? 'Surveillez' : 'Risque blessure';
+  const pctRun7   = trimp7All > 0 ? Math.round(trimp7Run / trimp7All * 100) : 0;
 
   el.innerHTML =
-    row('TRIMP 7 jours', trimp7, 'pts') +
-    row('TRIMP 28 jours', trimp28, 'pts') +
-    row('Charge moy / jour (7j)', mean7.toFixed(1), 'pts') +
+    `<div style="font-size:11px;color:#6366f1;font-weight:600;margin-bottom:6px;padding:4px 8px;background:rgba(99,102,241,0.08);border-radius:6px">
+       Toutes activités avec FC (course + natation + HIIT + rameur…)
+     </div>` +
+    row('TRIMP 7 jours — total', trimp7All, 'pts', `dont course : ${trimp7Run} pts (${pctRun7}%)`) +
+    row('TRIMP 28 jours — total', trimp28All, 'pts') +
+    row('TRIMP moy / jour (7j)', mean7.toFixed(1), 'pts') +
     `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--border);font-size:13px">
       <span style="color:var(--muted)">Monotonie</span>
       <span style="font-weight:600;color:${monoColor}">${monotonie} <span style="font-size:11px;font-weight:400">(${monoNote})</span></span>
@@ -990,14 +991,8 @@ function renderRunACWR() {
   const chartEl = document.getElementById('chart-run-acwr');
   if (!gaugeEl || !chartEl) return;
 
-  const allRuns = getRuns();
-
-  /* Build a TRIMP-per-day map from ALL runs (needed for 28j window) */
-  const trimpByDay = {};
-  allRuns.forEach(r => {
-    const d = (r.date || '').slice(0, 10);
-    if (d) trimpByDay[d] = (trimpByDay[d] || 0) + computeTRIMP(r);
-  });
+  /* Toutes activités avec FC — charge systémique complète */
+  const trimpByDay = buildTRIMPMap();
 
   /* Helper: sum TRIMP over [date - nDays, date) */
   function trimpSum(endDate, nDays) {
@@ -1049,7 +1044,8 @@ function renderRunACWR() {
           TRIMP 7j : <b style="color:var(--text)">${trimp7val} pts</b> &nbsp;·&nbsp;
           TRIMP 28j : <b style="color:var(--text)">${trimp28val} pts</b><br>
           AL moy/j : <b style="color:var(--text)">${acute7.toFixed(1)}</b> &nbsp;·&nbsp;
-          CL moy/j : <b style="color:var(--text)">${chronic28.toFixed(1)}</b>
+          CL moy/j : <b style="color:var(--text)">${chronic28.toFixed(1)}</b><br>
+          <span style="color:#6366f1;font-size:10px">Toutes activités avec FC (course, HIIT, rameur…)</span>
         </div>
       </div>
     </div>

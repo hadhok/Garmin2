@@ -382,23 +382,13 @@ function renderPocPhase() {
   const tlEl   = document.getElementById('poc-phase-timeline');
   if (!curEl || !tlEl) return;
 
-  const runs = (state.data?.activities || []).filter(a => a.type === 'run');
-  if (runs.length < 10) { curEl.innerHTML = '<div class="empty">Données insuffisantes (min 10 sorties)</div>'; return; }
+  const allActs = state.data?.activities || [];
+  if (allActs.filter(a => a.type === 'run').length < 10) {
+    curEl.innerHTML = '<div class="empty">Données insuffisantes (min 10 sorties)</div>'; return;
+  }
 
-  /* Build TRIMP per day */
-  const trimpByDay = {};
-  runs.forEach(r => {
-    const d = (r.date || '').slice(0, 10);
-    if (d) trimpByDay[d] = (trimpByDay[d] || 0) + ((r) => {
-      if (!r.hr_avg || !r.duration_min) return 0;
-      const HR_REST = parseInt(localStorage.getItem('hr_rest') || '62');
-      const HR_MAX  = parseInt(localStorage.getItem('hr_max')  || '177');
-      const ratio = (r.hr_avg - HR_REST) / (HR_MAX - HR_REST);
-      if (ratio <= 0) return 0;
-      return Math.round(r.duration_min * ratio * 0.64 * Math.exp(1.92 * ratio));
-    })(r);
-  });
-
+  /* Toutes activités avec FC — buildTRIMPMap() est global dans app.js */
+  const trimpByDay = buildTRIMPMap(allActs);
   function dayTrimp(dateStr) { return trimpByDay[dateStr] || 0; }
 
   /* CTL/ATL/TSB per week */

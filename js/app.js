@@ -266,6 +266,29 @@ function getPrevFiltered() {
 }
 
 /* ══════════════════════════════════════════════════════════
+   TRIMP — global (toutes activités avec FC)
+   Banister (1991) : durée × ratio_FC × 0.64 × exp(1.92 × ratio_FC)
+   ══════════════════════════════════════════════════════════ */
+function computeTRIMP(act) {
+  if (!act.hr_avg || !act.duration_min) return 0;
+  const HR_REST = parseInt(localStorage.getItem('hr_rest') || '62');
+  const HR_MAX  = parseInt(localStorage.getItem('hr_max')  || '177');
+  const ratio = (act.hr_avg - HR_REST) / (HR_MAX - HR_REST);
+  if (ratio <= 0 || ratio > 1.5) return 0;
+  return Math.round(act.duration_min * ratio * 0.64 * Math.exp(1.92 * ratio));
+}
+
+/* Daily TRIMP map for all activities with HR data */
+function buildTRIMPMap(activities) {
+  const map = {};
+  (activities || getAll()).forEach(a => {
+    const d = (a.date || a.start_time || '').slice(0, 10);
+    if (d) map[d] = (map[d] || 0) + computeTRIMP(a);
+  });
+  return map;
+}
+
+/* ══════════════════════════════════════════════════════════
    KPI COMPUTATION
    ══════════════════════════════════════════════════════════ */
 function computeKPIs(acts) {
