@@ -1522,6 +1522,7 @@ body.loading main::before {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 4px;
+  max-width: 560px;
 }
 .run-cal-head {
   font-size: 10px;
@@ -1530,9 +1531,12 @@ body.loading main::before {
   color: var(--muted);
   text-align: center;
   padding: 4px 0;
+  max-width: 72px;
 }
 .run-cal-day {
   aspect-ratio: 1;
+  max-width: 72px;
+  max-height: 72px;
   border-radius: 6px;
   background: var(--surface2);
   position: relative;
