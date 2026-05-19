@@ -981,6 +981,188 @@ function renderRunTRIMP() {
 }
 
 /* ══════════════════════════════════════════════════════════
+   ACWR — Acute:Chronic Workload Ratio
+   AL = avg TRIMP/j sur 7j  |  CL = avg TRIMP/j sur 28j
+   Zones : <0.8 sous-charge | 0.8–1.3 optimal | 1.3–1.5 vigilance | >1.5 danger
+   ══════════════════════════════════════════════════════════ */
+function renderRunACWR() {
+  const gaugeEl = document.getElementById('run-acwr-gauge');
+  const chartEl = document.getElementById('chart-run-acwr');
+  if (!gaugeEl || !chartEl) return;
+
+  const allRuns = getRuns();
+
+  /* Build a TRIMP-per-day map from ALL runs (needed for 28j window) */
+  const trimpByDay = {};
+  allRuns.forEach(r => {
+    const d = (r.date || '').slice(0, 10);
+    if (d) trimpByDay[d] = (trimpByDay[d] || 0) + computeTRIMP(r);
+  });
+
+  /* Helper: sum TRIMP over [date - nDays, date) */
+  function trimpSum(endDate, nDays) {
+    let sum = 0;
+    for (let i = 0; i < nDays; i++) {
+      const d = new Date(endDate);
+      d.setDate(d.getDate() - i);
+      sum += trimpByDay[d.toLocaleDateString('sv-SE')] || 0;
+    }
+    return sum;
+  }
+
+  /* Current ACWR */
+  const acute7  = trimpSum(TODAY, 7)  / 7;
+  const chronic28 = trimpSum(TODAY, 28) / 28;
+  const currentACWR = chronic28 > 0 ? +(acute7 / chronic28).toFixed(2) : null;
+
+  /* Zone info */
+  function acwrZone(v) {
+    if (v === null) return { label: 'Données insuffisantes', color: '#6b7280', bg: 'var(--surface2)' };
+    if (v < 0.8)   return { label: 'Sous-charge', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' };
+    if (v <= 1.3)  return { label: 'Zone optimale', color: '#22c55e', bg: 'rgba(34,197,94,0.1)' };
+    if (v <= 1.5)  return { label: 'Vigilance', color: '#f97316', bg: 'rgba(249,115,22,0.1)' };
+    return          { label: 'Risque élevé', color: '#ef4444', bg: 'rgba(239,68,68,0.1)' };
+  }
+
+  const zone = acwrZone(currentACWR);
+  const trimp7val  = trimpSum(TODAY, 7);
+  const trimp28val = trimpSum(TODAY, 28);
+
+  /* Gauge block */
+  gaugeEl.innerHTML = `
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+      <div style="text-align:center;background:${zone.bg};border:2px solid ${zone.color};border-radius:14px;padding:12px 22px;min-width:90px">
+        <div style="font-size:28px;font-weight:800;color:${zone.color}">${currentACWR ?? '–'}</div>
+        <div style="font-size:10px;font-weight:700;color:${zone.color};text-transform:uppercase;letter-spacing:.06em;margin-top:2px">${zone.label}</div>
+      </div>
+      <div style="flex:1;min-width:180px">
+        <div style="display:flex;gap:0;border-radius:8px;overflow:hidden;height:10px;margin-bottom:8px">
+          <div style="flex:0.8;background:#3b82f6" title="< 0.8 Sous-charge"></div>
+          <div style="flex:0.5;background:#22c55e" title="0.8–1.3 Optimal"></div>
+          <div style="flex:0.2;background:#f97316" title="1.3–1.5 Vigilance"></div>
+          <div style="flex:0.5;background:#ef4444" title="> 1.5 Danger"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted)">
+          <span>0</span><span>0.8</span><span>1.3</span><span>1.5</span><span>2+</span>
+        </div>
+        <div style="margin-top:10px;font-size:12px;color:var(--muted);line-height:1.5">
+          TRIMP 7j : <b style="color:var(--text)">${trimp7val} pts</b> &nbsp;·&nbsp;
+          TRIMP 28j : <b style="color:var(--text)">${trimp28val} pts</b><br>
+          AL moy/j : <b style="color:var(--text)">${acute7.toFixed(1)}</b> &nbsp;·&nbsp;
+          CL moy/j : <b style="color:var(--text)">${chronic28.toFixed(1)}</b>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;font-size:11px">
+      <span style="padding:3px 9px;border-radius:20px;background:rgba(59,130,246,0.12);color:#3b82f6">🔵 &lt; 0.8 Sous-charge</span>
+      <span style="padding:3px 9px;border-radius:20px;background:rgba(34,197,94,0.12);color:#22c55e">🟢 0.8–1.3 Optimal</span>
+      <span style="padding:3px 9px;border-radius:20px;background:rgba(249,115,22,0.12);color:#f97316">🟠 1.3–1.5 Vigilance</span>
+      <span style="padding:3px 9px;border-radius:20px;background:rgba(239,68,68,0.12);color:#ef4444">🔴 &gt; 1.5 Risque</span>
+    </div>`;
+
+  /* Build ACWR time series — one point per day for the selected period */
+  const months = runState.globalPeriod === '3m' ? 3 : runState.globalPeriod === '6m' ? 6 : runState.globalPeriod === '1y' ? 12 : 24;
+  const nDays  = months * 30;
+  const labels = [], values = [], pointColors = [];
+
+  for (let i = nDays - 1; i >= 0; i--) {
+    const d = new Date(TODAY);
+    d.setDate(d.getDate() - i);
+    const al = trimpSum(d, 7)  / 7;
+    const cl = trimpSum(d, 28) / 28;
+    if (cl < 0.5) { labels.push(null); values.push(null); pointColors.push('transparent'); continue; }
+    const ratio = +(al / cl).toFixed(2);
+    labels.push(d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
+    values.push(ratio);
+    pointColors.push(acwrZone(ratio).color);
+  }
+
+  mkChart('chart-run-acwr', {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'ACWR',
+        data: values,
+        borderColor: '#6366f1',
+        borderWidth: 2,
+        pointBackgroundColor: pointColors,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        tension: 0.3,
+        spanGaps: false,
+        fill: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const v = ctx.raw;
+              if (v === null) return '';
+              return `ACWR : ${v}  (${acwrZone(v).label})`;
+            }
+          }
+        },
+        annotation: {
+          annotations: {
+            zoneOptimalFill: {
+              type: 'box', yMin: 0.8, yMax: 1.3,
+              backgroundColor: 'rgba(34,197,94,0.06)',
+              borderWidth: 0,
+            },
+            zoneVigilanceFill: {
+              type: 'box', yMin: 1.3, yMax: 1.5,
+              backgroundColor: 'rgba(249,115,22,0.07)',
+              borderWidth: 0,
+            },
+            zoneDangerFill: {
+              type: 'box', yMin: 1.5, yMax: 3,
+              backgroundColor: 'rgba(239,68,68,0.06)',
+              borderWidth: 0,
+            },
+            line08: {
+              type: 'line', yMin: 0.8, yMax: 0.8,
+              borderColor: '#3b82f6', borderWidth: 1, borderDash: [4, 3],
+              label: { content: '0.8', display: true, position: 'start', color: '#3b82f6', font: { size: 9 }, backgroundColor: 'transparent' }
+            },
+            line13: {
+              type: 'line', yMin: 1.3, yMax: 1.3,
+              borderColor: '#f97316', borderWidth: 1, borderDash: [4, 3],
+              label: { content: '1.3', display: true, position: 'start', color: '#f97316', font: { size: 9 }, backgroundColor: 'transparent' }
+            },
+            line15: {
+              type: 'line', yMin: 1.5, yMax: 1.5,
+              borderColor: '#ef4444', borderWidth: 1, borderDash: [4, 3],
+              label: { content: '1.5', display: true, position: 'start', color: '#ef4444', font: { size: 9 }, backgroundColor: 'transparent' }
+            },
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            maxTicksLimit: 8,
+            maxRotation: 0,
+            callback: (_, i) => labels[i] || '',
+          },
+          grid: { display: false },
+        },
+        y: {
+          min: 0,
+          suggestedMax: 2,
+          title: { display: true, text: 'ACWR', font: { size: 10 }, color: '#6b7280' },
+          grid: { color: 'rgba(107,114,128,0.1)' },
+        }
+      }
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
    RENDER : Tableau des sorties
    ══════════════════════════════════════════════════════════ */
 const TYPE_COLORS_TABLE = {
@@ -2162,6 +2344,7 @@ function renderRunning() {
   safe(renderRunEfficiencyChart);
   safe(renderRunCardiacReserve);
   safe(renderRunTRIMP);
+  safe(renderRunACWR);
   safe(renderRunElevationCharts);
   safe(renderRunStatsTable);
   const yearEl = document.getElementById('run-year-label');
