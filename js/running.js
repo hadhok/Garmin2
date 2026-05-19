@@ -2168,10 +2168,103 @@ function renderRunning() {
   if (yearEl) yearEl.textContent = runState.year;
   safe(renderRunTypesGrid);
   safe(renderRunCalendar);
+  safe(renderRunWeekCompare);
   safe(renderRunTable);
   const arrowEl = document.getElementById(`sort-${runState.sortCol}`);
   if (arrowEl) arrowEl.textContent = runState.sortDir === -1 ? '▼' : '▲';
   safe(populateCompareSelectors);
+}
+
+/* ══════════════════════════════════════════════════════════
+   SEMAINE VS SEMAINE PRÉCÉDENTE
+   ══════════════════════════════════════════════════════════ */
+function renderRunWeekCompare() {
+  const el = document.getElementById('run-week-compare');
+  if (!el) return;
+
+  const dow    = (TODAY.getDay() + 6) % 7;
+  const mon0   = new Date(TODAY); mon0.setDate(TODAY.getDate() - dow);   mon0.setHours(0,0,0,0);
+  const mon1   = new Date(mon0);  mon1.setDate(mon0.getDate() - 7);
+
+  const inWeek = (r, monday) => {
+    const d = new Date(r.date + 'T12:00:00');
+    const sun = new Date(monday); sun.setDate(monday.getDate() + 6); sun.setHours(23,59,59);
+    return d >= monday && d <= sun;
+  };
+
+  const all    = getRuns();
+  const thisW  = all.filter(r => inWeek(r, mon0));
+  const prevW  = all.filter(r => inWeek(r, mon1));
+
+  const stat = runs => ({
+    n:    runs.length,
+    dist: runs.reduce((s,r) => s + (r.distance_km||0), 0),
+    dur:  runs.reduce((s,r) => s + (r.duration_min||0), 0),
+    load: runs.reduce((s,r) => s + (r.training_load||0), 0),
+    trimp:runs.reduce((s,r) => s + computeTRIMP(r), 0),
+    elev: runs.reduce((s,r) => s + (r.elevation_m||0), 0),
+  });
+
+  const A = stat(thisW), B = stat(prevW);
+
+  if (A.n === 0 && B.n === 0) { el.innerHTML = '<div style="color:var(--muted);font-size:13px">Aucune course ces deux dernières semaines.</div>'; return; }
+
+  const fmtDur = min => { const h = Math.floor(min/60); const m = Math.round(min%60); return h ? `${h}h${String(m).padStart(2,'0')}` : `${m}min`; };
+  const fmtDate = d => d.toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
+  const sun0 = new Date(mon0); sun0.setDate(mon0.getDate()+6);
+  const sun1 = new Date(mon1); sun1.setDate(mon1.getDate()+6);
+
+  const row = (label, vA, vB, unit='', lowerBetter=false) => {
+    const nA = parseFloat(vA)||0, nB = parseFloat(vB)||0;
+    const max = Math.max(nA, nB, 0.01);
+    const pA  = Math.round((nA/max)*100), pB = Math.round((nB/max)*100);
+    const aWins = nA > 0 && nB > 0 && (lowerBetter ? nA < nB : nA > nB);
+    const bWins = nA > 0 && nB > 0 && (lowerBetter ? nB < nA : nB > nA);
+    const diff  = nB > 0 ? ((nA - nB) / nB * 100) : null;
+    const diffHtml = diff !== null
+      ? `<span style="font-size:11px;font-weight:700;color:${diff>0?'#22c55e':diff<0?'#ef4444':'var(--muted)'}">${diff>0?'+':''}${diff.toFixed(0)}%</span>`
+      : '';
+    return `<tr>
+      <td style="font-size:12px;color:var(--muted);padding:8px 6px;white-space:nowrap">${label}</td>
+      <td style="padding:8px 6px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${pA}%;background:#6366f1;border-radius:3px"></div>
+          </div>
+          <span style="font-size:13px;font-weight:${aWins?700:500};min-width:52px;text-align:right">${vA}<span style="font-size:11px;font-weight:400;color:var(--muted)"> ${unit}</span></span>
+        </div>
+      </td>
+      <td style="padding:8px 6px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:13px;font-weight:${bWins?700:500};min-width:52px">${vB}<span style="font-size:11px;font-weight:400;color:var(--muted)"> ${unit}</span></span>
+          <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div style="height:100%;width:${pB}%;background:#94a3b8;border-radius:3px"></div>
+          </div>
+        </div>
+      </td>
+      <td style="padding:8px 6px;text-align:center">${diffHtml}</td>
+    </tr>`;
+  };
+
+  el.innerHTML = `
+    <table style="width:100%;border-collapse:collapse">
+      <thead>
+        <tr style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">
+          <th style="padding:6px 6px;text-align:left">Métrique</th>
+          <th style="padding:6px 6px;text-align:right;color:#6366f1">${fmtDate(mon0)} – ${fmtDate(sun0)}</th>
+          <th style="padding:6px 6px;text-align:left;color:var(--muted2)">${fmtDate(mon1)} – ${fmtDate(sun1)}</th>
+          <th style="padding:6px 6px;text-align:center">Δ</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${row('Sorties',      A.n,                B.n)}
+        ${row('Distance',     A.dist.toFixed(1),  B.dist.toFixed(1),  'km')}
+        ${row('Durée',        fmtDur(A.dur),       fmtDur(B.dur))}
+        ${row('Charge',       Math.round(A.load),  Math.round(B.load), 'pts')}
+        ${row('TRIMP',        Math.round(A.trimp), Math.round(B.trimp),'pts')}
+        ${row('Dénivelé',     Math.round(A.elev),  Math.round(B.elev), 'm')}
+      </tbody>
+    </table>`;
 }
 
 /* ══════════════════════════════════════════════════════════

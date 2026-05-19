@@ -175,9 +175,19 @@ def _run_sync():
     except Exception:
         pass
 
-    # ── Wellness : 7 derniers jours ──────────────────────────────────────────
+    # ── Wellness : 7 derniers jours (frais) + backfill jusqu'à 90 jours ─────
+    # Jours déjà en base pour éviter les appels redondants
+    existing_wellness = sb.table('wellness_days').select('date').execute()
+    existing_dates = {r['date'] for r in (existing_wellness.data or [])}
+
     wellness_records = []
-    for i in range(7):
+    days_to_fetch = list(range(7))  # derniers 7 jours toujours rafraîchis
+    for i in range(7, 90):          # backfill jusqu'à 90j si manquants
+        d = (today - timedelta(days=i)).strftime('%Y-%m-%d')
+        if d not in existing_dates:
+            days_to_fetch.append(i)
+
+    for i in days_to_fetch:
         date_str = (today - timedelta(days=i)).strftime('%Y-%m-%d')
         try:
             sleep_raw = client.get_sleep_data(date_str)
