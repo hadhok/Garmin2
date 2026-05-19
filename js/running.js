@@ -154,6 +154,8 @@ function renderWeekPlan() {
   const p = generateWeekPlan();
 
   // ── Dates réelles de la semaine courante ─────────────────────────────────
+  const localIso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const todayIso = localIso(TODAY);
   const dow = (TODAY.getDay() + 6) % 7; // 0=Lun … 6=Dim
   const monday = new Date(TODAY); monday.setDate(TODAY.getDate() - dow); monday.setHours(0,0,0,0);
   const DAY_OFFSETS = { 'Lun':0,'Mar':1,'Mer':2,'Jeu':3,'Ven':4,'Sam':5,'Dim':6 };
@@ -179,9 +181,9 @@ function renderWeekPlan() {
   const dayCard = (s) => {
     const offset   = DAY_OFFSETS[s.day];
     const dayDate  = new Date(monday); dayDate.setDate(monday.getDate() + offset);
-    const dateIso  = dayDate.toISOString().slice(0, 10);
+    const dateIso  = localIso(dayDate);
     const isPast   = dayDate <= TODAY;
-    const isToday  = dateIso === TODAY.toISOString().slice(0, 10);
+    const isToday  = dateIso === todayIso;
     const actual   = runsByDate[dateIso] || [];
     const hasRun   = actual.length > 0;
     const planRest = !s.zone;
