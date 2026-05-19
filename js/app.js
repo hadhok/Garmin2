@@ -594,7 +594,7 @@ function switchView(view) {
   const viewEl = document.getElementById('view-' + view);
   if (viewEl) viewEl.classList.add('active');
 
-  const titles = { dashboard:'Dashboard', activities:'Activités', health:'Santé', profile:'Profil', running:'Running', help:'Aide' };
+  const titles = { dashboard:'Dashboard', activities:'Activités', health:'Santé', profile:'Profil', running:'Running', poc:'🧪 POC', help:'Aide' };
   const titleEl = document.getElementById('topbar-title');
   if (titleEl) titleEl.textContent = titles[view] || view;
 
@@ -626,6 +626,7 @@ function renderAll() {
   if (state.view === 'profile')    { renderProfile();    return; }
   if (state.view === 'activities') { renderActivities(); return; }
   if (state.view === 'running')    { renderRunning();    return; }
+  if (state.view === 'poc')        { renderPOC();        return; }
   if (state.view === 'help')       { renderHelp();       return; }
 
   /* Dashboard */

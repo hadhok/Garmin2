@@ -78,6 +78,11 @@
         <span class="nav-label">Running</span>
         <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
+      <button class="nav-item" data-view="poc" onclick="switchView('poc')">
+        <span class="nav-icon">🧪</span>
+        <span class="nav-label">POC</span>
+        <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
       <button class="nav-item" data-view="help" onclick="switchView('help')">
         <span class="nav-icon">📖</span>
         <span class="nav-label">Aide</span>
@@ -948,6 +953,120 @@
       </div><!-- /view-running -->
 
       <!-- ════════════════════════════════════════════════
+           VIEW : POC — Science du sport
+      ════════════════════════════════════════════════ -->
+      <div id="view-poc" class="view">
+
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+          <span style="font-size:22px">🧪</span>
+          <div>
+            <div style="font-size:18px;font-weight:800">Outils Science du Sport</div>
+            <div style="font-size:12px;color:var(--muted)">Métriques validées en recherche sportive — proof of concept</div>
+          </div>
+        </div>
+
+        <!-- 1. Score de récupération composite -->
+        <div class="section-header collapsible" onclick="toggleSection(this)" style="margin-top:20px">
+          1. Score de Récupération Composite <span class="chev">▾</span>
+        </div>
+        <div class="section-body">
+          <div class="health-grid">
+            <div class="card">
+              <div class="section-header" style="margin:0 0 12px">Score du jour (0–100)</div>
+              <div id="poc-recovery-score"></div>
+            </div>
+            <div class="card health-full">
+              <div class="section-header" style="margin:0 0 12px">Évolution 30 jours</div>
+              <div class="chart-wrap" style="height:180px"><canvas id="chart-poc-recovery"></canvas></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:0;font-size:12px;color:var(--muted);padding:12px 16px;line-height:1.7">
+            <b style="color:var(--text)">Méthodologie :</b> Score composite pondéré — HRV nuit (30%) · FC repos (25%) · Body Battery (25%) · Durée sommeil (20%).
+            Chaque composante est normalisée par rapport à la baseline 28j. Référence : Plews et al. (2013) <i>IJSPP</i>.
+          </div>
+        </div>
+
+        <!-- 2. HRV-guided training -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">
+          2. HRV-Guided Training <span class="chev">▾</span>
+        </div>
+        <div class="section-body">
+          <div class="health-grid">
+            <div class="card">
+              <div class="section-header" style="margin:0 0 12px">Recommandation du jour</div>
+              <div id="poc-hrv-reco"></div>
+            </div>
+            <div class="card health-full">
+              <div class="section-header" style="margin:0 0 12px">HRV 90j — trend vs baseline</div>
+              <div class="chart-wrap" style="height:180px"><canvas id="chart-poc-hrv"></canvas></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:0;font-size:12px;color:var(--muted);padding:12px 16px;line-height:1.7">
+            <b style="color:var(--text)">Méthodologie :</b> Moyenne mobile HRV 7j comparée à la baseline 28j avec bandes ±1 SD.
+            HRV &gt; baseline + 0.5 SD → séance intense possible. HRV &lt; baseline − 0.5 SD → récupération conseillée.
+            Référence : Kiviniemi et al. (2007) <i>EJAP</i>.
+          </div>
+        </div>
+
+        <!-- 3. Ratio longue sortie / volume -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">
+          3. Ratio Longue Sortie / Volume Hebdomadaire <span class="chev">▾</span>
+        </div>
+        <div class="section-body">
+          <div class="card">
+            <div class="section-header" style="margin:0 0 12px">% de la longue sortie dans le volume total — 16 semaines</div>
+            <div id="poc-longratio-current"></div>
+            <div class="chart-wrap" style="height:180px"><canvas id="chart-poc-longratio"></canvas></div>
+          </div>
+          <div class="card" style="margin-top:0;font-size:12px;color:var(--muted);padding:12px 16px;line-height:1.7">
+            <b style="color:var(--text)">Méthodologie :</b> La sortie longue doit représenter 25–30% du volume hebdomadaire (km).
+            Au-dessus de 35% = charge asymétrique, risque de blessure. En-dessous de 20% = manque de stimulus aérobie long.
+            Référence : Daniels & Gilbert — <i>Oxygen Power</i> (1979).
+          </div>
+        </div>
+
+        <!-- 4. Détection de phase d'entraînement -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">
+          4. Détection Automatique de Phase <span class="chev">▾</span>
+        </div>
+        <div class="section-body">
+          <div class="card">
+            <div class="section-header" style="margin:0 0 12px">Phase détectée — 24 semaines</div>
+            <div id="poc-phase-current"></div>
+            <div id="poc-phase-timeline"></div>
+          </div>
+          <div class="card" style="margin-top:0;font-size:12px;color:var(--muted);padding:12px 16px;line-height:1.7">
+            <b style="color:var(--text)">Méthodologie :</b> Détection basée sur pente CTL (4 semaines), TSB, et ACWR.
+            Base : CTL↑ lent + TSB neutre · Build : CTL↑ fort + TSB négatif · Pic : CTL stable + TSB remonte ·
+            Récup : CTL↓ + TSB positif · Surcharge : ACWR &gt; 1.5 + TSB très négatif.
+          </div>
+        </div>
+
+        <!-- 5. Pace Reserve -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">
+          5. Pace Reserve (RP) <span class="chev">▾</span>
+        </div>
+        <div class="section-body">
+          <div class="health-grid">
+            <div class="card">
+              <div class="section-header" style="margin:0 0 12px">Marge allure actuelle vs seuil</div>
+              <div id="poc-pacereserve"></div>
+            </div>
+            <div class="card health-full">
+              <div class="section-header" style="margin:0 0 12px">Évolution RP — 12 semaines</div>
+              <div class="chart-wrap" style="height:180px"><canvas id="chart-poc-pacereserve"></canvas></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:0;font-size:12px;color:var(--muted);padding:12px 16px;line-height:1.7">
+            <b style="color:var(--text)">Méthodologie :</b> RP = (allure seuil − allure moyenne run) / allure seuil × 100.
+            RP &gt; 15% = sortie facile. 5–15% = tempo/seuil. &lt; 5% = sortie intense. Progression du RP à effort constant = gain de forme.
+            Référence : Renfree & Gibson (2013) <i>Sports Medicine</i>.
+          </div>
+        </div>
+
+      </div><!-- /view-poc -->
+
+      <!-- ════════════════════════════════════════════════
            VIEW : AIDE
       ════════════════════════════════════════════════ -->
       <div id="view-help" class="view"></div>
@@ -1057,6 +1176,7 @@
 <script src="/js/health.js"></script>
 <script src="/js/profile.js"></script>
 <script src="/js/running.js"></script>
+<script src="/js/poc.js"></script>
 <script src="/js/help.js"></script>
 <script>
   if ('serviceWorker' in navigator) {

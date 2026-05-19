@@ -1,0 +1,632 @@
+/* ══════════════════════════════════════════════════════════
+   POC.JS — Science du sport : outils validés expérimentaux
+   ══════════════════════════════════════════════════════════ */
+
+/* ──────────────────────────────────────────────────────────
+   1. SCORE DE RÉCUPÉRATION COMPOSITE
+   HRV 30% · FC repos 25% · Body Battery 25% · Sommeil 20%
+   Ref : Plews et al. (2013) IJSPP
+   ────────────────────────────────────────────────────────── */
+function renderPocRecovery() {
+  const el    = document.getElementById('poc-recovery-score');
+  if (!el || !state.wellness?.days) return;
+
+  const days = Object.values(state.wellness.days)
+    .filter(d => d.date)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  if (days.length < 7) { el.innerHTML = '<div class="empty">Données insuffisantes (min 7 jours)</div>'; return; }
+
+  /* baseline 28j pour chaque composante */
+  const last28 = days.slice(-28);
+  function avg(arr, fn) {
+    const vals = arr.map(fn).filter(v => v != null && !isNaN(v));
+    return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
+  }
+  function std(arr, fn, mean) {
+    const vals = arr.map(fn).filter(v => v != null && !isNaN(v));
+    if (!vals.length || mean == null) return 1;
+    return Math.sqrt(vals.reduce((s, v) => s + (v - mean) ** 2, 0) / vals.length) || 1;
+  }
+
+  const b28 = {
+    hrv:     avg(last28, d => d.hrv_rmssd || d.hrv_weekly_avg),
+    hr_rest: avg(last28, d => d.resting_hr),
+    bb:      avg(last28, d => d.body_battery_high),
+    sleep:   avg(last28, d => d.sleep_duration_h),
+  };
+
+  /* Score normalisé 0–100 par jour */
+  function scoreDay(d) {
+    const scores = [];
+
+    if (b28.hrv != null && d.hrv_rmssd != null) {
+      // HRV: plus élevé = mieux, normalise autour de baseline
+      const s = Math.min(100, Math.max(0, 50 + (d.hrv_rmssd - b28.hrv) / b28.hrv * 150));
+      scores.push({ s, w: 0.30 });
+    }
+    if (b28.hr_rest != null && d.resting_hr != null) {
+      // FC repos: plus bas = mieux, inverse
+      const s = Math.min(100, Math.max(0, 50 - (d.resting_hr - b28.hr_rest) / b28.hr_rest * 150));
+      scores.push({ s, w: 0.25 });
+    }
+    if (d.body_battery_high != null) {
+      scores.push({ s: d.body_battery_high, w: 0.25 });
+    }
+    if (d.sleep_duration_h != null) {
+      // Cible 7.5h, ±1.5h = ±50 pts
+      const s = Math.min(100, Math.max(0, 50 + (d.sleep_duration_h - 7.5) / 1.5 * 50));
+      scores.push({ s, w: 0.20 });
+    }
+
+    if (!scores.length) return null;
+    const totalW = scores.reduce((s, x) => s + x.w, 0);
+    return Math.round(scores.reduce((s, x) => s + x.s * x.w, 0) / totalW);
+  }
+
+  const scored = days.slice(-30).map(d => ({ date: d.date, score: scoreDay(d) })).filter(d => d.score != null);
+  if (!scored.length) { el.innerHTML = '<div class="empty">Données HRV / FC repos manquantes</div>'; return; }
+
+  const today = scored[scored.length - 1];
+  const score = today.score;
+
+  const color = score >= 70 ? '#22c55e' : score >= 40 ? '#f97316' : '#ef4444';
+  const label = score >= 70 ? 'Bonne récupération' : score >= 40 ? 'Récupération partielle' : 'Récupération insuffisante';
+  const reco  = score >= 70 ? 'Séance intense possible.' : score >= 40 ? 'Préférez endurance fondamentale ou technique.' : 'Repos actif recommandé.';
+
+  el.innerHTML = `
+    <div style="text-align:center;padding:16px 0">
+      <div style="position:relative;display:inline-block;width:110px;height:110px">
+        <svg width="110" height="110" viewBox="0 0 110 110">
+          <circle cx="55" cy="55" r="46" fill="none" stroke="var(--surface2)" stroke-width="10"/>
+          <circle cx="55" cy="55" r="46" fill="none" stroke="${color}" stroke-width="10"
+            stroke-dasharray="${2 * Math.PI * 46}"
+            stroke-dashoffset="${2 * Math.PI * 46 * (1 - score / 100)}"
+            stroke-linecap="round" transform="rotate(-90 55 55)"/>
+        </svg>
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center">
+          <div style="font-size:26px;font-weight:800;color:${color}">${score}</div>
+          <div style="font-size:10px;color:var(--muted)">/100</div>
+        </div>
+      </div>
+      <div style="font-size:14px;font-weight:700;color:${color};margin-top:6px">${label}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">${reco}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;font-size:12px">
+      ${b28.hrv     != null ? `<div style="background:var(--surface2);border-radius:8px;padding:8px 10px"><div style="color:var(--muted);font-size:10px">HRV base 28j</div><b>${b28.hrv.toFixed(1)} ms</b></div>` : ''}
+      ${b28.hr_rest != null ? `<div style="background:var(--surface2);border-radius:8px;padding:8px 10px"><div style="color:var(--muted);font-size:10px">FC repos base 28j</div><b>${b28.hr_rest.toFixed(0)} bpm</b></div>` : ''}
+      ${b28.bb      != null ? `<div style="background:var(--surface2);border-radius:8px;padding:8px 10px"><div style="color:var(--muted);font-size:10px">Body Battery base 28j</div><b>${b28.bb.toFixed(0)}%</b></div>` : ''}
+      ${b28.sleep   != null ? `<div style="background:var(--surface2);border-radius:8px;padding:8px 10px"><div style="color:var(--muted);font-size:10px">Sommeil base 28j</div><b>${b28.sleep.toFixed(1)}h</b></div>` : ''}
+    </div>`;
+
+  mkChart('chart-poc-recovery', {
+    type: 'line',
+    data: {
+      labels: scored.map(d => new Date(d.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })),
+      datasets: [{
+        label: 'Score récupération',
+        data: scored.map(d => d.score),
+        borderColor: '#6366f1',
+        backgroundColor: ctx => {
+          const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 180);
+          g.addColorStop(0, 'rgba(99,102,241,0.25)');
+          g.addColorStop(1, 'rgba(99,102,241,0)');
+          return g;
+        },
+        fill: true, borderWidth: 2, tension: 0.4,
+        pointBackgroundColor: scored.map(d => d.score >= 70 ? '#22c55e' : d.score >= 40 ? '#f97316' : '#ef4444'),
+        pointRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        annotation: {
+          annotations: {
+            z70: { type: 'line', yMin: 70, yMax: 70, borderColor: '#22c55e', borderWidth: 1, borderDash: [4, 3],
+              label: { content: '70 Bonne', display: true, position: 'end', color: '#22c55e', font: { size: 9 }, backgroundColor: 'transparent' } },
+            z40: { type: 'line', yMin: 40, yMax: 40, borderColor: '#f97316', borderWidth: 1, borderDash: [4, 3],
+              label: { content: '40 Partielle', display: true, position: 'end', color: '#f97316', font: { size: 9 }, backgroundColor: 'transparent' } },
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 6, maxRotation: 0 } },
+        y: { min: 0, max: 100, grid: { color: 'rgba(107,114,128,0.1)' } }
+      }
+    }
+  });
+}
+
+/* ──────────────────────────────────────────────────────────
+   2. HRV-GUIDED TRAINING
+   Moyenne mobile 7j vs baseline 28j ± 1 SD
+   Ref : Kiviniemi et al. (2007) EJAP
+   ────────────────────────────────────────────────────────── */
+function renderPocHRV() {
+  const el = document.getElementById('poc-hrv-reco');
+  if (!el || !state.wellness?.days) return;
+
+  const days = Object.values(state.wellness.days)
+    .filter(d => d.date && (d.hrv_rmssd || d.hrv_weekly_avg))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  if (days.length < 14) { el.innerHTML = '<div class="empty">Données HRV insuffisantes (min 14 jours)</div>'; return; }
+
+  const hrv = d => d.hrv_rmssd || d.hrv_weekly_avg || null;
+
+  /* Rolling 7-day average per day */
+  function rolling7(arr, i) {
+    const slice = arr.slice(Math.max(0, i - 6), i + 1).map(hrv).filter(v => v != null);
+    return slice.length ? slice.reduce((s, v) => s + v, 0) / slice.length : null;
+  }
+
+  /* Baseline 28j ending at each point */
+  function baseline28(arr, i) {
+    const slice = arr.slice(Math.max(0, i - 27), i + 1).map(hrv).filter(v => v != null);
+    if (slice.length < 7) return null;
+    const m = slice.reduce((s, v) => s + v, 0) / slice.length;
+    const sd = Math.sqrt(slice.reduce((s, v) => s + (v - m) ** 2, 0) / slice.length);
+    return { mean: m, sd };
+  }
+
+  const last90 = days.slice(-90);
+  const labels = [], r7vals = [], baseVals = [], upVals = [], downVals = [];
+
+  last90.forEach((d, i) => {
+    labels.push(new Date(d.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
+    const r7 = rolling7(last90, i);
+    const b  = baseline28(last90, i);
+    r7vals.push(r7 != null ? +r7.toFixed(1) : null);
+    baseVals.push(b ? +b.mean.toFixed(1) : null);
+    upVals.push(b ? +(b.mean + 0.5 * b.sd).toFixed(1) : null);
+    downVals.push(b ? +(b.mean - 0.5 * b.sd).toFixed(1) : null);
+  });
+
+  /* Today's recommendation */
+  const todayR7   = r7vals[r7vals.length - 1];
+  const todayBase = baseVals[baseVals.length - 1];
+  const todayUp   = upVals[upVals.length - 1];
+  const todayDown = downVals[downVals.length - 1];
+  const todayHRV  = hrv(last90[last90.length - 1]);
+
+  let recoColor, recoIcon, recoTitle, recoText;
+  if (todayR7 == null || todayBase == null) {
+    recoColor = '#6b7280'; recoIcon = '⚪'; recoTitle = 'Données insuffisantes'; recoText = 'Continuez à synchroniser pour obtenir une recommandation.';
+  } else if (todayR7 >= todayUp) {
+    recoColor = '#22c55e'; recoIcon = '🟢'; recoTitle = 'Séance intense possible';
+    recoText = `HRV 7j (${todayR7} ms) supérieur à la baseline + 0.5 SD (${todayUp} ms). Système nerveux bien récupéré.`;
+  } else if (todayR7 <= todayDown) {
+    recoColor = '#ef4444'; recoIcon = '🔴'; recoTitle = 'Récupération recommandée';
+    recoText = `HRV 7j (${todayR7} ms) inférieur à la baseline − 0.5 SD (${todayDown} ms). Évitez les séances intenses aujourd'hui.`;
+  } else {
+    recoColor = '#f97316'; recoIcon = '🟠'; recoTitle = 'Endurance fondamentale';
+    recoText = `HRV 7j (${todayR7} ms) dans la zone normale (${todayDown}–${todayUp} ms). Séance modérée conseillée.`;
+  }
+
+  el.innerHTML = `
+    <div style="background:${recoColor}18;border:1.5px solid ${recoColor};border-radius:12px;padding:14px 16px;margin-bottom:12px">
+      <div style="font-size:20px;margin-bottom:4px">${recoIcon}</div>
+      <div style="font-size:14px;font-weight:700;color:${recoColor};margin-bottom:4px">${recoTitle}</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.5">${recoText}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
+      <div style="background:var(--surface2);border-radius:8px;padding:8px 10px">
+        <div style="color:var(--muted);font-size:10px">HRV dernière nuit</div>
+        <b>${todayHRV != null ? todayHRV + ' ms' : '–'}</b>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:8px 10px">
+        <div style="color:var(--muted);font-size:10px">Trend 7j</div>
+        <b>${todayR7 != null ? todayR7 + ' ms' : '–'}</b>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:8px 10px">
+        <div style="color:var(--muted);font-size:10px">Baseline 28j</div>
+        <b>${todayBase != null ? todayBase + ' ms' : '–'}</b>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:8px 10px">
+        <div style="color:var(--muted);font-size:10px">Seuils ±0.5 SD</div>
+        <b>${todayDown != null ? todayDown + ' – ' + todayUp + ' ms' : '–'}</b>
+      </div>
+    </div>`;
+
+  mkChart('chart-poc-hrv', {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'HRV trend 7j',
+          data: r7vals,
+          borderColor: '#6366f1', borderWidth: 2, fill: false, tension: 0.4,
+          pointRadius: 2, spanGaps: true,
+        },
+        {
+          label: 'Baseline 28j',
+          data: baseVals,
+          borderColor: '#94a3b8', borderWidth: 1.5, borderDash: [4, 3], fill: false, tension: 0.4,
+          pointRadius: 0, spanGaps: true,
+        },
+        {
+          label: '+0.5 SD',
+          data: upVals,
+          borderColor: '#22c55e55', borderWidth: 1, fill: '+1',
+          backgroundColor: 'rgba(34,197,94,0.07)', tension: 0.4, pointRadius: 0, spanGaps: true,
+        },
+        {
+          label: '−0.5 SD',
+          data: downVals,
+          borderColor: '#ef444455', borderWidth: 1, fill: false,
+          tension: 0.4, pointRadius: 0, spanGaps: true,
+        },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, labels: { boxWidth: 12, font: { size: 10 } } },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 7, maxRotation: 0 } },
+        y: { title: { display: true, text: 'HRV (ms)', font: { size: 10 }, color: '#6b7280' }, grid: { color: 'rgba(107,114,128,0.1)' } }
+      }
+    }
+  });
+}
+
+/* ──────────────────────────────────────────────────────────
+   3. RATIO LONGUE SORTIE / VOLUME
+   Cible 25–30%, alerte >35%
+   Ref : Daniels & Gilbert — Oxygen Power (1979)
+   ────────────────────────────────────────────────────────── */
+function renderPocLongRatio() {
+  const el = document.getElementById('poc-longratio-current');
+  if (!el) return;
+
+  const runs = (state.data?.activities || []).filter(a => a.type === 'run' && a.distance_km > 0);
+  if (!runs.length) { el.innerHTML = '<div class="empty">Aucune course disponible</div>'; return; }
+
+  /* Weekly buckets — 16 dernières semaines */
+  function weekKey(dateStr) {
+    const d   = new Date(dateStr + 'T12:00:00');
+    const dow = (d.getDay() + 6) % 7;
+    const mon = new Date(d); mon.setDate(d.getDate() - dow);
+    return mon.toLocaleDateString('sv-SE');
+  }
+
+  const weeks = {};
+  runs.forEach(r => {
+    const wk = weekKey(r.date);
+    if (!weeks[wk]) weeks[wk] = [];
+    weeks[wk].push(r.distance_km);
+  });
+
+  const sorted = Object.keys(weeks).sort().slice(-16);
+
+  const labels = sorted.map(w => {
+    const d = new Date(w + 'T12:00:00');
+    return `S${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`;
+  });
+
+  const ratios = sorted.map(wk => {
+    const dists = weeks[wk];
+    const total = dists.reduce((s, v) => s + v, 0);
+    const long  = Math.max(...dists);
+    return total > 0 ? +(long / total * 100).toFixed(1) : 0;
+  });
+
+  const thisWeek = sorted[sorted.length - 1];
+  const curRatio = ratios[ratios.length - 1];
+  const curDists = weeks[thisWeek] || [];
+  const curTotal = curDists.reduce((s, v) => s + v, 0);
+  const curLong  = Math.max(...(curDists.length ? curDists : [0]));
+
+  const color = curRatio > 35 ? '#ef4444' : curRatio >= 25 ? '#22c55e' : '#f97316';
+  const label = curRatio > 35 ? 'Trop élevé — risque de charge asymétrique'
+              : curRatio >= 25 ? 'Optimal (25–30%)'
+              : 'Sous-optimal — sortie longue à allonger';
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;flex-wrap:wrap">
+      <div style="background:${color}18;border:2px solid ${color};border-radius:12px;padding:10px 20px;text-align:center">
+        <div style="font-size:28px;font-weight:800;color:${color}">${curRatio}%</div>
+        <div style="font-size:10px;color:${color};font-weight:700;text-transform:uppercase">cette semaine</div>
+      </div>
+      <div style="font-size:12px;line-height:1.6;color:var(--text)">
+        <div style="color:${color};font-weight:600;margin-bottom:4px">${label}</div>
+        Longue sortie : <b>${curLong.toFixed(1)} km</b> &nbsp;·&nbsp; Volume total : <b>${curTotal.toFixed(1)} km</b><br>
+        <span style="color:var(--muted)">Zone optimale : 25–30% · Alerte : &gt; 35%</span>
+      </div>
+    </div>`;
+
+  mkChart('chart-poc-longratio', {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: '% longue sortie',
+        data: ratios,
+        backgroundColor: ratios.map(r => r > 35 ? 'rgba(239,68,68,0.7)' : r >= 25 ? 'rgba(34,197,94,0.7)' : 'rgba(249,115,22,0.6)'),
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        annotation: {
+          annotations: {
+            optLow:  { type: 'line', yMin: 25, yMax: 25, borderColor: '#22c55e', borderWidth: 1, borderDash: [4, 3],
+              label: { content: '25%', display: true, position: 'start', color: '#22c55e', font: { size: 9 }, backgroundColor: 'transparent' } },
+            optHigh: { type: 'line', yMin: 30, yMax: 30, borderColor: '#22c55e', borderWidth: 1, borderDash: [4, 3],
+              label: { content: '30%', display: true, position: 'start', color: '#22c55e', font: { size: 9 }, backgroundColor: 'transparent' } },
+            danger:  { type: 'line', yMin: 35, yMax: 35, borderColor: '#ef4444', borderWidth: 1.5, borderDash: [4, 3],
+              label: { content: '35% Alerte', display: true, position: 'end', color: '#ef4444', font: { size: 9 }, backgroundColor: 'transparent' } },
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 9 } } },
+        y: { min: 0, suggestedMax: 50, title: { display: true, text: '%', font: { size: 10 }, color: '#6b7280' }, grid: { color: 'rgba(107,114,128,0.1)' } }
+      }
+    }
+  });
+}
+
+/* ──────────────────────────────────────────────────────────
+   4. DÉTECTION AUTOMATIQUE DE PHASE D'ENTRAÎNEMENT
+   Base CTL slope + TSB + ACWR → phase
+   ────────────────────────────────────────────────────────── */
+function renderPocPhase() {
+  const curEl  = document.getElementById('poc-phase-current');
+  const tlEl   = document.getElementById('poc-phase-timeline');
+  if (!curEl || !tlEl) return;
+
+  const runs = (state.data?.activities || []).filter(a => a.type === 'run');
+  if (runs.length < 10) { curEl.innerHTML = '<div class="empty">Données insuffisantes (min 10 sorties)</div>'; return; }
+
+  /* Build TRIMP per day */
+  const trimpByDay = {};
+  runs.forEach(r => {
+    const d = (r.date || '').slice(0, 10);
+    if (d) trimpByDay[d] = (trimpByDay[d] || 0) + ((r) => {
+      if (!r.hr_avg || !r.duration_min) return 0;
+      const HR_REST = parseInt(localStorage.getItem('hr_rest') || '62');
+      const HR_MAX  = parseInt(localStorage.getItem('hr_max')  || '177');
+      const ratio = (r.hr_avg - HR_REST) / (HR_MAX - HR_REST);
+      if (ratio <= 0) return 0;
+      return Math.round(r.duration_min * ratio * 0.64 * Math.exp(1.92 * ratio));
+    })(r);
+  });
+
+  function dayTrimp(dateStr) { return trimpByDay[dateStr] || 0; }
+
+  /* CTL/ATL/TSB per week */
+  function weekData(weeksBack) {
+    const end = new Date(TODAY); end.setDate(end.getDate() - weeksBack * 7);
+    let ctl = 0, atl = 0;
+    const kCTL = Math.exp(-1 / 42), kATL = Math.exp(-1 / 7);
+    // Warm-up 90 days before window
+    for (let i = 90 + weeksBack * 7; i >= weeksBack * 7; i--) {
+      const d = new Date(TODAY); d.setDate(d.getDate() - i);
+      const t = dayTrimp(d.toLocaleDateString('sv-SE'));
+      ctl = ctl * kCTL + t * (1 - kCTL);
+      atl = atl * kATL + t * (1 - kATL);
+    }
+    // Last 7 days of the window
+    const trimpW = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(end); d.setDate(end.getDate() - i);
+      return dayTrimp(d.toLocaleDateString('sv-SE'));
+    });
+    const al = trimpW.reduce((s, v) => s + v, 0) / 7;
+    const cl = (() => {
+      let sum = 0;
+      for (let i = 0; i < 28; i++) {
+        const d = new Date(end); d.setDate(end.getDate() - i);
+        sum += dayTrimp(d.toLocaleDateString('sv-SE'));
+      }
+      return sum / 28;
+    })();
+    const acwr = cl > 0.5 ? al / cl : null;
+    return { ctl, atl, tsb: ctl - atl, acwr };
+  }
+
+  function detectPhase(w) {
+    const { ctl, atl, tsb, acwr } = w;
+    const prevCTL = weekData(w._wk + 4)?.ctl || ctl;
+    const ctlSlope = ctl - prevCTL;
+
+    if (acwr != null && acwr > 1.5 && tsb < -20) return 'surcharge';
+    if (tsb > 5 && ctlSlope >= 0)               return 'pic';
+    if (tsb > 10)                                return 'recuperation';
+    if (ctlSlope > 3 && tsb < -5)               return 'build';
+    if (ctlSlope > 0)                            return 'base';
+    if (ctlSlope < -3)                           return 'recuperation';
+    return 'base';
+  }
+
+  const PHASE_CFG = {
+    base:        { label: 'Base',        color: '#3b82f6', icon: '🔵', desc: 'CTL qui monte lentement. Travail en endurance fondamentale.' },
+    build:       { label: 'Build',       color: '#8b5cf6', icon: '🟣', desc: 'Montée de charge significative. Inclut tempo et seuil.' },
+    pic:         { label: 'Pic de forme',color: '#22c55e', icon: '🟢', desc: 'TSB positif, CTL stabilisé. Forme au top.' },
+    recuperation:{ label: 'Récupération',color: '#06b6d4', icon: '🔷', desc: 'Décharge intentionnelle. Laissez le corps absorber.' },
+    surcharge:   { label: 'Surcharge ⚠️',color: '#ef4444', icon: '🔴', desc: 'ACWR > 1.5 et TSB très négatif. Risque de blessure élevé.' },
+  };
+
+  /* Build 24-week timeline */
+  const timeline = [];
+  for (let wk = 23; wk >= 0; wk--) {
+    const w = weekData(wk);
+    w._wk = wk;
+    const phase = detectPhase(w);
+    const weekStart = new Date(TODAY); weekStart.setDate(weekStart.getDate() - wk * 7);
+    timeline.push({ wk, phase, ...w, weekStart });
+  }
+
+  const todayPhase = timeline[timeline.length - 1];
+  const cfg = PHASE_CFG[todayPhase.phase];
+
+  curEl.innerHTML = `
+    <div style="background:${cfg.color}18;border:2px solid ${cfg.color};border-radius:12px;padding:14px 18px;margin-bottom:12px">
+      <div style="font-size:20px;margin-bottom:4px">${cfg.icon}</div>
+      <div style="font-size:16px;font-weight:800;color:${cfg.color}">${cfg.label}</div>
+      <div style="font-size:12px;color:var(--text);margin-top:4px;line-height:1.5">${cfg.desc}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:12px">
+      <div style="background:var(--surface2);border-radius:8px;padding:8px 10px">
+        <div style="color:var(--muted);font-size:10px">CTL (Forme)</div>
+        <b>${todayPhase.ctl.toFixed(1)}</b>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:8px 10px">
+        <div style="color:var(--muted);font-size:10px">TSB (Fraîcheur)</div>
+        <b style="color:${todayPhase.tsb > 0 ? '#22c55e' : todayPhase.tsb > -10 ? '#f97316' : '#ef4444'}">${todayPhase.tsb.toFixed(1)}</b>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:8px 10px">
+        <div style="color:var(--muted);font-size:10px">ACWR</div>
+        <b>${todayPhase.acwr != null ? todayPhase.acwr.toFixed(2) : '–'}</b>
+      </div>
+    </div>`;
+
+  /* Frise chronologique 24 semaines */
+  tlEl.innerHTML = `
+    <div style="margin-top:16px;overflow-x:auto">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Frise des 24 dernières semaines</div>
+      <div style="display:flex;gap:2px;min-width:500px">
+        ${timeline.map((w, i) => {
+          const c   = PHASE_CFG[w.phase];
+          const lbl = w.weekStart.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+          const isCurrent = i === timeline.length - 1;
+          return `<div title="${lbl} — ${c.label}" style="flex:1;height:32px;background:${c.color};border-radius:3px;opacity:${isCurrent ? 1 : 0.6};
+            ${isCurrent ? 'box-shadow:0 0 0 2px white,0 0 0 3px ' + c.color : ''}"></div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;font-size:11px">
+        ${Object.entries(PHASE_CFG).map(([, c]) => `<span style="display:flex;align-items:center;gap:4px"><span style="width:12px;height:12px;border-radius:2px;background:${c.color};display:inline-block"></span>${c.label}</span>`).join('')}
+      </div>
+    </div>`;
+}
+
+/* ──────────────────────────────────────────────────────────
+   5. PACE RESERVE (RP)
+   RP = (allure_seuil − allure_run) / allure_seuil × 100
+   Ref : Renfree & Gibson (2013) Sports Medicine
+   ────────────────────────────────────────────────────────── */
+function renderPocPaceReserve() {
+  const el = document.getElementById('poc-pacereserve');
+  if (!el) return;
+
+  const runs = (state.data?.activities || [])
+    .filter(a => a.type === 'run' && a.distance_km >= 3 && a.avg_pace_min_km > 0)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  if (runs.length < 5) { el.innerHTML = '<div class="empty">Données insuffisantes (min 5 sorties ≥ 3 km)</div>'; return; }
+
+  /* Threshold pace from prognosis (10 km time) or fallback: fastest pace + 10% */
+  const fastest = Math.min(...runs.map(r => r.avg_pace_min_km).filter(p => p > 0 && p < 20));
+  const thresholdPace = fastest * 1.08; // ~8% au-dessus du meilleur = seuil estimé
+
+  function rp(pace) {
+    if (!pace || pace <= 0) return null;
+    return +((thresholdPace - pace) / thresholdPace * 100).toFixed(1);
+  }
+
+  /* 12 dernières semaines — avg RP par semaine */
+  function weekKey(dateStr) {
+    const d = new Date(dateStr + 'T12:00:00');
+    const dow = (d.getDay() + 6) % 7;
+    const mon = new Date(d); mon.setDate(d.getDate() - dow);
+    return mon.toLocaleDateString('sv-SE');
+  }
+
+  const weekRPs = {};
+  runs.forEach(r => {
+    const v = rp(r.avg_pace_min_km);
+    if (v == null) return;
+    const wk = weekKey(r.date);
+    if (!weekRPs[wk]) weekRPs[wk] = [];
+    weekRPs[wk].push(v);
+  });
+
+  const sortedWks = Object.keys(weekRPs).sort().slice(-12);
+  const labels    = sortedWks.map(w => {
+    const d = new Date(w + 'T12:00:00');
+    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  });
+  const rpVals = sortedWks.map(wk => {
+    const vals = weekRPs[wk];
+    return +(vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(1);
+  });
+
+  const todayRun  = runs[runs.length - 1];
+  const todayRP   = rp(todayRun.avg_pace_min_km);
+  const rpColor   = todayRP == null ? '#6b7280' : todayRP > 15 ? '#22c55e' : todayRP >= 5 ? '#f97316' : '#ef4444';
+  const rpLabel   = todayRP == null ? '–' : todayRP > 15 ? 'Sortie facile / récupération' : todayRP >= 5 ? 'Zone tempo/seuil' : 'Sortie intense / compétition';
+
+  const paceStr = p => {
+    if (!p) return '–';
+    const m = Math.floor(p); const s = Math.round((p - m) * 60);
+    return `${m}:${s.toString().padStart(2, '0')} min/km`;
+  };
+
+  el.innerHTML = `
+    <div style="background:${rpColor}18;border:2px solid ${rpColor};border-radius:12px;padding:14px 18px;margin-bottom:12px">
+      <div style="font-size:28px;font-weight:800;color:${rpColor}">${todayRP != null ? todayRP + '%' : '–'}</div>
+      <div style="font-size:12px;font-weight:700;color:${rpColor};margin-top:2px">${rpLabel}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
+      <div style="background:var(--surface2);border-radius:8px;padding:8px 10px">
+        <div style="color:var(--muted);font-size:10px">Allure dernière sortie</div>
+        <b>${paceStr(todayRun.avg_pace_min_km)}</b>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:8px 10px">
+        <div style="color:var(--muted);font-size:10px">Allure seuil estimée</div>
+        <b>${paceStr(thresholdPace)}</b>
+      </div>
+    </div>
+    <div style="margin-top:10px;font-size:11px;color:var(--muted)">
+      RP &gt; 15% = récupération · 5–15% = tempo · &lt; 5% = intense / compétition
+    </div>`;
+
+  mkChart('chart-poc-pacereserve', {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Pace Reserve (%)',
+        data: rpVals,
+        backgroundColor: rpVals.map(v => v > 15 ? 'rgba(34,197,94,0.7)' : v >= 5 ? 'rgba(249,115,22,0.6)' : 'rgba(239,68,68,0.7)'),
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        annotation: {
+          annotations: {
+            rp15: { type: 'line', yMin: 15, yMax: 15, borderColor: '#22c55e', borderWidth: 1, borderDash: [4, 3],
+              label: { content: '15%', display: true, position: 'end', color: '#22c55e', font: { size: 9 }, backgroundColor: 'transparent' } },
+            rp5:  { type: 'line', yMin: 5,  yMax: 5,  borderColor: '#f97316', borderWidth: 1, borderDash: [4, 3],
+              label: { content: '5%', display: true, position: 'end', color: '#f97316', font: { size: 9 }, backgroundColor: 'transparent' } },
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 9 } } },
+        y: { title: { display: true, text: 'RP %', font: { size: 10 }, color: '#6b7280' }, grid: { color: 'rgba(107,114,128,0.1)' } }
+      }
+    }
+  });
+}
+
+/* ──────────────────────────────────────────────────────────
+   ENTRY POINT
+   ────────────────────────────────────────────────────────── */
+function renderPOC() {
+  const safe = (fn) => { try { fn(); } catch(e) { console.error('[POC]', fn.name, e); } };
+  safe(renderPocRecovery);
+  safe(renderPocHRV);
+  safe(renderPocLongRatio);
+  safe(renderPocPhase);
+  safe(renderPocPaceReserve);
+}
