@@ -172,6 +172,8 @@ async function loadCoach() {
    ══════════════════════════════════════════════════════════ */
 function startOfDay(d)  { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
 function endOfDay(d)    { return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59); }
+function localIso(d)    { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+const TODAY_ISO = localIso(TODAY);
 function startOfWeek(d) {
   const day = d.getDay();
   const diff = (day === 0 ? -6 : 1 - day);

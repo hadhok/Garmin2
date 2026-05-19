@@ -172,7 +172,7 @@ function renderHeatmap() {
   while(curDate <= endDate){
     const col=[];
     for(let d=0;d<7;d++){
-      const iso=curDate.toISOString().slice(0,10);
+      const iso=curDate.toLocaleDateString("sv-SE");
       col.push({iso,load:loadMap[iso]||0});
       curDate.setDate(curDate.getDate()+1);
     }
@@ -217,7 +217,7 @@ function computeFormCurve() {
   let ctl=0, atl=0;
   for(let i=179;i>=0;i--){
     const d=new Date(TODAY); d.setDate(d.getDate()-i);
-    const iso=d.toISOString().slice(0,10);
+    const iso=d.toLocaleDateString("sv-SE");
     const load=loadMap[iso]||0;
     ctl=ctl+(load-ctl)/42;
     atl=atl+(load-atl)/7;

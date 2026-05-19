@@ -39,9 +39,9 @@ function computeRecoveryScore() {
   const days = Object.values(state.wellness.days).sort((a,b) => a.date.localeCompare(b.date));
   if (!days.length) return null;
 
-  const todayIso = TODAY.toISOString().slice(0,10);
+  const todayIso = TODAY.toLocaleDateString("sv-SE");
   const yesterday = new Date(TODAY); yesterday.setDate(yesterday.getDate()-1);
-  const yesterdayIso = yesterday.toISOString().slice(0,10);
+  const yesterdayIso = yesterday.toLocaleDateString("sv-SE");
   let dayData = state.wellness.days[todayIso] || state.wellness.days[yesterdayIso];
   if (!dayData) return null;
 
@@ -165,7 +165,7 @@ function renderCorrelationChart(days, acts) {
     if (!a.training_load || a.training_load <= 0 || !a.date) return;
     const prev = new Date(a.date+'T12:00:00');
     prev.setDate(prev.getDate()-1);
-    const wDay = wellnessByDate[prev.toISOString().slice(0,10)];
+    const wDay = wellnessByDate[prev.toLocaleDateString("sv-SE")];
     if (!wDay) return;
     const ss = sleepScore(wDay);
     if (ss === null) return;

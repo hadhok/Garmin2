@@ -87,10 +87,10 @@ function renderWeekCells(acts) {
   if (!el) return;
   el.innerHTML = DAYS_FR.map((day, i) => {
     const cellDate = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
-    const iso = cellDate.toISOString().slice(0,10);
+    const iso = localIso(cellDate);
     const allDay  = acts.filter(a => a.date === iso);
     const dayActs = allDay.filter(a => state.filter === 'all' || a.type === state.filter);
-    const isToday = iso === TODAY.toISOString().slice(0,10);
+    const isToday = iso === TODAY_ISO;
     const dots = dayActs.map(a => `<div class="day-dot" style="background:${TYPE_COLOR[a.type]||'#888'}"></div>`).join('');
     const miniActs = allDay.slice(0,3).map(a => {
       ACT_MAP[a.id] = a;
@@ -124,15 +124,15 @@ function renderWeekCharts(acts) {
   const { start } = getPeriodBounds();
 
   const dists = DAYS_FR.map((_, i) => {
-    const iso = new Date(start.getFullYear(), start.getMonth(), start.getDate()+i).toISOString().slice(0,10);
+    const iso = localIso(new Date(start.getFullYear(), start.getMonth(), start.getDate()+i));
     return acts.filter(a=>a.date===iso).reduce((s,a)=>s+(a.distance_km||0),0);
   });
   const durs = DAYS_FR.map((_, i) => {
-    const iso = new Date(start.getFullYear(), start.getMonth(), start.getDate()+i).toISOString().slice(0,10);
+    const iso = localIso(new Date(start.getFullYear(), start.getMonth(), start.getDate()+i));
     return acts.filter(a=>a.date===iso).reduce((s,a)=>s+(a.duration_min||0),0);
   });
   const cols = DAYS_FR.map((_, i) => {
-    const iso = new Date(start.getFullYear(), start.getMonth(), start.getDate()+i).toISOString().slice(0,10);
+    const iso = localIso(new Date(start.getFullYear(), start.getMonth(), start.getDate()+i));
     const day = acts.filter(a=>a.date===iso);
     if (!day.length) return 'rgba(0,0,0,0.07)';
     return (TYPE_COLOR[day[0].type] || '#888') + 'cc';
@@ -301,9 +301,8 @@ function renderDashboard() {
 
 function _todayWellness() {
   if (!state.wellness?.days) return null;
-  const todayIso = TODAY.toISOString().slice(0, 10);
-  const yest     = new Date(TODAY); yest.setDate(yest.getDate() - 1);
-  return state.wellness.days[todayIso] || state.wellness.days[yest.toISOString().slice(0, 10)] || null;
+  const yest = new Date(TODAY); yest.setDate(yest.getDate() - 1);
+  return state.wellness.days[TODAY_ISO] || state.wellness.days[localIso(yest)] || null;
 }
 
 const _TRAINING_STATUS = {
