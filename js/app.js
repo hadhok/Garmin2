@@ -596,6 +596,7 @@ async function runSync() {
       closeSyncModal();
       cacheClear();
       await Promise.all([loadData(), loadWellness()]);
+      markAllDirty();
       renderAll();
     } else {
       log.textContent = data.message;
@@ -773,8 +774,93 @@ function setFilter(type) {
 /* ══════════════════════════════════════════════════════════
    RENDER DISPATCHER
    ══════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════
+   TODAY HERO — résumé condensé (récupération + reco + wellness)
+   ══════════════════════════════════════════════════════════ */
+function renderTodayHero() {
+  const el = document.getElementById('today-hero');
+  if (!el) return;
+
+  const dr = computeDailyReco();
+  const well = state.wellness?.days;
+  const todayWell = well ? Object.values(well).sort((a,b) => b.date.localeCompare(a.date))[0] : null;
+
+  const RECO_CFG = {
+    rest:     { icon: '😴', label: 'Repos — récupération',       color: '#ef4444' },
+    easy:     { icon: '🚶', label: 'Séance légère conseillée',    color: '#f59e0b' },
+    moderate: { icon: '🏃', label: 'Entraînement modéré',         color: '#3b82f6' },
+    hard:     { icon: '🔥', label: 'Séance intense possible',     color: '#22c55e' },
+  };
+  const cfg = RECO_CFG[dr.reco] || RECO_CFG.moderate;
+
+  /* Recovery score ring color */
+  const score = dr.recovScore;
+  const ringColor = score == null ? 'grey' : score >= 65 ? 'green' : score >= 40 ? 'yellow' : 'red';
+  const scoreHtml = score != null
+    ? `<div class="today-score-val ${ringColor}">${score}</div><div class="today-score-lbl">Récup.</div>`
+    : `<div class="today-score-val grey" style="font-size:18px">–</div><div class="today-score-lbl">Récup.</div>`;
+
+  /* Why text : first reason */
+  const whyText = dr.reasons[0] || '';
+
+  /* Wellness pills : sommeil, body battery, HRV */
+  const pills = [];
+  if (todayWell?.sleep_duration_h != null) {
+    const h = Math.floor(todayWell.sleep_duration_h), m = Math.round((todayWell.sleep_duration_h - h) * 60);
+    const sleepColor = todayWell.sleep_duration_h >= 7 ? '#22c55e' : todayWell.sleep_duration_h >= 6 ? '#f59e0b' : '#ef4444';
+    pills.push({ val: `${h}h${m > 0 ? m : ''}`, unit: '', lbl: 'Sommeil', color: sleepColor });
+  }
+  if (todayWell?.body_battery_high != null) {
+    const bb = todayWell.body_battery_high;
+    const bbColor = bb >= 70 ? '#22c55e' : bb >= 40 ? '#f59e0b' : '#ef4444';
+    pills.push({ val: bb, unit: '%', lbl: 'Body Battery', color: bbColor });
+  }
+  if (dr.hrvDetail) {
+    const hrvColor = dr.hrvSignal === 'green' ? '#22c55e' : dr.hrvSignal === 'red' ? '#ef4444' : '#f59e0b';
+    pills.push({ val: dr.hrvDetail.r7, unit: 'ms', lbl: 'HRV 7j', color: hrvColor });
+  }
+
+  /* Today's activities (most recent 3) */
+  const todayActs = getAll().filter(a => a.date === TODAY_ISO).slice(0, 3);
+  const actsHtml = todayActs.length
+    ? todayActs.map(a => {
+        const dist = a.distance_km > 0 ? `${a.distance_km} km` : '';
+        const dur  = a.duration_min ? fmt_dur(a.duration_min) : '';
+        const stat = [dist, dur].filter(Boolean).join(' · ') || a.calories ? `${Math.round(a.calories)} kcal` : '';
+        return `<div class="today-act-row" onclick="openDetail(${a.id})">
+          <div class="today-act-icon act-icon ${a.type||'other'}">${a.icon||'⚡'}</div>
+          <div class="today-act-info">
+            <div class="today-act-name">${a.name || a.type_label || a.type}</div>
+            <div class="today-act-sub">${a.type_label || ''}</div>
+          </div>
+          <div class="today-act-stat">${stat}</div>
+        </div>`;
+      }).join('')
+    : `<div class="today-no-act">Pas d'activité aujourd'hui</div>`;
+
+  el.innerHTML = `
+    <div class="today-hero-top">
+      <div class="today-score-ring ${ringColor}">${scoreHtml}</div>
+      <div class="today-reco-wrap">
+        <div class="today-reco-eyebrow">Recommandation du jour</div>
+        <div class="today-reco-main">${cfg.icon} ${cfg.label}</div>
+        ${whyText ? `<div class="today-reco-why">${whyText}</div>` : ''}
+      </div>
+    </div>
+    ${pills.length ? `<div class="today-wellness-row">
+      ${pills.map(p => `<div class="today-pill">
+        <div class="today-pill-val" style="color:${p.color}">${p.val}<span class="today-pill-unit">${p.unit}</span></div>
+        <div class="today-pill-lbl">${p.lbl}</div>
+      </div>`).join('')}
+    </div>` : ''}
+    <div class="today-acts-preview">${actsHtml}</div>
+  `;
+  el.style.display = '';
+}
+
 /* ── Wrappers pour la nouvelle navigation ── */
 function renderToday() {
+  renderTodayHero();
   /* Forcé en mode "day" pour la vue Aujourd'hui */
   const savedTab = state.tab;
   state.tab = 'day';
@@ -794,7 +880,28 @@ function renderTraining() {
   renderDashboard();
 }
 
+/* Lazy rendering : on ne re-rend une vue que si elle est "dirty"
+   (données rechargées, ou state.tab / state.offset / state.filter changé).
+   Chaque appel à renderAll() invalide seulement la vue courante.
+   Les vues jamais visitées ne sont pas rendues au démarrage.            */
+const _viewDirty = new Set();
+let   _lastRenderKey = '';
+
+function _renderKey() {
+  return `${state.view}|${state.tab}|${state.offset}|${state.filter}|${state.healthDays}`;
+}
+
+function markAllDirty() {
+  ['today','training','recovery','history','profile','running','poc','help'].forEach(v => _viewDirty.add(v));
+  _lastRenderKey = '';
+}
+
 function renderAll() {
+  const key = _renderKey();
+  if (key === _lastRenderKey && !_viewDirty.has(state.view)) return; // rien à faire
+  _lastRenderKey = key;
+  _viewDirty.delete(state.view);
+
   /* Nouveaux noms de vue */
   if (state.view === 'today')    { renderToday();      return; }
   if (state.view === 'training') { renderTraining();   return; }
@@ -965,6 +1072,23 @@ async function init() {
   if (localStorage.getItem('sidebar-collapsed') === '1') {
     document.body.classList.add('sidebar-collapsed');
   }
+
+  // Sur mobile, les sections collapsibles sont fermées par défaut
+  if (window.innerWidth <= 768) {
+    document.querySelectorAll('.section-body').forEach(body => body.classList.add('closed'));
+    document.querySelectorAll('.chev').forEach(chev => chev.style.transform = 'rotate(-90deg)');
+  }
+
+  // Handle PWA deep-link shortcuts (/#recovery, /#training)
+  const hash = window.location.hash.replace('#','');
+  if (['today','training','recovery','history','profile'].includes(hash)) {
+    state.view = hash;
+    document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+    const vEl = document.getElementById('view-' + hash);
+    if (vEl) vEl.classList.add('active');
+    document.querySelectorAll('[data-view]').forEach(el => el.classList.toggle('active', el.dataset.view === hash));
+  }
+
   // Spinner pendant le chargement
   document.body.classList.add('loading');
   const syncDot = document.getElementById('sync-dot');
@@ -975,6 +1099,7 @@ async function init() {
   document.body.classList.remove('loading');
   if (syncDot) syncDot.classList.remove('syncing');
 
+  markAllDirty();
   renderAll();
 }
 

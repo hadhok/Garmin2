@@ -1,4 +1,4 @@
-const CACHE = 'garmin-v4';
+const CACHE = 'garmin-v6';
 const ASSETS = [
   '/',
   '/index.html',
@@ -8,8 +8,12 @@ const ASSETS = [
   '/js/activities.js',
   '/js/health.js',
   '/js/profile.js',
+  '/js/running.js',
+  '/js/poc.js',
+  '/js/help.js',
   '/icons/icon-192.png',
-  '/icons/icon-512.png'
+  '/icons/icon-512.png',
+  '/manifest.json',
 ];
 
 self.addEventListener('install', e => {
@@ -25,9 +29,19 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Toujours réseau pour les données dynamiques
-  if (e.request.url.includes('/api/') || e.request.url.includes('coach.json')) return;
+  const url = e.request.url;
+  if (url.includes('/api/') || url.includes('coach.json')) return;
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request).catch(() => caches.match('/index.html')))
+    caches.match(e.request).then(cached => {
+      if (cached) return cached;
+      return fetch(e.request).then(res => {
+        // Cache CDN resources on first fetch
+        if (url.includes('cdn.jsdelivr.net') || url.includes('fonts.gstatic.com') || url.includes('fonts.googleapis.com')) {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
+        return res;
+      }).catch(() => caches.match('/index.html'));
+    })
   );
 });
