@@ -172,7 +172,7 @@ function renderHeatmap() {
   while(curDate <= endDate){
     const col=[];
     for(let d=0;d<7;d++){
-      const iso=curDate.toLocaleDateString("sv-SE");
+      const iso=localIso(curDate);
       col.push({iso,load:loadMap[iso]||0});
       curDate.setDate(curDate.getDate()+1);
     }
@@ -206,28 +206,10 @@ function renderHeatmap() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   CTL / ATL / TSB (Forme & Fatigue)
+   CTL / ATL / TSB (Forme & Fatigue) — délègue à computeFormeCurve, source TRIMP
    ══════════════════════════════════════════════════════════ */
-function computeFormCurve() {
-  const all = getAll();
-  const loadMap = {};
-  all.forEach(a=>{ if(!a.date) return; loadMap[a.date]=(loadMap[a.date]||0)+(a.training_load||0); });
-
-  const result=[];
-  let ctl=0, atl=0;
-  for(let i=179;i>=0;i--){
-    const d=new Date(TODAY); d.setDate(d.getDate()-i);
-    const iso=d.toLocaleDateString("sv-SE");
-    const load=loadMap[iso]||0;
-    ctl=ctl+(load-ctl)/42;
-    atl=atl+(load-atl)/7;
-    if(i<90) result.push({date:iso,ctl:+ctl.toFixed(1),atl:+atl.toFixed(1),tsb:+(ctl-atl).toFixed(1)});
-  }
-  return result;
-}
-
 function renderFormChart() {
-  const curve=computeFormCurve();
+  const curve=computeFormeCurve(getAll(), 90);
   if(!curve.length) return;
   const labels=curve.map(d=>new Date(d.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'}));
   mkChart('chart-form',{

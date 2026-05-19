@@ -74,27 +74,10 @@ function trimpForSession(durationMin, zoneNum, pctInZone = 0.8) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   CTL / ATL / TSB — runs only
+   CTL / ATL / TSB — runs only (délègue à computeFormeCurve, source TRIMP)
    ══════════════════════════════════════════════════════════ */
 function computeRunForm() {
-  const runs = getRuns();
-  const loadMap = {};
-  runs.forEach(r => {
-    const d = (r.date || '').slice(0, 10);
-    if (d) loadMap[d] = (loadMap[d] || 0) + (r.training_load || 0);
-  });
-
-  const result = [];
-  let ctl = 0, atl = 0;
-  for (let i = 179; i >= 0; i--) {
-    const d = new Date(TODAY); d.setDate(d.getDate() - i);
-    const iso = d.toLocaleDateString("sv-SE");
-    const load = loadMap[iso] || 0;
-    ctl = ctl + (load - ctl) / 42;
-    atl = atl + (load - atl) / 7;
-    if (i < 90) result.push({ date: iso, ctl: +ctl.toFixed(1), atl: +atl.toFixed(1), tsb: +(ctl - atl).toFixed(1) });
-  }
-  return result;
+  return computeFormeCurve(getRuns(), 90);
 }
 
 /* ══════════════════════════════════════════════════════════
