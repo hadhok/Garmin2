@@ -1407,6 +1407,8 @@ body.loading main::before {
   .topbar-right .btn-sync-mobile { display: inline-flex; }
 
   main { padding: 12px 14px 88px; }
+  /* Vue Shorts : pas de padding sur main pour que les cartes soient vraiment full-screen */
+  main:has(#view-shorts.active) { padding: 0; }
 
   /* KPI — 2 colonnes sur mobile, chiffres plus gros */
   .kpi-grid  { grid-template-columns: repeat(2, 1fr); gap: 8px; }
@@ -1829,6 +1831,201 @@ body.loading main::before {
   .compare-vs { margin-top: 0; }
   .compare-val-a, .compare-val-b { font-size: 12px; }
 }
+
+/* ══════════════════════════════════════════════════════════
+   TOPBAR CARDS BUTTON (mobile only)
+   ══════════════════════════════════════════════════════════ */
+.btn-topbar-cards {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border2);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .15s;
+  flex-shrink: 0;
+}
+.btn-topbar-cards:hover { background: var(--surface2); color: var(--text2); }
+.btn-topbar-cards.active { background: var(--accent); border-color: var(--accent); color: #111; }
+@media (max-width: 768px) { .btn-topbar-cards { display: flex; } }
+
+/* ══════════════════════════════════════════════════════════
+   SHORTS VIEW — snap-scroll vertical (YouTube Shorts style)
+   ══════════════════════════════════════════════════════════ */
+.shorts-container {
+  /* Hauteur = viewport - topbar - bottom nav */
+  height: calc(100dvh - 52px - 64px);
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
+}
+.shorts-container::-webkit-scrollbar { display: none; }
+
+.short-card {
+  height: calc(100dvh - 52px - 64px);
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
+  padding: 20px 18px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Fond par type de carte */
+.short-card.card-reco     { background: linear-gradient(160deg, #1e1b4b 0%, #111827 100%); }
+.short-card.card-recovery { background: linear-gradient(160deg, #064e3b 0%, #111827 100%); }
+.short-card.card-sleep    { background: linear-gradient(160deg, #1e3a5f 0%, #111827 100%); }
+.short-card.card-battery  { background: linear-gradient(160deg, #451a03 0%, #111827 100%); }
+.short-card.card-hrv      { background: linear-gradient(160deg, #2d1657 0%, #111827 100%); }
+.short-card.card-acwr     { background: linear-gradient(160deg, #1c1917 0%, #111827 100%); }
+.short-card.card-act      { background: linear-gradient(160deg, #0c2340 0%, #111827 100%); }
+
+/* Numéro de carte (X / N) */
+.short-card-num {
+  position: absolute;
+  top: 14px; right: 16px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.3);
+  letter-spacing: .5px;
+}
+
+/* Indicateur de scroll (flèche bas) */
+.short-card-hint {
+  position: absolute;
+  bottom: 14px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 18px;
+  color: rgba(255,255,255,0.2);
+  animation: bounceDown 1.6s ease-in-out infinite;
+}
+.short-card:last-child .short-card-hint { display: none; }
+@keyframes bounceDown {
+  0%,100% { transform: translateX(-50%) translateY(0); }
+  50%      { transform: translateX(-50%) translateY(6px); }
+}
+
+/* Contenu des cartes */
+.sc-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: rgba(255,255,255,0.45);
+  margin-bottom: 8px;
+}
+.sc-main-icon { font-size: 52px; line-height: 1; margin-bottom: 12px; }
+.sc-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.15;
+  letter-spacing: -.5px;
+  margin-bottom: 8px;
+}
+.sc-sub {
+  font-size: 14px;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.55;
+  margin-bottom: 20px;
+}
+.sc-big-num {
+  font-size: 72px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -3px;
+}
+.sc-big-unit {
+  font-size: 22px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.55);
+  margin-left: 4px;
+  letter-spacing: 0;
+}
+.sc-stat-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+.sc-stat {
+  flex: 1;
+  min-width: 80px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.sc-stat-val {
+  font-size: 22px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.sc-stat-lbl {
+  font-size: 11px;
+  color: rgba(255,255,255,0.45);
+  margin-top: 4px;
+}
+.sc-bar-track {
+  height: 6px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 3px;
+  margin-top: 14px;
+  overflow: hidden;
+}
+.sc-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width .8s cubic-bezier(.4,0,.2,1);
+}
+.sc-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  margin-right: 6px;
+  margin-top: 6px;
+}
+.sc-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+  margin: 14px 0;
+}
+.sc-act-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.sc-act-row:last-child { border-bottom: none; }
+.sc-act-icon {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.1);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.sc-act-name { font-size: 14px; font-weight: 600; color: #fff; }
+.sc-act-sub  { font-size: 12px; color: rgba(255,255,255,0.45); margin-top: 2px; }
+.sc-act-stat { font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.75); flex-shrink: 0; margin-left: auto; }
 
 /* ══════════════════════════════════════════════════════════
    TODAY HERO CARD (mobile-first résumé du jour)

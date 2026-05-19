@@ -752,6 +752,7 @@ function switchView(view, swipeDir) {
     recovery: 'Récupération',
     history:  'Historique',
     profile:  'Profil',
+    shorts:   '✦ Cartes',
     /* legacy aliases */
     dashboard: 'Dashboard', activities: 'Activités', health: 'Santé',
     running: 'Running', poc: 'Science du sport', help: 'Aide',
@@ -787,6 +788,183 @@ function setFilter(type) {
 /* ══════════════════════════════════════════════════════════
    RENDER DISPATCHER
    ══════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════
+   SHORTS — cartes snap-scroll (YouTube Shorts style)
+   ══════════════════════════════════════════════════════════ */
+let _shortsActive = false;
+let _shortsReturnView = 'today';
+
+function toggleShorts() {
+  if (_shortsActive) {
+    _shortsActive = false;
+    document.getElementById('btn-shorts')?.classList.remove('active');
+    switchView(_shortsReturnView);
+  } else {
+    _shortsActive = true;
+    _shortsReturnView = state.view;
+    document.getElementById('btn-shorts')?.classList.add('active');
+    switchView('shorts');
+  }
+}
+
+function renderShorts() {
+  const container = document.getElementById('shorts-container');
+  if (!container) return;
+
+  const dr         = computeDailyReco();
+  const well       = state.wellness?.days;
+  const wDays      = well ? Object.values(well).sort((a,b) => b.date.localeCompare(a.date)) : [];
+  const todayWell  = wDays[0] || null;
+  const allActs    = getAll();
+  const todayActs  = allActs.filter(a => a.date === TODAY_ISO);
+  const recentActs = allActs.slice(0, 5);
+
+  const RECO = {
+    rest:     { icon: '😴', title: 'Repos aujourd\'hui', color: '#ef4444', accent: '#fca5a5' },
+    easy:     { icon: '🚶', title: 'Séance légère',       color: '#f59e0b', accent: '#fcd34d' },
+    moderate: { icon: '🏃', title: 'Entraînement modéré', color: '#3b82f6', accent: '#93c5fd' },
+    hard:     { icon: '🔥', title: 'Séance intense !',    color: '#22c55e', accent: '#86efac' },
+  };
+  const recoC = RECO[dr.reco] || RECO.moderate;
+
+  const score = dr.recovScore;
+  const scoreColor = score == null ? '#9ca3af' : score >= 65 ? '#22c55e' : score >= 40 ? '#f59e0b' : '#ef4444';
+
+  /* ── Carte 1 : Recommandation du jour ── */
+  const card1 = `
+    <div class="short-card card-reco">
+      <div class="short-card-num">1 / 6</div>
+      <div class="sc-eyebrow">Recommandation du jour</div>
+      <div class="sc-main-icon">${recoC.icon}</div>
+      <div class="sc-title" style="color:${recoC.accent}">${recoC.title}</div>
+      <div class="sc-sub">${dr.reasons.slice(0,2).join('<br>')}</div>
+      ${dr.conflicts.length ? `<div class="sc-pill" style="background:rgba(251,191,36,0.15);border-color:rgba(251,191,36,0.3);color:#fbbf24">⚠️ ${dr.conflicts[0].split('.')[0]}</div>` : ''}
+      <div class="short-card-hint">↓</div>
+    </div>`;
+
+  /* ── Carte 2 : Score de récupération ── */
+  const scoreBar = score != null ? `<div class="sc-bar-track"><div class="sc-bar-fill" style="width:${score}%;background:${scoreColor}"></div></div>` : '';
+  const recoPills = [];
+  if (dr.hrvDetail)         recoPills.push(`HRV ${dr.hrvDetail.r7} ms`);
+  if (todayWell?.resting_hr) recoPills.push(`FC repos ${todayWell.resting_hr} bpm`);
+  if (todayWell?.body_battery_high != null) recoPills.push(`BB ${todayWell.body_battery_high}%`);
+
+  const card2 = `
+    <div class="short-card card-recovery">
+      <div class="short-card-num">2 / 6</div>
+      <div class="sc-eyebrow">Score de récupération</div>
+      <div class="sc-big-num" style="color:${scoreColor}">${score ?? '–'}<span class="sc-big-unit">/100</span></div>
+      ${scoreBar}
+      <div class="sc-stat-row">
+        ${recoPills.map(p => `<div class="sc-stat"><div class="sc-stat-val">${p.split(' ')[1]}</div><div class="sc-stat-lbl">${p.split(' ').slice(2).join(' ') || p.split(' ')[0]}</div></div>`).join('')}
+      </div>
+      <div class="short-card-hint">↓</div>
+    </div>`;
+
+  /* ── Carte 3 : Sommeil ── */
+  let sleepCard = '';
+  if (todayWell?.sleep_duration_h != null) {
+    const sh = Math.floor(todayWell.sleep_duration_h), sm = Math.round((todayWell.sleep_duration_h - sh) * 60);
+    const sleepColor = todayWell.sleep_duration_h >= 7 ? '#22c55e' : todayWell.sleep_duration_h >= 6 ? '#f59e0b' : '#ef4444';
+    const sleepPct = Math.min(100, Math.round(todayWell.sleep_duration_h / 9 * 100));
+    const deepMin = Math.round(todayWell.sleep_deep_min || 0), remMin = Math.round(todayWell.sleep_rem_min || 0);
+    sleepCard = `
+      <div class="short-card card-sleep">
+        <div class="short-card-num">3 / 6</div>
+        <div class="sc-eyebrow">Sommeil de la nuit</div>
+        <div class="sc-big-num" style="color:${sleepColor}">${sh}h<span class="sc-big-unit">${sm > 0 ? sm + 'm' : ''}</span></div>
+        <div class="sc-bar-track"><div class="sc-bar-fill" style="width:${sleepPct}%;background:${sleepColor}"></div></div>
+        <div class="sc-stat-row">
+          ${deepMin ? `<div class="sc-stat"><div class="sc-stat-val">${deepMin}<span style="font-size:13px;color:rgba(255,255,255,0.45)"> min</span></div><div class="sc-stat-lbl">Profond</div></div>` : ''}
+          ${remMin  ? `<div class="sc-stat"><div class="sc-stat-val">${remMin}<span style="font-size:13px;color:rgba(255,255,255,0.45)"> min</span></div><div class="sc-stat-lbl">REM</div></div>` : ''}
+          ${todayWell.sleep_score != null ? `<div class="sc-stat"><div class="sc-stat-val">${Math.round(todayWell.sleep_score)}</div><div class="sc-stat-lbl">Score</div></div>` : ''}
+        </div>
+        <div class="short-card-hint">↓</div>
+      </div>`;
+  }
+
+  /* ── Carte 4 : Body Battery ── */
+  let bbCard = '';
+  if (todayWell?.body_battery_high != null) {
+    const bb = todayWell.body_battery_high;
+    const bbLow = todayWell.body_battery_low ?? 0;
+    const bbColor = bb >= 70 ? '#f97316' : bb >= 40 ? '#fbbf24' : '#9ca3af';
+    const bbPct = bb;
+    const bbStatus = bb >= 70 ? 'Prêt pour l\'effort' : bb >= 40 ? 'Niveau modéré' : 'Recharge nécessaire';
+    bbCard = `
+      <div class="short-card card-battery">
+        <div class="short-card-num">4 / 6</div>
+        <div class="sc-eyebrow">Body Battery</div>
+        <div class="sc-big-num" style="color:${bbColor}">${bb}<span class="sc-big-unit">%</span></div>
+        <div class="sc-sub">${bbStatus}</div>
+        <div class="sc-bar-track" style="height:10px;border-radius:5px"><div class="sc-bar-fill" style="width:${bbPct}%;background:linear-gradient(90deg,#ef4444,#f59e0b,#22c55e);border-radius:5px"></div></div>
+        <div class="sc-stat-row">
+          <div class="sc-stat"><div class="sc-stat-val">${bbLow}%</div><div class="sc-stat-lbl">Minimum nuit</div></div>
+          <div class="sc-stat"><div class="sc-stat-val">${bb}%</div><div class="sc-stat-lbl">Maximum</div></div>
+        </div>
+        <div class="short-card-hint">↓</div>
+      </div>`;
+  }
+
+  /* ── Carte 5 : ACWR / Charge ── */
+  let acwrCard = '';
+  if (dr.acwrVal != null) {
+    const acwr = dr.acwrVal;
+    const acwrColor = acwr > 1.5 ? '#ef4444' : acwr > 1.3 ? '#f59e0b' : acwr < 0.8 ? '#9ca3af' : '#22c55e';
+    const acwrStatus = acwr > 1.5 ? 'Risque élevé' : acwr > 1.3 ? 'Zone vigilance' : acwr < 0.8 ? 'Sous-charge' : 'Zone optimale';
+    const acwrPct = Math.min(100, Math.round(acwr / 2 * 100));
+    acwrCard = `
+      <div class="short-card card-acwr">
+        <div class="short-card-num">5 / 6</div>
+        <div class="sc-eyebrow">Charge aiguë / chronique</div>
+        <div class="sc-big-num" style="color:${acwrColor}">${acwr}<span class="sc-big-unit">ACWR</span></div>
+        <div class="sc-sub" style="color:${acwrColor};font-weight:700;margin-bottom:6px">${acwrStatus}</div>
+        <div class="sc-sub">Ratio charge 7j ÷ charge 28j. Zone optimale : 0.8 – 1.3</div>
+        <div class="sc-bar-track"><div class="sc-bar-fill" style="width:${acwrPct}%;background:${acwrColor}"></div></div>
+        <div class="sc-pill" style="background:rgba(34,197,94,0.15);border-color:rgba(34,197,94,0.3);color:#86efac">0.8 optimal</div>
+        <div class="sc-pill" style="background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.3);color:#fca5a5">1.5 danger</div>
+        <div class="short-card-hint">↓</div>
+      </div>`;
+  }
+
+  /* ── Carte 6 : Activités récentes ── */
+  const acts = (todayActs.length ? todayActs : recentActs).slice(0, 4);
+  const actsTitle = todayActs.length ? 'Activités du jour' : 'Dernières activités';
+  const actRows = acts.map(a => {
+    const dist = a.distance_km > 0 ? `${a.distance_km} km` : a.duration_min ? fmt_dur(a.duration_min) : '';
+    const load = a.training_load > 0 ? `${Math.round(a.training_load)} pts` : '';
+    const stat = dist || load || (a.calories ? `${Math.round(a.calories)} kcal` : '');
+    return `<div class="sc-act-row">
+      <div class="sc-act-icon">${a.icon || '⚡'}</div>
+      <div style="flex:1;min-width:0">
+        <div class="sc-act-name">${a.name || a.type_label || a.type}</div>
+        <div class="sc-act-sub">${a.date || ''} · ${a.type_label || ''}</div>
+      </div>
+      <div class="sc-act-stat">${stat}</div>
+    </div>`;
+  }).join('');
+
+  const card6 = `
+    <div class="short-card card-act">
+      <div class="short-card-num">6 / 6</div>
+      <div class="sc-eyebrow">${actsTitle}</div>
+      ${acts.length ? actRows : '<div class="sc-sub">Aucune activité</div>'}
+      <div class="sc-divider"></div>
+      <button onclick="toggleShorts()" style="background:rgba(163,230,53,0.15);border:1.5px solid rgba(163,230,53,0.4);color:#a3e635;border-radius:12px;padding:12px 20px;font-size:14px;font-weight:700;width:100%;cursor:pointer;margin-top:8px">
+        Voir le dashboard complet →
+      </button>
+    </div>`;
+
+  /* Assembler les cartes (en omettant les cartes null) */
+  const cards = [card1, card2, sleepCard, bbCard, acwrCard, card6].filter(Boolean);
+
+  /* Re-numéroter */
+  const total = cards.length;
+  container.innerHTML = cards
+    .map((c, i) => c.replace(/\d+ \/ 6/, `${i+1} / ${total}`))
+    .join('');
+}
+
 /* ══════════════════════════════════════════════════════════
    TODAY HERO — résumé condensé (récupération + reco + wellness)
    ══════════════════════════════════════════════════════════ */
@@ -926,6 +1104,7 @@ function renderAll() {
     return;
   }
   if (state.view === 'history')  { renderActivities(); return; }
+  if (state.view === 'shorts')   { renderShorts();     return; }
   /* Aliases legacy */
   if (state.view === 'health')     { renderHealth();     return; }
   if (state.view === 'profile')    { renderProfile();    return; }
@@ -1113,6 +1292,8 @@ function _initSwipeNav() {
   mainEl.addEventListener('touchend', e => {
     if (!tracking) return;
     tracking = false;
+    /* Pas de swipe inter-onglets dans la vue cartes */
+    if (state.view === 'shorts') return;
     const dx = e.changedTouches[0].clientX - tx;
     const dy = Math.abs(e.changedTouches[0].clientY - ty);
     /* Seuil : au moins 60px horizontal, et moins oblique que 45° */
