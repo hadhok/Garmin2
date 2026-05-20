@@ -622,12 +622,15 @@ function renderRunFormChart() {
   const curve = computeRunForm();
   if (!curve.length) return;
 
+  const allCurve = computeFormeCurve(getAll(), 90);
+
   const labels   = curve.map(d => new Date(d.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
   const ctlVals  = curve.map(d => d.ctl);
   const atlVals  = curve.map(d => d.atl);
   const tsbVals  = curve.map(d => d.tsb);
+  const allCtlVals = allCurve.map(d => d.ctl);
 
-  const maxCTLATL = Math.ceil(Math.max(...ctlVals, ...atlVals, 1) * 1.2);
+  const maxCTLATL = Math.ceil(Math.max(...ctlVals, ...atlVals, ...allCtlVals, 1) * 1.2);
   const tsbMin    = Math.floor(Math.min(...tsbVals, -5)  - 5);
   const tsbMax    = Math.ceil( Math.max(...tsbVals,  5)  + 5);
 
@@ -646,12 +649,16 @@ function renderRunFormChart() {
         borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.08)',
         fill: 'origin', tension: 0.4, pointRadius: 0, borderWidth: 2,
         borderDash: [5, 3], yAxisID: 'yTSB' },
+      { label: 'CTL (tous sports)', data: allCtlVals,
+        borderColor: 'rgba(99,102,241,0.35)', backgroundColor: 'transparent',
+        fill: false, tension: 0.4, pointRadius: 0, borderWidth: 1.5,
+        borderDash: [4, 3], yAxisID: 'yCTL' },
     ]},
     options: {
       responsive: true, maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { display: false },
+        legend: { display: true, labels: { boxWidth: 12, font: { size: 10 } } },
         tooltip: { callbacks: {
           label: c => {
             if (c.dataset.label === 'CTL') return `CTL (fitness) : ${c.raw} pts`;
@@ -660,6 +667,7 @@ function renderRunFormChart() {
               const status = c.raw > 0 ? 'Frais' : c.raw > -10 ? 'Optimal' : c.raw > -20 ? 'En charge' : 'Surcharge';
               return `TSB (forme) : ${c.raw} → ${status}`;
             }
+            if (c.dataset.label === 'CTL (tous sports)') return `CTL tous sports : ${c.raw} pts`;
           }
         }},
         annotation: { annotations: {

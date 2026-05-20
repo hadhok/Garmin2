@@ -115,6 +115,7 @@ def _normalize(raw):
         'te_label':      te,
         'intensity_min': (raw.get('moderateIntensityMinutes') or 0) + (raw.get('vigorousIntensityMinutes') or 0) * 2,
         'vo2max':        raw.get('vO2MaxValue'),
+        'avg_cadence':   int(raw.get('averageRunningCadenceInStepsPerMinute') or 0) if is_run else None,
         'hr_zones_pct':  hr_zones,
     }
 
