@@ -1314,10 +1314,13 @@ async function init() {
     document.body.classList.add('sidebar-collapsed');
   }
 
-  // Sur mobile, les sections collapsibles sont fermées par défaut
   if (window.innerWidth <= 768) {
-    document.querySelectorAll('.section-body').forEach(body => body.classList.add('closed'));
-    document.querySelectorAll('.chev').forEach(chev => chev.style.transform = 'rotate(-90deg)');
+    // Sur mobile, fermer uniquement les sections secondaires (marquées data-secondary)
+    document.querySelectorAll('.section-body[data-secondary]').forEach(body => {
+      body.classList.add('closed');
+      const chev = body.previousElementSibling?.querySelector('.chev');
+      if (chev) chev.style.transform = 'rotate(-90deg)';
+    });
     _initSwipeNav();
   }
 
