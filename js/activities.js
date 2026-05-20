@@ -138,6 +138,7 @@ function renderActivities() {
   }).join('');
 
   _renderActsPagination(total, totalPages);
+  if (typeof populateCompareSelectors === 'function') populateCompareSelectors();
 }
 
 function _renderActsPagination(total, totalPages) {
@@ -167,6 +168,5 @@ function _renderActsPagination(total, totalPages) {
 function actChangePage(dir) {
   actState.page += dir;
   renderActivities();
-  /* Scroll to top of table */
   document.querySelector('.table-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
