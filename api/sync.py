@@ -211,6 +211,8 @@ def _run_sync():
                 'sleep_hr_avg':           dto.get('avgHeartRate'),
                 'sleep_stress_avg':       dto.get('avgSleepStress'),
                 'sleep_respiration_avg':  dto.get('averageRespirationValue'),
+                # Score officiel Garmin (0–100) — prioritaire sur le calcul maison
+                'sleep_score':            (dto.get('sleepScores') or {}).get('overall', {}).get('value'),
                 'hrv_overnight_avg':      sleep_raw.get('avgOvernightHrv'),
                 'hrv_status':             sleep_raw.get('hrvStatus'),
                 'body_battery_high':      stats_raw.get('bodyBatteryHighestValue'),

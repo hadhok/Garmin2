@@ -102,20 +102,23 @@ function renderRecoveryCard() {
 
 /* ══════════════════════════════════════════════════════════
    SLEEP SCORE
+   Priorité : score officiel Garmin (sleep_score) récupéré via API.
+   Fallback : calcul maison si le champ est absent (historique sans resync).
    ══════════════════════════════════════════════════════════ */
 function sleepScore(day) {
   if (!day) return null;
+  /* Score officiel Garmin — toujours prioritaire */
+  if (day.sleep_score != null) return day.sleep_score;
+  /* Fallback calcul maison pour les données sans resync */
   const dur   = day.sleep_total_min || 0;
   const deep  = day.sleep_deep_min  || 0;
   const rem   = day.sleep_rem_min   || 0;
   const awake = day.sleep_awake_min || 0;
   if (!dur) return null;
-
   let durPts;
   if (dur >= 420 && dur <= 510) durPts = 35;
   else if (dur < 420) durPts = Math.max(0, 35 * (dur / 420));
   else durPts = Math.max(0, 35 * (1 - (dur - 510) / 120));
-
   const deepPts  = Math.min(30, (deep / 90) * 30);
   const remPts   = Math.min(20, (rem  / 90) * 20);
   const awakePen = Math.min(20, awake / 5);

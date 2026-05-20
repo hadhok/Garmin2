@@ -877,7 +877,7 @@ function renderShorts() {
         <div class="sc-stat-row">
           ${deepMin ? `<div class="sc-stat"><div class="sc-stat-val">${deepMin}<span style="font-size:13px;color:rgba(255,255,255,0.45)"> min</span></div><div class="sc-stat-lbl">Profond</div></div>` : ''}
           ${remMin  ? `<div class="sc-stat"><div class="sc-stat-val">${remMin}<span style="font-size:13px;color:rgba(255,255,255,0.45)"> min</span></div><div class="sc-stat-lbl">REM</div></div>` : ''}
-          ${todayWell.sleep_score != null ? `<div class="sc-stat"><div class="sc-stat-val">${Math.round(todayWell.sleep_score)}</div><div class="sc-stat-lbl">Score</div></div>` : ''}
+          ${sleepScore(todayWell) != null ? `<div class="sc-stat"><div class="sc-stat-val">${sleepScore(todayWell)}</div><div class="sc-stat-lbl">Score</div></div>` : ''}
         </div>
         <div class="short-card-hint">↓</div>
       </div>`;
