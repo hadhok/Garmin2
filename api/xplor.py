@@ -385,6 +385,32 @@ class handler(BaseHTTPRequestHandler):
                 sb.table('app_settings').upsert({'key': 'xplor_location_filter', 'value': loc}).execute()
                 self._reply(200, {'ok': True})
 
+            elif action == 'debug_ical':
+                # Retourne les 10 premiers events bruts pour diagnostiquer
+                ical_url = _get_ical_url(sb)
+                if not ical_url:
+                    self._reply(400, {'error': 'Aucune URL iCal configurée'})
+                    return
+                try:
+                    text = _fetch_ical(ical_url)
+                    events = _parse_ical(text)
+                    now = datetime.now()
+                    sample = [
+                        {
+                            'summary':     e['summary'],
+                            'dtstart':     e['dtstart'].isoformat(),
+                            'duration':    e['duration'],
+                            'location':    e['location'],
+                            'description': (e['description'] or '')[:120],
+                            'classified':  _classify(e['summary']),
+                        }
+                        for e in events
+                        if e['dtstart'] >= now
+                    ][:10]
+                    self._reply(200, {'total_future': len([e for e in events if e['dtstart'] >= now]), 'sample': sample})
+                except Exception as e:
+                    self._reply(500, {'error': str(e)})
+
             else:
                 self._reply(400, {'error': f'action inconnue: {action}'})
 
