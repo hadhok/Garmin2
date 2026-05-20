@@ -207,20 +207,36 @@ def _estimate_load(act_type: str, duration_min: int, sb) -> tuple:
     return round(avg * duration_min, 1), conf
 
 
-def _get_ical_url(sb) -> str | None:
+def _get_setting(sb, key: str) -> str | None:
     try:
-        r = sb.table('app_settings').select('value').eq('key', 'xplor_ical_url').limit(1).execute()
+        r = sb.table('app_settings').select('value').eq('key', key).limit(1).execute()
         return r.data[0]['value'] if r.data else None
     except Exception:
         return None
+
+
+def _get_ical_url(sb) -> str | None:
+    return _get_setting(sb, 'xplor_ical_url')
 
 
 def _save_ical_url(sb, url: str) -> None:
     sb.table('app_settings').upsert({'key': 'xplor_ical_url', 'value': url}).execute()
 
 
+def _location_matches(event_location: str, filter_str: str) -> bool:
+    """True si tous les mots du filtre se retrouvent dans la location (insensible à la casse)."""
+    if not filter_str:
+        return True
+    loc = (event_location or '').lower()
+    # Match si au moins un "mot clé significatif" du filtre est présent
+    words = [w for w in re.split(r'[\s,\-]+', filter_str.lower()) if len(w) >= 4]
+    return any(w in loc for w in words)
+
+
 def _do_sync(sb) -> dict:
-    ical_url = _get_ical_url(sb)
+    ical_url      = _get_ical_url(sb)
+    location_filter = _get_setting(sb, 'xplor_location_filter') or ''
+
     if not ical_url:
         return {'error': 'Aucune URL iCal configurée. Colle ton URL dans le dashboard.'}
 
@@ -239,8 +255,19 @@ def _do_sync(sb) -> dict:
     cutoff = now + timedelta(days=30)
     future = [e for e in events if e['dtstart'] >= now and e['dtstart'] <= cutoff]
 
+    # Filter by location if configured
+    if location_filter:
+        before = len(future)
+        future = [e for e in future if _location_matches(e['location'], location_filter)]
+        filtered_out = before - len(future)
+    else:
+        filtered_out = 0
+
     if not future:
-        return {'ok': True, 'synced': 0, 'message': 'Aucune séance à venir dans les 30 prochains jours'}
+        msg = 'Aucune séance à venir'
+        if filtered_out:
+            msg += f' (filtre lieu actif : {filtered_out} événement(s) exclus)'
+        return {'ok': True, 'synced': 0, 'message': msg}
 
     # Build sessions with load estimation
     sessions = []
@@ -322,13 +349,15 @@ class handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         try:
-            sb = self._sb()
-            sessions  = _get_sessions(sb)
-            ical_url  = _get_ical_url(sb) or ''
+            sb              = self._sb()
+            sessions        = _get_sessions(sb)
+            ical_url        = _get_ical_url(sb) or ''
+            location_filter = _get_setting(sb, 'xplor_location_filter') or ''
             self._reply(200, {
-                'sessions':  sessions,
-                'ical_configured': bool(ical_url),
+                'sessions':         sessions,
+                'ical_configured':  bool(ical_url),
                 'ical_url_preview': (ical_url[:40] + '…') if len(ical_url) > 40 else ical_url,
+                'location_filter':  location_filter,
             })
         except Exception as e:
             self._reply(500, {'error': str(e)})
@@ -349,6 +378,11 @@ class handler(BaseHTTPRequestHandler):
                     self._reply(400, {'error': 'URL vide'})
                     return
                 _save_ical_url(sb, url)
+                self._reply(200, {'ok': True})
+
+            elif action == 'save_filter':
+                loc = (body.get('location') or '').strip()
+                sb.table('app_settings').upsert({'key': 'xplor_location_filter', 'value': loc}).execute()
                 self._reply(200, {'ok': True})
 
             else:

@@ -2,9 +2,10 @@
    XPLOR ACTIVE — import iCal
    ══════════════════════════════════════════════════════════ */
 
-let _xplorSessions    = [];
-let _xplorLoaded      = false;
+let _xplorSessions       = [];
+let _xplorLoaded         = false;
 let _xplorIcalConfigured = false;
+let _xplorLocationFilter = '';
 
 async function loadXplorSessions() {
   try {
@@ -13,6 +14,7 @@ async function loadXplorSessions() {
     const data = await r.json();
     _xplorSessions       = data.sessions || [];
     _xplorIcalConfigured = data.ical_configured || false;
+    _xplorLocationFilter = data.location_filter || '';
     _xplorLoaded         = true;
   } catch (e) {
     console.warn('[xplor] load', e);
@@ -113,10 +115,19 @@ function showXplorSetup() {
         </div>
       </details>
 
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px">URL iCal</label>
       <input id="xplor-ical-input" type="url" placeholder="https://calendar.google.com/calendar/ical/..."
         style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);
-               color:var(--text);font-size:13px;box-sizing:border-box;margin-bottom:12px"
-        oninput="document.getElementById('xplor-save-btn').disabled=!this.value.trim()" />
+               color:var(--text);font-size:13px;box-sizing:border-box;margin-bottom:12px" />
+
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px">
+        Filtre lieu <span style="font-weight:400;color:var(--muted)">(optionnel — importe uniquement les séances à cette adresse)</span>
+      </label>
+      <input id="xplor-location-input" type="text"
+        placeholder="ex: Les Girondins, Mérignac, Marcel Dassault…"
+        value="${_xplorLocationFilter}"
+        style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);
+               color:var(--text);font-size:13px;box-sizing:border-box;margin-bottom:12px" />
 
       <div style="display:flex;gap:8px">
         <button onclick="document.getElementById('xplor-setup-overlay').remove()"
@@ -145,11 +156,19 @@ function showXplorSetup() {
 
 async function _saveAndSyncIcal(btnEl) {
   const url = document.getElementById('xplor-ical-input')?.value?.trim();
+  const loc = document.getElementById('xplor-location-input')?.value?.trim() || '';
   if (!url) return;
   btnEl.disabled = true;
   btnEl.textContent = '⏳ Enregistrement…';
   try {
     await saveXplorIcalUrl(url);
+    // Save location filter
+    await fetch('/api/xplor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save_filter', location: loc }),
+    });
+    _xplorLocationFilter = loc;
     document.getElementById('xplor-setup-overlay')?.remove();
     await syncXplor(null);
   } catch (e) {
