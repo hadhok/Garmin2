@@ -217,14 +217,53 @@ function renderWeekPlan() {
     </div>`;
   };
 
+  // ── Séances Xplor pour la semaine ─────────────────────────────────────────
+  const xplorSess = (typeof getXplorSessions === 'function') ? getXplorSessions() : [];
+  const xplorByDate = {};
+  xplorSess.forEach(s => { (xplorByDate[s.date] = xplorByDate[s.date] || []).push(s); });
+  const xplorTotal     = xplorSess.filter(s => {
+    const d = new Date(s.date + 'T12:00');
+    return d >= monday && d <= new Date(monday.getTime() + 6*86400000);
+  });
+  const xplorLoadTotal = xplorTotal.reduce((sum, s) => sum + (s.estimated_load || 0), 0);
+  const hasXplor       = xplorTotal.length > 0;
+
+  const xplorDayPills = (dateIso) => {
+    const sess = xplorByDate[dateIso] || [];
+    if (!sess.length) return '';
+    return sess.map(s => {
+      const timeStr = s.start_time
+        ? new Date(s.start_time).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})
+        : '';
+      const isDone = s.status === 'completed';
+      const confColor = s.load_confidence === 'high' ? '#22c55e'
+                      : s.load_confidence === 'medium' ? '#f97316' : '#94a3b8';
+      return `<div style="margin-top:4px;padding:3px 5px;border-radius:6px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);text-align:left">
+        <div style="font-size:9px;font-weight:700;color:#6366f1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.icon} ${s.name}${isDone ? ' ✓' : ''}</div>
+        ${timeStr ? `<div style="font-size:8px;color:var(--muted)">${timeStr}${s.estimated_load ? ` · <span style="color:${confColor}">~${Math.round(s.estimated_load)}pts</span>` : ''}</div>` : ''}
+      </div>`;
+    }).join('');
+  };
+
   el.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
       <span style="background:${weekColor};color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px">${weekLabel}</span>
       <span style="font-size:12px;color:var(--muted)">${p.reason}</span>
+      ${hasXplor ? `<span style="background:rgba(99,102,241,0.12);color:#6366f1;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid rgba(99,102,241,0.25)">𝕏 ${xplorTotal.length} séance${xplorTotal.length>1?'s':''} Xplor</span>` : ''}
+      <button onclick="syncXplor(this)" style="margin-left:auto;background:none;border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:11px;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:5px" title="Synchroniser avec Xplor Active">
+        <span>↺</span> Xplor
+      </button>
     </div>
+    <div id="xplor-error-banner" style="display:none;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:8px 12px;font-size:12px;color:#ef4444;margin-bottom:12px"></div>
 
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:16px">
-      ${p.plan.map(s => dayCard(s)).join('')}
+      ${p.plan.map(s => {
+        const offset  = DAY_OFFSETS[s.day];
+        const dayDate = new Date(monday); dayDate.setDate(monday.getDate() + offset);
+        const dateIso = localIso(dayDate);
+        const pills   = xplorDayPills(dateIso);
+        return `<div>${dayCard(s)}${pills}</div>`;
+      }).join('')}
     </div>
 
     <!-- Légende -->
@@ -258,10 +297,12 @@ function renderWeekPlan() {
         <div style="display:flex;justify-content:space-between"><span>TSB</span><span>${p.startTSB} → <b>${p.endTSB}</b> ${tsbArrow}</span></div>
       </div>
       <div style="background:var(--surface2);border-radius:10px;padding:12px;font-size:12px">
-        <div style="font-weight:600;margin-bottom:8px;font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:.5px">Charge &amp; Polarisation</div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>TRIMP total</span><span><b>${p.totalTrimp}</b> pts</span></div>
+        <div style="font-weight:600;margin-bottom:8px;font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:.5px">Charge totale semaine</div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Running plan</span><span><b>${p.totalTrimp}</b> pts</span></div>
+        ${hasXplor ? `<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:#6366f1">+ Xplor Active</span><span style="color:#6366f1"><b>~${Math.round(xplorLoadTotal)}</b> pts</span></div>
+        <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:4px;margin-top:4px"><span style="font-weight:600">Total</span><span style="font-weight:600">~${Math.round(p.totalTrimp + xplorLoadTotal)} pts</span></div>` : `
         <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Z1-Z2 (base)</span><span style="color:#22c55e"><b>${p.z12pct}%</b></span></div>
-        <div style="display:flex;justify-content:space-between"><span>Z4-Z5 (qualité)</span><span style="color:#f97316"><b>${p.z45pct}%</b></span></div>
+        <div style="display:flex;justify-content:space-between"><span>Z4-Z5 (qualité)</span><span style="color:#f97316"><b>${p.z45pct}%</b></span></div>`}
       </div>
     </div>
 
