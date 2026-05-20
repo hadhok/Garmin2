@@ -154,9 +154,17 @@ def _run_sync():
     normalized = [_normalize(r) for r in raw_acts if r.get('activityId')]
 
     if normalized:
-        # Upsert par batch de 50
+        # Upsert par batch de 50 — fallback sans avg_cadence si colonne absente
         for i in range(0, len(normalized), 50):
-            sb.table('activities').upsert(normalized[i:i+50]).execute()
+            batch = normalized[i:i+50]
+            try:
+                sb.table('activities').upsert(batch).execute()
+            except Exception as e:
+                if 'avg_cadence' in str(e):
+                    stripped = [{k: v for k, v in row.items() if k != 'avg_cadence'} for row in batch]
+                    sb.table('activities').upsert(stripped).execute()
+                else:
+                    raise
 
     # ── Poids / composition corporelle : 90 derniers jours (1 seul appel) ──────
     today = now.date()
