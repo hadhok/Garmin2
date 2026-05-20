@@ -219,50 +219,34 @@ function renderWeekPlan() {
 
   // ── Séances Xplor pour la semaine ─────────────────────────────────────────
   const xplorSess = (typeof getXplorSessions === 'function') ? getXplorSessions() : [];
-  const xplorByDate = {};
-  xplorSess.forEach(s => { (xplorByDate[s.date] = xplorByDate[s.date] || []).push(s); });
-  const xplorTotal     = xplorSess.filter(s => {
+  const xplorTotal = xplorSess.filter(s => {
     const d = new Date(s.date + 'T12:00');
     return d >= monday && d <= new Date(monday.getTime() + 6*86400000);
   });
   const xplorLoadTotal = xplorTotal.reduce((sum, s) => sum + (s.estimated_load || 0), 0);
   const hasXplor       = xplorTotal.length > 0;
+  const configured     = typeof isXplorConfigured === 'function' && isXplorConfigured();
 
-  const xplorDayPills = (dateIso) => {
-    const sess = xplorByDate[dateIso] || [];
-    if (!sess.length) return '';
-    return sess.map(s => {
-      const timeStr = s.start_time
-        ? new Date(s.start_time).toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'})
-        : '';
-      const isDone = s.status === 'completed';
-      const confColor = s.load_confidence === 'high' ? '#22c55e'
-                      : s.load_confidence === 'medium' ? '#f97316' : '#94a3b8';
-      return `<div style="margin-top:4px;padding:3px 5px;border-radius:6px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);text-align:left">
-        <div style="font-size:9px;font-weight:700;color:#6366f1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.icon} ${s.name}${isDone ? ' ✓' : ''}</div>
-        ${timeStr ? `<div style="font-size:8px;color:var(--muted)">${timeStr}${s.estimated_load ? ` · <span style="color:${confColor}">~${Math.round(s.estimated_load)}pts</span>` : ''}</div>` : ''}
-      </div>`;
-    }).join('');
-  };
+  // xplorDayPills() is defined in xplor.js — available at render time
+  const _pills = typeof xplorDayPills === 'function' ? xplorDayPills : () => '';
 
   el.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
       <span style="background:${weekColor};color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px">${weekLabel}</span>
       <span style="font-size:12px;color:var(--muted)">${p.reason}</span>
-      ${hasXplor ? `<span style="background:rgba(99,102,241,0.12);color:#6366f1;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid rgba(99,102,241,0.25)">𝕏 ${xplorTotal.length} séance${xplorTotal.length>1?'s':''} Xplor</span>` : ''}
-      <button onclick="syncXplor(this)" style="margin-left:auto;background:none;border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:11px;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:5px" title="Synchroniser avec Xplor Active">
-        <span>↺</span> Xplor
+      ${hasXplor ? `<span style="background:rgba(99,102,241,0.12);color:#6366f1;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid rgba(99,102,241,0.25)">𝕏 ${xplorTotal.length} séance${xplorTotal.length>1?'s':''}</span>` : ''}
+      <button onclick="syncXplor(this)" style="margin-left:auto;background:${configured?'none':'rgba(99,102,241,0.08)'};border:1px solid ${configured?'var(--border)':'rgba(99,102,241,0.4)'};border-radius:8px;padding:4px 10px;font-size:11px;color:${configured?'var(--muted)':'#6366f1'};cursor:pointer;display:flex;align-items:center;gap:5px" title="${configured?'Synchroniser Xplor Active':'Connecter Xplor Active'}">
+        ↺ ${configured ? 'Xplor' : '+ Xplor Active'}
       </button>
     </div>
-    <div id="xplor-error-banner" style="display:none;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:8px 12px;font-size:12px;color:#ef4444;margin-bottom:12px"></div>
+    <div id="xplor-error-banner" style="display:none;border-radius:8px;padding:8px 12px;font-size:12px;margin-bottom:12px"></div>
 
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:16px">
       ${p.plan.map(s => {
         const offset  = DAY_OFFSETS[s.day];
         const dayDate = new Date(monday); dayDate.setDate(monday.getDate() + offset);
         const dateIso = localIso(dayDate);
-        const pills   = xplorDayPills(dateIso);
-        return `<div>${dayCard(s)}${pills}</div>`;
+        return `<div>${dayCard(s)}${_pills(dateIso)}</div>`;
       }).join('')}
     </div>
 
@@ -271,6 +255,7 @@ function renderWeekPlan() {
       <span><span style="color:#22c55e;font-weight:700">✓</span> Réalisé / Repos respecté</span>
       <span><span style="color:#ef4444;font-weight:700">✗</span> Non réalisé</span>
       <span><span style="color:#3b82f6;font-weight:700">+</span> Bonus non planifié</span>
+      ${hasXplor ? `<span><span style="color:#6366f1;font-weight:700">𝕏</span> Xplor Active</span>` : ''}
     </div>
 
     <!-- Détails des séances -->
