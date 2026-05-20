@@ -1344,6 +1344,9 @@ async function init() {
 
   await Promise.all([loadData(), loadWellness(), loadCoach()]);
 
+  // Load Xplor after other data so week plan projection includes gym sessions
+  if (typeof loadXplorSessions === 'function') await loadXplorSessions();
+
   document.body.classList.remove('loading');
   if (syncDot) syncDot.classList.remove('syncing');
 

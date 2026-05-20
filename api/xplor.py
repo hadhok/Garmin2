@@ -111,12 +111,19 @@ def _parse_dt(s: str) -> datetime | None:
 
 
 def _parse_dt_simple(s: str) -> datetime | None:
-    """Simplified parser for common iCal date formats."""
+    """Simplified parser for common iCal date formats. Returns naive local datetime."""
     s = re.sub(r'^.*:', '', s.strip())  # strip TZID= prefix
+    is_utc = s.strip().endswith('Z')
     s = s.strip().rstrip('Z')
     for fmt in ('%Y%m%dT%H%M%S', '%Y%m%d'):
         try:
-            return datetime.strptime(s[:len(fmt.replace('%Y','1234').replace('%m','12').replace('%d','31').replace('%H','23').replace('%M','59').replace('%S','59'))], fmt)
+            l  = len(fmt.replace('%Y','1234').replace('%m','12').replace('%d','31')
+                        .replace('%H','23').replace('%M','59').replace('%S','59'))
+            dt = datetime.strptime(s[:l], fmt)
+            if is_utc:
+                # Convert UTC → local so comparisons with datetime.now() are correct
+                dt = dt.replace(tzinfo=timezone.utc).astimezone().replace(tzinfo=None)
+            return dt
         except Exception:
             pass
     return None

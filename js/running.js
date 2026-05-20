@@ -258,7 +258,7 @@ function renderWeekPlan() {
         ${configured ? '⚙ Xplor' : '+ Xplor Active'}
       </button>
     </div>
-    <div id="xplor-error-banner" style="display:none;border-radius:8px;padding:8px 12px;font-size:12px;margin-bottom:12px"></div>
+    <div class="xplor-status-banner" style="display:none;border-radius:8px;padding:8px 12px;font-size:12px;margin-bottom:12px"></div>
 
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:16px">
       ${p.plan.map(s => {

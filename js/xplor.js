@@ -256,7 +256,9 @@ async function _debugIcal(btnEl) {
 
 /* ── Banner d'état inline ─────────────────────────────────────────────────── */
 function _showXplorBanner(msg, type) {
-  const el = document.getElementById('xplor-error-banner');
+  const activeView = document.querySelector('.view.active');
+  const el = (activeView && activeView.querySelector('.xplor-status-banner'))
+    || document.querySelector('.xplor-status-banner');
   if (!el) return;
   el.textContent = msg;
   el.style.background = type === 'ok' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)';
@@ -297,12 +299,4 @@ function xplorDayPills(dateIso) {
   }).join('');
 }
 
-/* ── Init ─────────────────────────────────────────────────────────────────── */
-document.addEventListener('DOMContentLoaded', () => {
-  loadXplorSessions().then(() => {
-    if (_xplorSessions.length) {
-      if (typeof markAllDirty === 'function') markAllDirty();
-      if (typeof renderAll   === 'function') renderAll();
-    }
-  });
-});
+/* loadXplorSessions() is called inside init() in app.js — no separate init needed */
