@@ -2303,31 +2303,47 @@ function renderRunElevationCharts() {
    RENDER : Réserve cardiaque (hr_max − hr_avg) dans le temps
    ══════════════════════════════════════════════════════════ */
 function renderRunCardiacReserve() {
-  const runs = getRunsForGlobalPeriod()
+  const allRuns = getRunsForGlobalPeriod()
     .filter(r => r.hr_max && r.hr_avg && r.hr_max > r.hr_avg)
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  if (runs.length < 3) {
-    const el = document.getElementById('run-cardiac-info');
-    if (el) el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:6px 0">Pas assez de données (FC max requise).</div>';
+  const totalInPeriod = getRunsForGlobalPeriod().length;
+  const infoEl = document.getElementById('run-cardiac-info');
+
+  if (allRuns.length < 5) {
+    if (infoEl) infoEl.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:6px 0">
+      Pas assez de données (${allRuns.length}/${totalInPeriod} courses ont FC max enregistrée — minimum 5 requis).
+    </div>`;
     return;
   }
 
-  const reserves = runs.map(r => r.hr_max - r.hr_avg);
+  const reserves = allRuns.map(r => r.hr_max - r.hr_avg);
   const avg = Math.round(reserves.reduce((s, v) => s + v, 0) / reserves.length);
-  const half = Math.floor(reserves.length / 2);
-  const avgOld = reserves.slice(0, half).reduce((s, v) => s + v, 0) / half;
-  const avgNew = reserves.slice(half).reduce((s, v) => s + v, 0) / (reserves.length - half);
-  const delta  = avgNew - avgOld;
 
-  const infoEl = document.getElementById('run-cardiac-info');
+  // Trend only on last 10 points minimum to avoid outlier bias
+  const trendRuns = allRuns.length >= 10 ? allRuns : null;
+  let delta = 0, trendLabel = '→ Stable', trendColor = '#94a3b8';
+  if (trendRuns) {
+    const half   = Math.floor(trendRuns.length / 2);
+    const resAll = trendRuns.map(r => r.hr_max - r.hr_avg);
+    const avgOld = resAll.slice(0, half).reduce((s, v) => s + v, 0) / half;
+    const avgNew = resAll.slice(half).reduce((s, v) => s + v, 0) / (trendRuns.length - half);
+    delta = avgNew - avgOld;
+    trendLabel = delta < -2 ? '↘ Amélioration' : delta > 2 ? '↗ Dégradation' : '→ Stable';
+    trendColor = delta < -2 ? '#22c55e' : delta > 2 ? '#ef4444' : '#94a3b8';
+  }
+
+  const coveredPct = Math.round(allRuns.length / totalInPeriod * 100);
+  const dataNote = coveredPct < 80
+    ? `<span style="color:#f97316;font-size:11px">⚠ ${allRuns.length}/${totalInPeriod} courses avec FC max (${coveredPct}%)</span>`
+    : `<span style="color:var(--muted);font-size:11px">${allRuns.length} courses</span>`;
+
   if (infoEl) {
-    const trendLabel = delta < -2 ? '↘ Amélioration' : delta > 2 ? '↗ Dégradation' : '→ Stable';
-    const trendColor = delta < -2 ? '#22c55e' : delta > 2 ? '#ef4444' : '#94a3b8';
-    infoEl.innerHTML = `<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;margin-bottom:8px">
+    infoEl.innerHTML = `<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;margin-bottom:8px;align-items:center">
       <span style="color:var(--muted)">Moy. : <strong style="color:var(--text)">${avg} bpm</strong></span>
-      <span style="color:${trendColor};font-weight:600">${trendLabel}</span>
-      <span style="color:var(--muted);font-size:11px">↘ baisse = meilleure efficience cardiaque</span>
+      ${trendRuns ? `<span style="color:${trendColor};font-weight:600">${trendLabel}</span>` : '<span style="color:var(--muted);font-size:11px">Tendance : données insuffisantes (&lt;10 pts)</span>'}
+      <span style="color:var(--muted);font-size:11px">↘ baisse = meilleure efficience</span>
+      ${dataNote}
     </div>`;
   }
 
