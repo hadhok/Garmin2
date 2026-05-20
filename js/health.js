@@ -5,6 +5,7 @@
 function getWellnessDays() {
   if (!state.wellness?.days) return [];
   return Object.values(state.wellness.days)
+    .filter(d => d.date)
     .sort((a,b) => a.date.localeCompare(b.date))
     .slice(-state.healthDays);
 }

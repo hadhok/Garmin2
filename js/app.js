@@ -273,6 +273,7 @@ function computeTRIMP(act) {
   if (!act.hr_avg || !act.duration_min) return 0;
   const HR_REST = parseInt(localStorage.getItem('hr_rest') || '62');
   const HR_MAX  = parseInt(localStorage.getItem('hr_max')  || '177');
+  if (HR_MAX <= HR_REST + 20) return 0; // paramètres incohérents — silently bail
   const ratio = (act.hr_avg - HR_REST) / (HR_MAX - HR_REST);
   if (ratio <= 0 || ratio > 1.5) return 0;
   return Math.round(act.duration_min * ratio * 0.64 * Math.exp(1.92 * ratio));

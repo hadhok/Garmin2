@@ -592,7 +592,7 @@ function renderPocPaceReserve() {
   if (!el) return;
 
   const runs = (state.data?.activities || [])
-    .filter(a => a.type === 'run' && a.distance_km >= 3 && a.avg_pace_min_km > 0)
+    .filter(a => a.date && a.type === 'run' && a.distance_km >= 3 && a.avg_pace_min_km > 0)
     .sort((a, b) => a.date.localeCompare(b.date));
 
   if (runs.length < 5) { el.innerHTML = '<div class="empty">Données insuffisantes (min 5 sorties ≥ 3 km)</div>'; return; }

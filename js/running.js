@@ -232,6 +232,7 @@ function renderWeekPlan() {
   });
   const augmentedLoads = p.plan.map(s => {
     const offset  = DAY_OFFSETS[s.day];
+    if (offset === undefined) return s.trimp || 0; // label inattendu — skip Xplor
     const dayDate = new Date(monday); dayDate.setDate(monday.getDate() + offset);
     const dateIso = localIso(dayDate);
     return (s.trimp || 0) + (xplorByDayIso[dateIso] || 0);
@@ -991,8 +992,10 @@ function renderRunTRIMP() {
   });
   const mean7    = loads7.reduce((s, v) => s + v, 0) / 7;
   const std7     = Math.sqrt(loads7.reduce((s, v) => s + (v - mean7) ** 2, 0) / 7);
-  const monotonie = std7 > 0 ? +(mean7 / std7).toFixed(2) : 0;
-  const strain    = +(trimp7All * monotonie).toFixed(0);
+  // std7=0 + mean7>0 = charge parfaitement uniforme = monotonie maximale (risque)
+  // std7=0 + mean7=0 = aucune activité
+  const monotonie = std7 > 0 ? +(mean7 / std7).toFixed(2) : (mean7 > 0 ? 99 : 0);
+  const strain    = +(trimp7All * (monotonie >= 99 ? mean7 : monotonie)).toFixed(0);
 
   const row = (label, val, unit = '', note = '', noteColor = 'var(--muted)') => `
     <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--border);font-size:13px">
@@ -1003,8 +1006,17 @@ function renderRunTRIMP() {
       </div>
     </div>`;
 
-  const monoColor = monotonie < 1.5 ? '#22c55e' : monotonie < 2 ? '#f97316' : '#ef4444';
-  const monoNote  = monotonie < 1.5 ? 'OK' : monotonie < 2 ? 'Surveillez' : 'Risque blessure';
+  const monoColor = monotonie === 0   ? '#94a3b8'
+    : monotonie >= 99                 ? '#ef4444'
+    : monotonie < 1.5                 ? '#22c55e'
+    : monotonie < 2                   ? '#f97316'
+    : '#ef4444';
+  const monoNote = monotonie === 0    ? 'Aucune charge'
+    : monotonie >= 99                 ? 'Charge uniforme — monotonie max ⚠'
+    : monotonie < 1.5                 ? 'OK'
+    : monotonie < 2                   ? 'Surveillez'
+    : 'Risque blessure';
+  const monoDisplay = monotonie >= 99 ? '∞' : monotonie;
   const pctRun7   = trimp7All > 0 ? Math.round(trimp7Run / trimp7All * 100) : 0;
 
   el.innerHTML =
@@ -1016,7 +1028,7 @@ function renderRunTRIMP() {
     row('TRIMP moy / jour (7j)', mean7.toFixed(1), 'pts') +
     `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid var(--border);font-size:13px">
       <span style="color:var(--muted)">Monotonie</span>
-      <span style="font-weight:600;color:${monoColor}">${monotonie} <span style="font-size:11px;font-weight:400">(${monoNote})</span></span>
+      <span style="font-weight:600;color:${monoColor}">${monoDisplay} <span style="font-size:11px;font-weight:400">(${monoNote})</span></span>
     </div>` +
     row('Strain (charge × monotonie)', strain, 'pts');
 }
@@ -2577,16 +2589,10 @@ function renderCadenceTrend() {
   const runs = getRunsForGlobalPeriod().filter(r => (r.avg_cadence || 0) > 0);
 
   if (!runs.length) {
-    // Insert message after canvas if canvas exists
-    const msgEl = el.querySelector('#chart-run-cadence') || el;
-    const parent = msgEl.parentElement || el;
-    const msg = document.createElement('div');
-    msg.style.cssText = 'color:var(--muted);font-size:13px;padding:12px;text-align:center';
-    msg.textContent = 'Cadence non disponible (resync requis)';
-    // Only add if not already present
-    if (!el.querySelector('.cadence-msg')) { msg.classList.add('cadence-msg'); el.appendChild(msg); }
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px;text-align:center">Cadence non disponible — resync requis après ajout de la colonne avg_cadence.</div>';
     return;
   }
+  el.innerHTML = '<canvas id="chart-run-cadence" style="max-height:180px"></canvas>';
 
   const sorted = runs.sort((a, b) => a.date.localeCompare(b.date));
   const labels = sorted.map(r => new Date(r.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
