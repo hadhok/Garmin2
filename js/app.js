@@ -1069,6 +1069,9 @@ function renderTraining() {
   const trainingPeriodLbl = document.getElementById('period-label-training');
   if (trainingPeriodLbl) trainingPeriodLbl.textContent = formatPeriodLabel();
   renderDashboard();
+  if (state.tab === 'week' && typeof renderWeekPlan === 'function') {
+    try { renderWeekPlan(); } catch(e) { console.warn('[training] week plan', e); }
+  }
 }
 
 /* Lazy rendering : on ne re-rend une vue que si elle est "dirty"

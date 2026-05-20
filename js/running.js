@@ -129,8 +129,9 @@ function computeTrainingPaces(vdot) {
    RENDER : Plan de la semaine
    ══════════════════════════════════════════════════════════ */
 function renderWeekPlan() {
-  const el = document.getElementById('run-week-plan');
-  if (!el) return;
+  const targets = ['run-week-plan', 'training-week-plan'].map(id => document.getElementById(id)).filter(Boolean);
+  if (!targets.length) return;
+  const el = targets[0]; // used for innerHTML build below
 
   const p = generateWeekPlan();
 
@@ -277,6 +278,9 @@ function renderWeekPlan() {
         📤 Envoyer vers Garmin Connect
       </button>
     </div>`;
+
+  // Sync to all target containers
+  targets.forEach(t => { if (t !== el) t.innerHTML = el.innerHTML; });
 }
 
 /* ══════════════════════════════════════════════════════════
