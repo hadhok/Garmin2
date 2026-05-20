@@ -130,7 +130,12 @@ function showXplorSetup() {
         <button onclick="_debugIcal(this)"
           style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;
                  background:none;color:var(--muted);cursor:pointer;font-size:12px">
-          🔍 Tester le flux
+          🔍 Tester
+        </button>
+        <button onclick="_syncFromDialog(this)"
+          style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;
+                 background:none;color:var(--muted);cursor:pointer;font-size:12px">
+          ↺ Sync
         </button>
         <button onclick="document.getElementById('xplor-setup-overlay').remove()"
           style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;
@@ -141,7 +146,7 @@ function showXplorSetup() {
           style="flex:1;padding:8px 14px;border:none;border-radius:8px;background:#6366f1;
                  color:#fff;font-weight:600;cursor:pointer;font-size:13px"
           onclick="_saveAndSyncIcal(this)">
-          Enregistrer et synchroniser
+          Enregistrer
         </button>
       </div>
     </div>`;
@@ -179,6 +184,36 @@ async function _saveAndSyncIcal(btnEl) {
     btnEl.disabled = false;
     btnEl.textContent = 'Enregistrer et synchroniser';
     _showXplorBanner(String(e), 'error');
+  }
+}
+
+async function _syncFromDialog(btnEl) {
+  const orig = btnEl.innerHTML;
+  btnEl.disabled = true; btnEl.innerHTML = '⏳';
+  try {
+    const r = await fetch('/api/xplor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'sync_ical' }),
+    });
+    const data = await r.json();
+    const zone = document.getElementById('xplor-debug-zone');
+    if (zone) {
+      zone.style.display = 'block';
+      zone.textContent = data.error
+        ? '❌ ' + data.error
+        : `✓ ${data.synced ?? 0} séance(s) importée(s)${data.message ? ' — ' + data.message : ''}`;
+    }
+    if (!data.error) {
+      await loadXplorSessions();
+      if (typeof markAllDirty === 'function') markAllDirty();
+      if (typeof renderAll   === 'function') renderAll();
+    }
+  } catch (e) {
+    const zone = document.getElementById('xplor-debug-zone');
+    if (zone) { zone.style.display = 'block'; zone.textContent = '❌ ' + e; }
+  } finally {
+    btnEl.disabled = false; btnEl.innerHTML = orig;
   }
 }
 

@@ -235,12 +235,13 @@ function renderWeekPlan() {
       <span style="background:${weekColor};color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px">${weekLabel}</span>
       <span style="font-size:12px;color:var(--muted)">${p.reason}</span>
       ${hasXplor ? `<span style="background:rgba(99,102,241,0.12);color:#6366f1;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid rgba(99,102,241,0.25)">𝕏 ${xplorTotal.length} séance${xplorTotal.length>1?'s':''}</span>` : ''}
-      <div style="margin-left:auto;display:flex;gap:4px;align-items:center">
-        ${configured ? `<button onclick="syncXplor(this)" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:11px;color:var(--muted);cursor:pointer" title="Synchroniser Xplor Active">↺ Xplor</button>` : ''}
-        <button onclick="showXplorSetup()" style="background:${configured?'none':'rgba(99,102,241,0.08)'};border:1px solid ${configured?'var(--border)':'rgba(99,102,241,0.4)'};border-radius:8px;padding:4px 8px;font-size:11px;color:${configured?'var(--muted)':'#6366f1'};cursor:pointer" title="${configured?'Paramètres Xplor':'Connecter Xplor Active'}">
-          ${configured ? '⚙' : '+ Xplor Active'}
-        </button>
-      </div>
+      <button onclick="showXplorSetup()"
+        style="margin-left:auto;background:${configured?'none':'rgba(99,102,241,0.08)'};
+               border:1px solid ${configured?'var(--border)':'rgba(99,102,241,0.4)'};
+               border-radius:8px;padding:4px 10px;font-size:11px;
+               color:${configured?'var(--muted)':'#6366f1'};cursor:pointer">
+        ${configured ? '⚙ Xplor' : '+ Xplor Active'}
+      </button>
     </div>
     <div id="xplor-error-banner" style="display:none;border-radius:8px;padding:8px 12px;font-size:12px;margin-bottom:12px"></div>
 
