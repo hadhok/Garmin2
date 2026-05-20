@@ -155,9 +155,7 @@ function renderWeekPlan() {
   const weekColor   = WEEK_COLORS[p.weekType];
   const weekLabel   = WEEK_LABELS[p.weekType];
 
-  const tsbArrow = p.endTSB > p.startTSB
-    ? `<span style="color:#22c55e">▲ ${(p.endTSB - p.startTSB).toFixed(1)}</span>`
-    : `<span style="color:#ef4444">▼ ${(p.endTSB - p.startTSB).toFixed(1)}</span>`;
+  // tsbArrow computed after Xplor augmentation below
 
   // ── Carte jour ───────────────────────────────────────────────────────────
   const dayCard = (s) => {
@@ -227,6 +225,23 @@ function renderWeekPlan() {
   const hasXplor       = xplorTotal.length > 0;
   const configured     = typeof isXplorConfigured === 'function' && isXplorConfigured();
 
+  // ── Projection CTL/ATL/TSB avec running + Xplor ───────────────────────────
+  const xplorByDayIso = {};
+  xplorTotal.forEach(s => {
+    xplorByDayIso[s.date] = (xplorByDayIso[s.date] || 0) + (s.estimated_load || 0);
+  });
+  const augmentedLoads = p.plan.map(s => {
+    const offset  = DAY_OFFSETS[s.day];
+    const dayDate = new Date(monday); dayDate.setDate(monday.getDate() + offset);
+    const dateIso = localIso(dayDate);
+    return (s.trimp || 0) + (xplorByDayIso[dateIso] || 0);
+  });
+  const endStateAug = simulateCTL_ATL(p.startCTL, p.startATL, augmentedLoads);
+
+  const tsbArrowAug = endStateAug.tsb > p.startTSB
+    ? `<span style="color:#22c55e">▲ ${(endStateAug.tsb - p.startTSB).toFixed(1)}</span>`
+    : `<span style="color:#ef4444">▼ ${(endStateAug.tsb - p.startTSB).toFixed(1)}</span>`;
+
   // xplorDayPills() is defined in xplor.js — available at render time
   const _pills = typeof xplorDayPills === 'function' ? xplorDayPills : () => '';
 
@@ -281,9 +296,9 @@ function renderWeekPlan() {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div style="background:var(--surface2);border-radius:10px;padding:12px;font-size:12px">
         <div style="font-weight:600;margin-bottom:8px;font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:.5px">Projection fin de semaine</div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>CTL</span><span>${p.startCTL} → <b>${p.endCTL}</b></span></div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>ATL</span><span>${p.startATL} → <b>${p.endATL}</b></span></div>
-        <div style="display:flex;justify-content:space-between"><span>TSB</span><span>${p.startTSB} → <b>${p.endTSB}</b> ${tsbArrow}</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>CTL</span><span>${p.startCTL} → <b>${endStateAug.ctl}</b></span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>ATL</span><span>${p.startATL} → <b>${endStateAug.atl}</b></span></div>
+        <div style="display:flex;justify-content:space-between"><span>TSB</span><span>${p.startTSB} → <b>${endStateAug.tsb}</b> ${tsbArrowAug}</span></div>
       </div>
       <div style="background:var(--surface2);border-radius:10px;padding:12px;font-size:12px">
         <div style="font-weight:600;margin-bottom:8px;font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:.5px">Charge totale semaine</div>
