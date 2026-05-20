@@ -225,23 +225,53 @@ function renderWeekPlan() {
   const hasXplor       = xplorTotal.length > 0;
   const configured     = typeof isXplorConfigured === 'function' && isXplorConfigured();
 
-  // ── Projection CTL/ATL/TSB avec running + Xplor ───────────────────────────
+  // ── TRIMP réel par jour (toutes activités Garmin) ────────────────────────
+  const allTrimpMap = typeof buildTRIMPMap === 'function' ? buildTRIMPMap(getAll()) : {};
+
+  // ── Xplor par jour ───────────────────────────────────────────────────────
   const xplorByDayIso = {};
   xplorTotal.forEach(s => {
     xplorByDayIso[s.date] = (xplorByDayIso[s.date] || 0) + (s.estimated_load || 0);
   });
-  const augmentedLoads = p.plan.map(s => {
-    const offset  = DAY_OFFSETS[s.day];
-    if (offset === undefined) return s.trimp || 0; // label inattendu — skip Xplor
+
+  // ── CTL/ATL au début de la semaine (lundi matin) ─────────────────────────
+  // On recalcule en TRIMP pour être cohérent avec les charges journalières
+  let weekStartCTL = 0, weekStartATL = 0;
+  for (let i = 270; i >= 1; i--) {
+    const d = new Date(monday); d.setDate(monday.getDate() - i);
+    const iso = localIso(d);
+    const l = allTrimpMap[iso] || 0;
+    weekStartCTL = weekStartCTL + (l - weekStartCTL) / 42;
+    weekStartATL = weekStartATL + (l - weekStartATL) / 7;
+  }
+  weekStartCTL = +weekStartCTL.toFixed(1);
+  weekStartATL = +weekStartATL.toFixed(1);
+
+  // ── Charge par jour : réel (passé) + prévu (futur) ───────────────────────
+  const todayMidnight = new Date(TODAY); todayMidnight.setHours(0, 0, 0, 0);
+  let actualTrimpWeek = 0, plannedTrimpWeek = 0;
+  const augmentedLoads = [0,1,2,3,4,5,6].map(offset => {
     const dayDate = new Date(monday); dayDate.setDate(monday.getDate() + offset);
     const dateIso = localIso(dayDate);
-    return (s.trimp || 0) + (xplorByDayIso[dateIso] || 0);
+    const xplor   = xplorByDayIso[dateIso] || 0;
+    if (dayDate <= todayMidnight) {
+      // jour passé ou aujourd'hui : charge réelle toutes activités + Xplor
+      const actual = (allTrimpMap[dateIso] || 0) + xplor;
+      actualTrimpWeek += actual;
+      return actual;
+    } else {
+      // jour futur : TRIMP planifié + Xplor
+      const planDay = p.plan[offset];
+      const planned = (planDay?.trimp || 0) + xplor;
+      plannedTrimpWeek += planned;
+      return planned;
+    }
   });
-  const endStateAug = simulateCTL_ATL(p.startCTL, p.startATL, augmentedLoads);
+  const endStateAug = simulateCTL_ATL(weekStartCTL, weekStartATL, augmentedLoads);
 
-  const tsbArrowAug = endStateAug.tsb > p.startTSB
-    ? `<span style="color:#22c55e">▲ ${(endStateAug.tsb - p.startTSB).toFixed(1)}</span>`
-    : `<span style="color:#ef4444">▼ ${(endStateAug.tsb - p.startTSB).toFixed(1)}</span>`;
+  const tsbArrowAug = endStateAug.tsb > (weekStartCTL - weekStartATL)
+    ? `<span style="color:#22c55e">▲ ${(endStateAug.tsb - (weekStartCTL - weekStartATL)).toFixed(1)}</span>`
+    : `<span style="color:#ef4444">▼ ${(endStateAug.tsb - (weekStartCTL - weekStartATL)).toFixed(1)}</span>`;
 
   // xplorDayPills() is defined in xplor.js — available at render time
   const _pills = typeof xplorDayPills === 'function' ? xplorDayPills : () => '';
@@ -297,17 +327,16 @@ function renderWeekPlan() {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div style="background:var(--surface2);border-radius:10px;padding:12px;font-size:12px">
         <div style="font-weight:600;margin-bottom:8px;font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:.5px">Projection fin de semaine</div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>CTL</span><span>${p.startCTL} → <b>${endStateAug.ctl}</b></span></div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>ATL</span><span>${p.startATL} → <b>${endStateAug.atl}</b></span></div>
-        <div style="display:flex;justify-content:space-between"><span>TSB</span><span>${p.startTSB} → <b>${endStateAug.tsb}</b> ${tsbArrowAug}</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>CTL (lun)</span><span>${weekStartCTL} → <b>${endStateAug.ctl}</b></span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>ATL (lun)</span><span>${weekStartATL} → <b>${endStateAug.atl}</b></span></div>
+        <div style="display:flex;justify-content:space-between"><span>TSB</span><span>${+(weekStartCTL-weekStartATL).toFixed(1)} → <b>${endStateAug.tsb}</b> ${tsbArrowAug}</span></div>
       </div>
       <div style="background:var(--surface2);border-radius:10px;padding:12px;font-size:12px">
         <div style="font-weight:600;margin-bottom:8px;font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:.5px">Charge totale semaine</div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Running plan</span><span><b>${p.totalTrimp}</b> pts</span></div>
-        ${hasXplor ? `<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:#6366f1">+ Xplor Active</span><span style="color:#6366f1"><b>~${Math.round(xplorLoadTotal)}</b> pts</span></div>
-        <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:4px;margin-top:4px"><span style="font-weight:600">Total</span><span style="font-weight:600">~${Math.round(p.totalTrimp + xplorLoadTotal)} pts</span></div>` : `
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Z1-Z2 (base)</span><span style="color:#22c55e"><b>${p.z12pct}%</b></span></div>
-        <div style="display:flex;justify-content:space-between"><span>Z4-Z5 (qualité)</span><span style="color:#f97316"><b>${p.z45pct}%</b></span></div>`}
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Réalisé (toutes act.)</span><span><b>${Math.round(actualTrimpWeek)}</b> pts</span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:var(--muted)">Prévu restant</span><span style="color:var(--muted)"><b>${Math.round(plannedTrimpWeek)}</b> pts</span></div>
+        ${hasXplor ? `<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:#6366f1">+ Xplor Active</span><span style="color:#6366f1"><b>~${Math.round(xplorLoadTotal)}</b> pts</span></div>` : ''}
+        <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:4px;margin-top:4px"><span style="font-weight:600">Total semaine</span><span style="font-weight:600">~${Math.round(actualTrimpWeek + plannedTrimpWeek)} pts</span></div>
       </div>
     </div>
 
