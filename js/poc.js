@@ -696,6 +696,63 @@ function renderPocPaceReserve() {
 }
 
 /* ──────────────────────────────────────────────────────────
+   6. TENDANCE FC REPOS
+   28j baseline vs 7j rolling — détection élévation
+   ────────────────────────────────────────────────────────── */
+function renderRHRTrend() {
+  const el = document.getElementById('poc-rhr-trend');
+  if (!el) return;
+
+  const wellDays = state.wellness?.days || {};
+  const days = Object.values(wellDays)
+    .filter(d => d.date && d.resting_hr != null)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  if (days.length < 7) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px">Données FC repos insuffisantes (min 7 jours).</div>';
+    return;
+  }
+
+  const last28 = days.slice(-28);
+  const last7  = days.slice(-7);
+
+  const avg28 = last28.reduce((s, d) => s + d.resting_hr, 0) / last28.length;
+  const avg7  = last7.reduce((s, d) => s + d.resting_hr, 0) / last7.length;
+  const delta = +(avg7 - avg28).toFixed(1);
+
+  let color, label;
+  if (delta <= 0) {
+    color = '#22c55e';
+    label = `FC repos stable — ${Math.round(avg7)} bpm (moy. 7j)`;
+  } else if (delta <= 3) {
+    color = '#f97316';
+    label = `FC repos légèrement élevée +${delta} bpm vs baseline`;
+  } else {
+    color = '#ef4444';
+    label = `⚠ FC repos élevée +${delta} bpm — surveiller récupération`;
+  }
+
+  el.innerHTML = `
+    <div style="background:${color}12;border:1.5px solid ${color};border-radius:12px;padding:14px 16px">
+      <div style="font-size:13px;font-weight:700;color:${color};margin-bottom:10px">${label}</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:12px">
+        <div style="background:var(--surface2);border-radius:8px;padding:8px 10px;text-align:center">
+          <div style="color:var(--muted);font-size:10px;margin-bottom:2px">Baseline 28j</div>
+          <b>${avg28.toFixed(0)} bpm</b>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:8px 10px;text-align:center">
+          <div style="color:var(--muted);font-size:10px;margin-bottom:2px">Moy. 7j</div>
+          <b style="color:${color}">${avg7.toFixed(0)} bpm</b>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:8px 10px;text-align:center">
+          <div style="color:var(--muted);font-size:10px;margin-bottom:2px">Delta</div>
+          <b style="color:${color}">${delta > 0 ? '+' : ''}${delta} bpm</b>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ──────────────────────────────────────────────────────────
    ENTRY POINT
    ────────────────────────────────────────────────────────── */
 function renderPOC() {

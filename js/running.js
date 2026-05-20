@@ -2362,6 +2362,379 @@ function renderRunCardiacReserve() {
 }
 
 /* ══════════════════════════════════════════════════════════
+   RENDER : Règle des 10% + Indice de consistance
+   ══════════════════════════════════════════════════════════ */
+function renderProgressionConsistance() {
+  const el = document.getElementById('run-progression-consistance');
+  if (!el) return;
+
+  const allActs = getAll().filter(a => a.hr_avg && a.duration_min);
+
+  // Compute weekly TRIMP for last 9 complete weeks + current partial week
+  function getWeekMonday(date) {
+    const d = new Date(date + 'T12:00:00');
+    const dow = (d.getDay() + 6) % 7;
+    d.setDate(d.getDate() - dow);
+    return localIso(d);
+  }
+
+  // Current week monday
+  const dow = (TODAY.getDay() + 6) % 7;
+  const currentMon = new Date(TODAY); currentMon.setDate(TODAY.getDate() - dow); currentMon.setHours(0,0,0,0);
+  const currentMonIso = localIso(currentMon);
+
+  // Build weekly TRIMP map
+  const weeklyTrimp = {};
+  allActs.forEach(a => {
+    const wk = getWeekMonday(a.date);
+    weeklyTrimp[wk] = (weeklyTrimp[wk] || 0) + computeTRIMP(a);
+  });
+
+  // Last 8 complete weeks (exclude current)
+  const completeWeeks = [];
+  for (let w = 1; w <= 8; w++) {
+    const mon = new Date(currentMon); mon.setDate(currentMon.getDate() - w * 7);
+    const monIso = localIso(mon);
+    completeWeeks.unshift(weeklyTrimp[monIso] || 0);
+  }
+
+  // Current week TRIMP (Mon–today)
+  const currentWeekTrimp = weeklyTrimp[currentMonIso] || 0;
+
+  // avg of 4 complete weeks before current (weeks 1-4)
+  const prev4 = completeWeeks.slice(-4);
+  const avg4w = prev4.length > 0 ? prev4.reduce((s, v) => s + v, 0) / prev4.length : 0;
+  const ratio = avg4w > 0 ? currentWeekTrimp / avg4w : 0;
+  const ratioPct = Math.round(ratio * 100);
+
+  let progressColor, progressLabel;
+  if (avg4w === 0) {
+    progressColor = '#6b7280'; progressLabel = 'Données insuffisantes';
+  } else if (ratioPct < 85) {
+    progressColor = '#3b82f6'; progressLabel = 'Sous-charge';
+  } else if (ratioPct <= 115) {
+    progressColor = '#22c55e'; progressLabel = 'Progression optimale';
+  } else if (ratioPct <= 130) {
+    progressColor = '#f97316'; progressLabel = `Attention +${ratioPct - 100}%`;
+  } else {
+    progressColor = '#ef4444'; progressLabel = `Surcharge +${ratioPct - 100}% ⚠`;
+  }
+
+  // Consistance : CV sur 8 complete weeks
+  const w8 = completeWeeks;
+  const w8mean = w8.reduce((s, v) => s + v, 0) / (w8.length || 1);
+  const w8std  = w8.length > 1
+    ? Math.sqrt(w8.reduce((s, v) => s + (v - w8mean) ** 2, 0) / w8.length)
+    : 0;
+  const cv = w8mean > 0 ? Math.round(w8std / w8mean * 100) : 0;
+
+  let cvColor, cvLabel;
+  if (w8mean === 0) {
+    cvColor = '#6b7280'; cvLabel = 'Données insuffisantes';
+  } else if (cv < 20) {
+    cvColor = '#22c55e'; cvLabel = `Régulier (CV ${cv}%)`;
+  } else if (cv <= 35) {
+    cvColor = '#f97316'; cvLabel = `Irrégulier (CV ${cv}%)`;
+  } else {
+    cvColor = '#ef4444'; cvLabel = `Très irrégulier (CV ${cv}%)`;
+  }
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div style="background:var(--surface2);border-radius:12px;padding:14px 16px;border-left:4px solid ${progressColor}">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px">Règle des 10% — Charge progressive</div>
+        <div style="font-size:22px;font-weight:800;color:${progressColor};margin-bottom:4px">${avg4w > 0 ? ratioPct + '%' : '–'}</div>
+        <div style="font-size:12px;font-weight:600;color:${progressColor};margin-bottom:8px">${progressLabel}</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.6">
+          Semaine en cours : <b style="color:var(--text)">${Math.round(currentWeekTrimp)} pts</b><br>
+          Moy. 4 sem. préc. : <b style="color:var(--text)">${Math.round(avg4w)} pts</b>
+        </div>
+      </div>
+      <div style="background:var(--surface2);border-radius:12px;padding:14px 16px;border-left:4px solid ${cvColor}">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px">Indice de consistance</div>
+        <div style="font-size:22px;font-weight:800;color:${cvColor};margin-bottom:4px">${w8mean > 0 ? cv + '%' : '–'}</div>
+        <div style="font-size:12px;font-weight:600;color:${cvColor};margin-bottom:8px">${cvLabel}</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.6">
+          Coeff. variation TRIMP<br>8 dernières semaines complètes
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ══════════════════════════════════════════════════════════
+   RENDER : Distribution TE aérobie/anaérobie
+   ══════════════════════════════════════════════════════════ */
+function renderTEDistribution() {
+  const el = document.getElementById('run-te-distribution');
+  if (!el) return;
+
+  // Last 12 weeks of runs with TE data
+  const cutoff = new Date(TODAY); cutoff.setDate(cutoff.getDate() - 84);
+  const runs = getRuns().filter(r =>
+    new Date(r.date + 'T12:00:00') >= cutoff &&
+    ((r.aerobic_te || 0) > 0 || (r.anaerobic_te || 0) > 0)
+  );
+
+  if (!runs.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px">Pas de données Training Effect disponibles.</div>';
+    return;
+  }
+
+  // Get ISO week key (Mon-based)
+  function isoWeekKey(dateStr) {
+    const d = new Date(dateStr + 'T12:00:00');
+    const dow = (d.getDay() + 6) % 7;
+    const mon = new Date(d); mon.setDate(d.getDate() - dow);
+    return localIso(mon);
+  }
+
+  // Group by week
+  const byWeek = {};
+  runs.forEach(r => {
+    const wk = isoWeekKey(r.date);
+    if (!byWeek[wk]) byWeek[wk] = [];
+    byWeek[wk].push(r);
+  });
+
+  const sortedWeeks = Object.keys(byWeek).sort();
+  const labels = sortedWeeks.map(wk => {
+    const d = new Date(wk + 'T12:00:00');
+    const weekNum = Math.ceil((d - new Date(d.getFullYear(), 0, 1)) / 604800000);
+    return `S${weekNum}`;
+  });
+
+  const aerobicData   = sortedWeeks.map(wk => {
+    const arr = byWeek[wk].map(r => r.aerobic_te || 0).filter(v => v > 0);
+    return arr.length ? +(arr.reduce((s, v) => s + v, 0) / arr.length).toFixed(2) : 0;
+  });
+  const anaerobicData = sortedWeeks.map(wk => {
+    const arr = byWeek[wk].map(r => r.anaerobic_te || 0).filter(v => v > 0);
+    return arr.length ? +(arr.reduce((s, v) => s + v, 0) / arr.length).toFixed(2) : 0;
+  });
+
+  // Current week stats
+  const curWk = isoWeekKey(localIso(TODAY));
+  const curRuns = byWeek[curWk] || [];
+  const curAerArr  = curRuns.map(r => r.aerobic_te || 0).filter(v => v > 0);
+  const curAnaArr  = curRuns.map(r => r.anaerobic_te || 0).filter(v => v > 0);
+  const curAer = curAerArr.length ? (curAerArr.reduce((s, v) => s + v, 0) / curAerArr.length).toFixed(1) : '–';
+  const curAna = curAnaArr.length ? (curAnaArr.reduce((s, v) => s + v, 0) / curAnaArr.length).toFixed(1) : '–';
+
+  mkChart('chart-run-te', {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Aérobie', data: aerobicData, backgroundColor: '#3b82f6', borderRadius: 3 },
+        { label: 'Anaérobie', data: anaerobicData, backgroundColor: '#f97316', borderRadius: 3 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, labels: { boxWidth: 10, font: { size: 10 } } },
+        tooltip: { callbacks: { label: c => `${c.dataset.label} : ${c.raw}` } },
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } },
+        y: { stacked: true, min: 0, max: 5, grid: { color: 'rgba(0,0,0,0.06)' },
+          title: { display: true, text: 'TE (0–5)', font: { size: 10 }, color: '#6b7280' } },
+      },
+    },
+  });
+
+  const statsEl = document.createElement('div');
+  statsEl.style.cssText = 'margin-top:10px;font-size:12px;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap';
+  statsEl.innerHTML = `
+    <span>Semaine en cours — Aérobie : <b style="color:#3b82f6">${curAer}</b></span>
+    <span>Anaérobie : <b style="color:#f97316">${curAna}</b></span>`;
+  el.appendChild(statsEl);
+}
+
+/* ══════════════════════════════════════════════════════════
+   RENDER : Cadence de course
+   ══════════════════════════════════════════════════════════ */
+function renderCadenceTrend() {
+  const el = document.getElementById('run-cadence');
+  if (!el) return;
+
+  const runs = getRunsForGlobalPeriod().filter(r => (r.avg_cadence || 0) > 0);
+
+  if (!runs.length) {
+    // Insert message after canvas if canvas exists
+    const msgEl = el.querySelector('#chart-run-cadence') || el;
+    const parent = msgEl.parentElement || el;
+    const msg = document.createElement('div');
+    msg.style.cssText = 'color:var(--muted);font-size:13px;padding:12px;text-align:center';
+    msg.textContent = 'Cadence non disponible (resync requis)';
+    // Only add if not already present
+    if (!el.querySelector('.cadence-msg')) { msg.classList.add('cadence-msg'); el.appendChild(msg); }
+    return;
+  }
+
+  const sorted = runs.sort((a, b) => a.date.localeCompare(b.date));
+  const labels = sorted.map(r => new Date(r.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
+  const cadences = sorted.map(r => r.avg_cadence);
+
+  const minC = Math.min(...cadences);
+  const maxC = Math.max(...cadences);
+  const avgC = Math.round(cadences.reduce((s, v) => s + v, 0) / cadences.length);
+  const pct175 = Math.round(cadences.filter(v => v >= 175).length / cadences.length * 100);
+
+  mkChart('chart-run-cadence', {
+    type: 'line',
+    data: { labels, datasets: [{
+      label: 'Cadence', data: cadences,
+      borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.08)',
+      fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#8b5cf6', borderWidth: 2,
+    }]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => `Cadence : ${c.raw} spm` } },
+        annotation: { annotations: {
+          line170: { type: 'line', yMin: 170, yMax: 170, borderColor: '#f97316', borderWidth: 1, borderDash: [4, 3],
+            label: { content: '170', display: true, position: 'end', color: '#f97316', font: { size: 9 }, backgroundColor: 'transparent' } },
+          line180: { type: 'line', yMin: 180, yMax: 180, borderColor: '#22c55e', borderWidth: 1, borderDash: [4, 3],
+            label: { content: '180', display: true, position: 'end', color: '#22c55e', font: { size: 9 }, backgroundColor: 'transparent' } },
+        }},
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 10 } } },
+        y: { grid: { color: 'rgba(0,0,0,0.06)' },
+          title: { display: true, text: 'spm', font: { size: 10 }, color: '#6b7280' },
+          ticks: { font: { size: 10 } } },
+      },
+    },
+  });
+
+  const statsEl = document.createElement('div');
+  statsEl.style.cssText = 'margin-top:10px;font-size:12px;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap';
+  statsEl.innerHTML = `
+    <span>Min : <b style="color:var(--text)">${minC} spm</b></span>
+    <span>Max : <b style="color:var(--text)">${maxC} spm</b></span>
+    <span>Moy. : <b style="color:#8b5cf6">${avgC} spm</b></span>
+    <span>≥ 175 spm : <b style="color:#22c55e">${pct175}%</b> des sorties</span>`;
+  el.appendChild(statsEl);
+}
+
+/* ══════════════════════════════════════════════════════════
+   RENDER : Prévision de forme — Course cible
+   ══════════════════════════════════════════════════════════ */
+let _racePredictorResult = null;
+
+function renderRacePredictor() {
+  const el = document.getElementById('run-race-predictor');
+  if (!el) return;
+
+  const todayIso = localIso(TODAY);
+  const maxDate  = new Date(TODAY); maxDate.setMonth(maxDate.getMonth() + 6);
+  const maxIso   = localIso(maxDate);
+
+  function simulateToDate(targetIso) {
+    // Get current CTL/ATL from all-sport curve
+    const allCurve = computeFormeCurve(getAll(), 90);
+    const last = allCurve[allCurve.length - 1] || { ctl: 0, atl: 0 };
+    let ctl = last.ctl, atl = last.atl;
+
+    // Get weekly plan loads
+    const plan = generateWeekPlan();
+    const weekLoads = plan.plan.map(s => s.trimp || 0); // 7 values Mon-Sun
+
+    // Day-by-day simulation
+    const targetDate = new Date(targetIso + 'T12:00:00');
+    const dow = (TODAY.getDay() + 6) % 7; // 0=Mon
+    let dayIdx = dow; // which day of week we're in
+
+    let cur = new Date(TODAY);
+    while (localIso(cur) < targetIso) {
+      const load = weekLoads[dayIdx % 7] || 0;
+      ctl = ctl + (load - ctl) / 42;
+      atl = atl + (load - atl) / 7;
+      dayIdx++;
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    const tsb = +(ctl - atl).toFixed(1);
+    const daysLeft = Math.round((targetDate - TODAY) / 86400000);
+    return { ctl: +ctl.toFixed(1), atl: +atl.toFixed(1), tsb, daysLeft };
+  }
+
+  function renderResult(res) {
+    let tsbColor, tsbLabel;
+    if (res.tsb >= 5 && res.tsb <= 20)      { tsbColor = '#22c55e'; tsbLabel = 'Forme optimale pour la course ✓'; }
+    else if (res.tsb > 20)                   { tsbColor = '#3b82f6'; tsbLabel = 'Trop frais — envisagez plus de charge'; }
+    else if (res.tsb >= 0 && res.tsb < 5)   { tsbColor = '#f97316'; tsbLabel = 'Légèrement sous-optimale'; }
+    else                                      { tsbColor = '#ef4444'; tsbLabel = 'Fatigue résiduelle — adaptez le plan'; }
+
+    return `
+      <div style="margin-top:14px;background:${tsbColor}12;border:1.5px solid ${tsbColor};border-radius:12px;padding:14px 16px">
+        <div style="font-size:13px;font-weight:700;color:${tsbColor};margin-bottom:8px">${tsbLabel}</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:12px">
+          <div style="background:var(--surface2);border-radius:8px;padding:8px 10px;text-align:center">
+            <div style="color:var(--muted);font-size:10px;margin-bottom:2px">CTL projeté</div>
+            <b>${res.ctl}</b>
+          </div>
+          <div style="background:var(--surface2);border-radius:8px;padding:8px 10px;text-align:center">
+            <div style="color:var(--muted);font-size:10px;margin-bottom:2px">ATL projeté</div>
+            <b>${res.atl}</b>
+          </div>
+          <div style="background:var(--surface2);border-radius:8px;padding:8px 10px;text-align:center">
+            <div style="color:var(--muted);font-size:10px;margin-bottom:2px">TSB projeté</div>
+            <b style="color:${tsbColor}">${res.tsb > 0 ? '+' : ''}${res.tsb}</b>
+          </div>
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:var(--muted);text-align:center">${res.daysLeft} jours jusqu'à la course</div>
+      </div>`;
+  }
+
+  const prevResult = _racePredictorResult ? renderResult(_racePredictorResult) : '';
+
+  el.innerHTML = `
+    <div style="font-size:13px;color:var(--muted);margin-bottom:10px">Simulez votre forme à la date d'une course cible en se basant sur le plan hebdomadaire courant.</div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div>
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Date de course cible</label>
+        <input type="date" id="race-target-date" min="${todayIso}" max="${maxIso}"
+          style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);font-size:13px"
+          value="${_racePredictorResult ? '' : ''}">
+      </div>
+      <button onclick="(function(){
+        const d = document.getElementById('race-target-date').value;
+        if (!d) return;
+        try { _racePredictorResult = (function simulateToDate(targetIso){
+          const allCurve = computeFormeCurve(getAll(), 90);
+          const last = allCurve[allCurve.length - 1] || { ctl: 0, atl: 0 };
+          let ctl = last.ctl, atl = last.atl;
+          const plan = generateWeekPlan();
+          const weekLoads = plan.plan.map(s => s.trimp || 0);
+          const targetDate = new Date(targetIso + 'T12:00:00');
+          const dow = (TODAY.getDay() + 6) % 7;
+          let dayIdx = dow;
+          let cur = new Date(TODAY);
+          while (localIso(cur) < targetIso) {
+            const load = weekLoads[dayIdx % 7] || 0;
+            ctl = ctl + (load - ctl) / 42;
+            atl = atl + (load - atl) / 7;
+            dayIdx++;
+            cur.setDate(cur.getDate() + 1);
+          }
+          const tsb = +(ctl - atl).toFixed(1);
+          const daysLeft = Math.round((targetDate - TODAY) / 86400000);
+          return { ctl: +ctl.toFixed(1), atl: +atl.toFixed(1), tsb, daysLeft };
+        })(d);
+        } catch(e) { console.error(e); }
+        renderRacePredictor();
+      })()"
+        style="align-self:flex-end;padding:8px 18px;background:var(--accent);color:#000;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+        Simuler
+      </button>
+    </div>
+    ${prevResult}`;
+}
+
+/* ══════════════════════════════════════════════════════════
    ENTRY POINT
    ══════════════════════════════════════════════════════════ */
 function renderRunning() {
@@ -2392,6 +2765,10 @@ function renderRunning() {
   const arrowEl = document.getElementById(`sort-${runState.sortCol}`);
   if (arrowEl) arrowEl.textContent = runState.sortDir === -1 ? '▼' : '▲';
   safe(populateCompareSelectors);
+  safe(renderProgressionConsistance);
+  safe(renderTEDistribution);
+  safe(renderCadenceTrend);
+  safe(renderRacePredictor);
 }
 
 /* ══════════════════════════════════════════════════════════

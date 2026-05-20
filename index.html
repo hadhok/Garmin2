@@ -478,6 +478,12 @@
           </div>
         </div>
 
+        <!-- Tendance FC repos -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">Tendance FC repos <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="card" id="poc-rhr-trend"></div>
+        </div>
+
         <!-- Recovery card (health.js) -->
         <div id="recovery-section" style="display:none;margin-bottom:20px">
           <div class="card recovery-card" id="recovery-card-inner"></div>
@@ -1011,6 +1017,30 @@
               <tbody id="run-table-body"></tbody>
             </table>
           </div>
+        </div>
+
+        <!-- Progression & Consistance -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">Progression &amp; Consistance <span class="chev">▾</span></div>
+        <div class="section-body" data-secondary>
+          <div class="card" id="run-progression-consistance"></div>
+        </div>
+
+        <!-- Distribution TE -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">Distribution Training Effect <span class="chev">▾</span></div>
+        <div class="section-body" data-secondary>
+          <div class="card" id="run-te-distribution"><canvas id="chart-run-te" style="max-height:180px"></canvas></div>
+        </div>
+
+        <!-- Cadence -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">Cadence de course <span class="chev">▾</span></div>
+        <div class="section-body" data-secondary>
+          <div class="card" id="run-cadence"><canvas id="chart-run-cadence" style="max-height:180px"></canvas></div>
+        </div>
+
+        <!-- Prévision de forme -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">Prévision de forme — Course cible <span class="chev">▾</span></div>
+        <div class="section-body" data-secondary>
+          <div class="card" id="run-race-predictor"></div>
         </div>
 
       </div><!-- /view-running -->

@@ -1104,6 +1104,7 @@ function renderAll() {
     if (typeof renderPocSynthesis === 'function') { try { renderPocSynthesis(); } catch(e) { console.warn('[recovery] poc synthesis', e); } }
     if (typeof renderPocRecovery  === 'function') { try { renderPocRecovery();  } catch(e) { console.warn('[recovery] poc recovery', e); } }
     if (typeof renderPocHRV       === 'function') { try { renderPocHRV();       } catch(e) { console.warn('[recovery] poc hrv', e); } }
+    if (typeof renderRHRTrend === 'function') try { renderRHRTrend(); } catch(e) {}
     return;
   }
   if (state.view === 'history')  { renderActivities(); return; }
