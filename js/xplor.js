@@ -87,56 +87,60 @@ function showXplorSetup() {
   overlay.id = 'xplor-setup-overlay';
   overlay.style.cssText = `
     position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;
-    display:flex;align-items:center;justify-content:center;padding:16px`;
+    display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto`;
 
   overlay.innerHTML = `
-    <div style="background:var(--surface);border-radius:16px;padding:24px;max-width:480px;width:100%;box-shadow:0 24px 48px rgba(0,0,0,.2)">
+    <div style="background:var(--surface);border-radius:16px;padding:24px;max-width:500px;width:100%;
+                box-shadow:0 24px 48px rgba(0,0,0,.2);margin:auto">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-        <div style="font-size:16px;font-weight:700">𝕏 Connecter Xplor Active</div>
-        <button onclick="document.getElementById('xplor-setup-overlay').remove()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted)">✕</button>
+        <div style="font-size:16px;font-weight:700">𝕏 Xplor Active — Réglages</div>
+        <button onclick="document.getElementById('xplor-setup-overlay').remove()"
+          style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted)">✕</button>
       </div>
-
-      <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6">
-        Colle ici l'URL iCal de ton calendrier Xplor Active pour importer automatiquement tes séances planifiées.
-      </div>
-
-      <details style="margin-bottom:16px;font-size:12px;color:var(--muted)">
-        <summary style="cursor:pointer;font-weight:600;color:var(--text2)">Comment obtenir l'URL iCal ?</summary>
-        <div style="margin-top:10px;line-height:1.8;padding:10px;background:var(--surface2);border-radius:8px">
-          <b>Google Calendar :</b><br>
-          1. Réserve une séance dans Xplor Active → "Ajouter au calendrier" → Google Calendar<br>
-          2. Sur calendar.google.com → ⋮ à côté du calendrier Xplor → Paramètres<br>
-          3. Descends jusqu'à <i>"Adresse secrète au format iCal"</i> → copie l'URL<br><br>
-          <b>Apple Calendar / iCloud :</b><br>
-          1. Xplor Active → "Ajouter au calendrier" → Apple Calendar<br>
-          2. Sur icloud.com/calendar → partage le calendrier → active le lien public → copie l'URL .ics<br><br>
-          <b>URL directe Xplor (si disponible) :</b><br>
-          Certaines versions de l'app proposent un lien "Abonnement calendrier" dans les réglages du profil.
-        </div>
-      </details>
 
       <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px">URL iCal</label>
       <input id="xplor-ical-input" type="url" placeholder="https://calendar.google.com/calendar/ical/..."
-        style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);
-               color:var(--text);font-size:13px;box-sizing:border-box;margin-bottom:12px" />
+        style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;
+               background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box;margin-bottom:6px" />
+      <details style="margin-bottom:14px;font-size:11px;color:var(--muted)">
+        <summary style="cursor:pointer">Comment obtenir cette URL ?</summary>
+        <div style="margin-top:8px;line-height:1.7;padding:8px;background:var(--surface2);border-radius:8px">
+          <b>Google Calendar :</b><br>
+          1. Réserve une séance → "Ajouter au calendrier" → Google Calendar<br>
+          2. calendar.google.com → ⋮ à côté du calendrier → Paramètres<br>
+          3. Section <i>"Intégrer l'agenda"</i> → <i>"Adresse secrète au format iCal"</i> → copie
+        </div>
+      </details>
 
       <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px">
-        Filtre lieu <span style="font-weight:400;color:var(--muted)">(optionnel — importe uniquement les séances à cette adresse)</span>
+        Filtre lieu <span style="font-weight:400;color:var(--muted)">(mot-clé dans le champ lieu de l'événement)</span>
       </label>
       <input id="xplor-location-input" type="text"
-        placeholder="ex: Les Girondins, Mérignac, Marcel Dassault…"
+        placeholder="ex: Girondins, Mérignac…"
         value="${_xplorLocationFilter}"
-        style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--surface);
-               color:var(--text);font-size:13px;box-sizing:border-box;margin-bottom:12px" />
+        style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;
+               background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box;margin-bottom:14px" />
 
-      <div style="display:flex;gap:8px">
-        <button onclick="document.getElementById('xplor-setup-overlay').remove()"
-          style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px;background:none;color:var(--muted);cursor:pointer;font-size:13px">
-          Annuler
+      <!-- Zone debug -->
+      <div id="xplor-debug-zone" style="display:none;margin-bottom:14px;padding:10px;background:var(--surface2);
+           border-radius:8px;font-size:11px;font-family:monospace;max-height:200px;overflow-y:auto;
+           color:var(--text2);white-space:pre-wrap;word-break:break-all"></div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="_debugIcal(this)"
+          style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;
+                 background:none;color:var(--muted);cursor:pointer;font-size:12px">
+          🔍 Tester le flux
         </button>
-        <button id="xplor-save-btn" disabled onclick="_saveAndSyncIcal(this)"
-          style="flex:2;padding:10px;border:none;border-radius:8px;background:#6366f1;color:#fff;
-                 font-weight:600;cursor:pointer;font-size:13px;opacity:0.5">
+        <button onclick="document.getElementById('xplor-setup-overlay').remove()"
+          style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;
+                 background:none;color:var(--muted);cursor:pointer;font-size:12px">
+          Fermer
+        </button>
+        <button id="xplor-save-btn"
+          style="flex:1;padding:8px 14px;border:none;border-radius:8px;background:#6366f1;
+                 color:#fff;font-weight:600;cursor:pointer;font-size:13px"
+          onclick="_saveAndSyncIcal(this)">
           Enregistrer et synchroniser
         </button>
       </div>
@@ -175,6 +179,43 @@ async function _saveAndSyncIcal(btnEl) {
     btnEl.disabled = false;
     btnEl.textContent = 'Enregistrer et synchroniser';
     _showXplorBanner(String(e), 'error');
+  }
+}
+
+/* ── Debug : affiche les événements bruts du flux iCal ───────────────────── */
+async function _debugIcal(btnEl) {
+  const zone = document.getElementById('xplor-debug-zone');
+  if (!zone) return;
+  zone.style.display = 'block';
+  zone.textContent = '⏳ Chargement…';
+  btnEl.disabled = true;
+
+  try {
+    const r = await fetch('/api/xplor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'debug_ical' }),
+    });
+    const data = await r.json();
+    if (data.error) {
+      zone.textContent = '❌ ' + data.error;
+    } else {
+      const lines = [`${data.total_future} événements à venir\n`];
+      (data.sample || []).forEach((e, i) => {
+        lines.push(`── ${i+1}. ${e.dtstart.slice(0,10)} ──`);
+        lines.push(`   Nom      : ${e.summary}`);
+        lines.push(`   Lieu     : ${e.location || '(vide)'}`);
+        lines.push(`   Desc     : ${e.description || '(vide)'}`);
+        lines.push(`   Durée    : ${e.duration} min`);
+        lines.push(`   Type det.: ${e.classified}`);
+        lines.push('');
+      });
+      zone.textContent = lines.join('\n');
+    }
+  } catch (e) {
+    zone.textContent = '❌ ' + e;
+  } finally {
+    btnEl.disabled = false;
   }
 }
 
