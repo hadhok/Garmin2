@@ -1,38 +1,38 @@
 {
-  "updated_at": "2026-05-19",
+  "updated_at": "2026-05-20",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "progression",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 34.2,
-    "atl": 46.2,
-    "tsb": -12.0,
-    "effort_idx": 1.3,
-    "body_battery": 35.5,
+    "ctl": 34.6,
+    "atl": 46.3,
+    "tsb": -11.6,
+    "effort_idx": 1.26,
+    "body_battery": 43.0,
     "training_readiness": null,
     "niveau": "Sportif",
-    "total_activites": 211,
-    "total_km": 431
+    "total_activites": 213,
+    "total_km": 435
   },
   "items": [
     {
       "type": "warning",
       "icon": "💪",
       "title": "En progression — adaptation positive",
-      "text": "Effort pondéré 7j : 1.3× (1.0 = charge de base, >2 = intense). TSB -12 pts (CTL 34.2 / ATL 46.2). • HRV 38.4 ms (+5 ms vs S-1) • Sommeil 8.2h/nuit • Body Battery fin de journée : 36%"
+      "text": "Effort pondéré 7j : 1.3× (1.0 = charge de base, >2 = intense). TSB -12 pts (CTL 34.6 / ATL 46.3). • HRV 37.8 ms (+4 ms vs S-1) • Sommeil 8.3h/nuit • Body Battery fin de journée : 43%"
     },
     {
       "type": "warning",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "📊 manque de Zone 1-2 (37% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (23%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (40%) — surveille la fatigue accumulée\n📈 Charge semaine +55% au-dessus de la moyenne — risque de surcharge"
+      "text": "📊 manque de Zone 1-2 (44% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (23%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (32%) — surveille la fatigue accumulée\n📈 Charge semaine +68% au-dessus de la moyenne — risque de surcharge"
     },
     {
       "type": "goal",
       "icon": "📋",
       "title": "Prescription : Séance légère — Zone 2",
-      "text": "Hier : Unknown (walk). 45-60 min à allure conversationnelle. Course lente, vélo ou natation à faible intensité. — Z2 — 60-70% FCmax"
+      "text": "Hier : Récupération (pilates). 45-60 min à allure conversationnelle. Course lente, vélo ou natation à faible intensité. — Z2 — 60-70% FCmax"
     }
   ]
 }
