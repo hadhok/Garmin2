@@ -1703,7 +1703,8 @@ function getRunsForGlobalPeriod() {
   const months = runState.globalPeriod === '3m' ? 3 : runState.globalPeriod === '6m' ? 6 : 12;
   const cutoff = new Date(TODAY);
   cutoff.setMonth(cutoff.getMonth() - months);
-  return runs.filter(r => new Date(r.date) >= cutoff);
+  const cutoffIso = cutoff.toLocaleDateString('sv-SE');
+  return runs.filter(r => (r.date || '') >= cutoffIso);
 }
 
 function setGlobalPeriod(p) {
@@ -1977,8 +1978,10 @@ function renderRunVolumeChart() {
       const dow = monday.getDay() === 0 ? 6 : monday.getDay() - 1;
       monday.setDate(monday.getDate() - dow - w * 7);
       monday.setHours(0, 0, 0, 0);
-      const sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6); sunday.setHours(23, 59, 59);
-      const km = allRuns.filter(r => { const d = new Date(r.date + 'T12:00:00'); return d >= monday && d <= sunday; })
+      const sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6);
+      const monIso = monday.toLocaleDateString('sv-SE');
+      const sunIso = sunday.toLocaleDateString('sv-SE');
+      const km = allRuns.filter(r => (r.date || '') >= monIso && (r.date || '') <= sunIso)
         .reduce((s, r) => s + (r.distance_km || 0), 0);
       labels.push(monday.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
       volumes.push(+km.toFixed(1));
