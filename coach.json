@@ -1,38 +1,38 @@
 {
-  "updated_at": "2026-05-18",
+  "updated_at": "2026-05-21",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "progression",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 35.0,
-    "atl": 53.4,
-    "tsb": -18.4,
-    "effort_idx": 1.2,
-    "body_battery": 29.3,
+    "ctl": 37.4,
+    "atl": 60.3,
+    "tsb": -22.9,
+    "effort_idx": 1.27,
+    "body_battery": 32.5,
     "training_readiness": null,
     "niveau": "Sportif",
-    "total_activites": 210,
-    "total_km": 429
+    "total_activites": 216,
+    "total_km": 445
   },
   "items": [
     {
       "type": "warning",
       "icon": "💪",
       "title": "En progression — adaptation positive",
-      "text": "Effort pondéré 7j : 1.2× (1.0 = charge de base, >2 = intense). TSB -18 pts (CTL 35.0 / ATL 53.4). • HRV 37.8 ms (+4 ms vs S-1) • Sommeil 8.3h/nuit • Body Battery fin de journée : 29%"
+      "text": "Effort pondéré 7j : 1.3× (1.0 = charge de base, >2 = intense). TSB -23 pts (CTL 37.4 / ATL 60.3). • HRV 38.4 ms (+4 ms vs S-1) • Sommeil 8.4h/nuit • Body Battery fin de journée : 32%"
     },
     {
       "type": "warning",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "📊 manque de Zone 1-2 (28% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (30%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (42%) — surveille la fatigue accumulée\n📈 Charge semaine +53% au-dessus de la moyenne — risque de surcharge"
+      "text": "📊 manque de Zone 1-2 (54% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (23%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📈 Charge semaine +99% au-dessus de la moyenne — risque de surcharge\n🏃 Course : allure en régression (1.0 min/km plus lent — peut indiquer fatigue)"
     },
     {
       "type": "goal",
       "icon": "📋",
-      "title": "Prescription : Récupération active",
-      "text": "Hier : Tempo (run). 20-30 min de marche, mobilité ou yoga. Pas de cardio. Objectif : ne pas aggraver la fatigue. — Z1 uniquement — FC < 120 bpm"
+      "title": "Prescription : Séance légère — Zone 2",
+      "text": "Hier : Aerobic Base (run). 45-60 min à allure conversationnelle. Course lente, vélo ou natation à faible intensité. — Z2 — 60-70% FCmax"
     }
   ]
 }
