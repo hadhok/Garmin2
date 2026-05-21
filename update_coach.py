@@ -662,8 +662,6 @@ def main():
         else:
             subprocess.run(['git', 'push'], cwd=BASE, check=True)
             print("🚀 Poussé sur GitHub.")
-            # Propager aussi vers redesign-litellm (branche GitHub Pages)
-            _push_coach_to_branch(BASE, COACH_FILE, 'redesign-litellm', msg)
     except subprocess.CalledProcessError as e:
         print(f"⚠️  Erreur git : {e}")
 
