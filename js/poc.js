@@ -3,6 +3,94 @@
    ══════════════════════════════════════════════════════════ */
 
 /* ──────────────────────────────────────────────────────────
+   INFO MODALS — explications & niveaux pour chaque graphique
+   ────────────────────────────────────────────────────────── */
+const INFO_CONTENT = {
+  'recovery-score': {
+    title: 'Score de Récupération Composite',
+    text: 'Score 0–100 calculé chaque jour à partir de 4 signaux biologiques pondérés : HRV (30%), FC repos (25%), Body Battery (25%), Sommeil (20%). Chaque composante est normalisée par rapport à votre baseline personnelle sur 28 jours.',
+    levels: [
+      { color: '#22c55e', label: '≥ 70 — Bon',    desc: 'Séance intense possible, le corps est bien récupéré' },
+      { color: '#f97316', label: '40–69 — Moyen', desc: 'Endurance fondamentale conseillée, évitez les séances dures' },
+      { color: '#ef4444', label: '< 40 — Bas',    desc: 'Repos actif recommandé, récupération insuffisante' },
+    ]
+  },
+  'hrv': {
+    title: 'HRV-Guided Training',
+    text: 'La variabilité de la fréquence cardiaque (HRV) reflète l\'état de votre système nerveux autonome. Une HRV élevée = bonne récupération. On compare le trend 7 jours à votre baseline personnelle sur 28 jours (±0.5 écart-type).',
+    levels: [
+      { color: '#22c55e', label: 'Au-dessus baseline + 0.5 SD', desc: 'Séance intense possible 🟢' },
+      { color: '#f97316', label: 'Dans la zone normale',         desc: 'Endurance fondamentale conseillée 🟠' },
+      { color: '#ef4444', label: 'En-dessous baseline − 0.5 SD', desc: 'Repos actif recommandé 🔴' },
+    ]
+  },
+  'rhr': {
+    title: 'Tendance FC de repos',
+    text: 'La fréquence cardiaque de repos (FCR) est un marqueur de fatigue accumulée. Une augmentation par rapport à votre moyenne 28 jours signale un stress physique ou une mauvaise récupération. Garmin la mesure chaque nuit pendant le sommeil.',
+    levels: [
+      { color: '#22c55e', label: '≤ baseline',          desc: 'Bien récupéré, FCR normale ou basse' },
+      { color: '#f97316', label: '+ 3–5 bpm vs baseline', desc: 'Fatigue modérée — surveillez l\'entraînement' },
+      { color: '#ef4444', label: '> + 5 bpm vs baseline', desc: 'Fatigue élevée — repos recommandé' },
+    ]
+  },
+  'longratio': {
+    title: 'Ratio Longue Sortie / Volume',
+    text: 'Pourcentage du volume hebdomadaire représenté par votre sortie la plus longue. Selon Daniels & Gilbert (Oxygen Power), la longue sortie ne doit pas dépasser 30% du volume total pour éviter une charge asymétrique et le risque de blessure.',
+    levels: [
+      { color: '#22c55e', label: '25–30% — Optimal',    desc: 'Équilibre idéal entre longue sortie et volume total' },
+      { color: '#f97316', label: '< 25% — Sous-optimal', desc: 'Sortie longue trop courte, endurance de fond sous-développée' },
+      { color: '#ef4444', label: '> 35% — Trop élevé',  desc: 'Risque de charge asymétrique et surmenage' },
+    ]
+  },
+  'phase': {
+    title: 'Phase d\'Entraînement Automatique',
+    text: 'La phase est détectée automatiquement à partir de la pente du CTL (fitness trend), du TSB (forme du moment) et de l\'ACWR (ratio charge aiguë/chronique). Elle évolue semaine après semaine.',
+    levels: [
+      { color: '#3b82f6', label: 'Base',      desc: 'Construction aérobie, CTL en hausse progressive' },
+      { color: '#f97316', label: 'Charge',     desc: 'Bloc intensif, TSB négatif contrôlé' },
+      { color: '#6366f1', label: 'Pic',        desc: 'CTL élevé, prêt pour une compétition' },
+      { color: '#22c55e', label: 'Récupération', desc: 'TSB remonte, fatigue qui se dissipe' },
+    ]
+  },
+  'pacereserve': {
+    title: 'Réserve d\'Allure',
+    text: 'La réserve d\'allure (Pace Reserve) est l\'écart entre votre allure maximale en sprint court et votre allure d\'endurance fondamentale. Plus la réserve est grande, plus vous avez de marge pour accélérer en course. Elle est calculée sur vos 20 dernières courses ≥ 3 km.',
+    levels: [
+      { color: '#22c55e', label: '> 3 min/km — Grande réserve',   desc: 'Bonne capacité à changer de rythme, vitesse maximale élevée' },
+      { color: '#f97316', label: '1.5–3 min/km — Réserve moyenne', desc: 'Profil équilibré coureur endurance/vitesse' },
+      { color: '#ef4444', label: '< 1.5 min/km — Faible réserve', desc: 'Profil spécialisé endurance, peu de vitesse maximale' },
+    ]
+  },
+};
+
+function showInfoModal(key) {
+  const info = INFO_CONTENT[key];
+  if (!info) return;
+  const existing = document.getElementById('info-modal-overlay');
+  if (existing) existing.remove();
+
+  const levelsHtml = (info.levels || []).map(l => `
+    <div class="info-modal-level">
+      <div class="info-modal-level-dot" style="background:${l.color}"></div>
+      <div class="info-modal-level-label" style="color:${l.color}">${l.label}</div>
+      <div class="info-modal-level-desc">${l.desc}</div>
+    </div>`).join('');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'info-modal-overlay';
+  overlay.className = 'info-modal-overlay';
+  overlay.innerHTML = `
+    <div class="info-modal">
+      <div class="info-modal-title">${info.title}</div>
+      <div class="info-modal-text">${info.text}</div>
+      ${levelsHtml ? `<div class="info-modal-levels">${levelsHtml}</div>` : ''}
+      <button class="info-modal-close" onclick="document.getElementById('info-modal-overlay').remove()">Fermer</button>
+    </div>`;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+/* ──────────────────────────────────────────────────────────
    0. RECOMMANDATION CONSOLIDÉE
    Arbitre entre HRV, ACWR, score récupération et phase.
    Hiérarchie de priorité :

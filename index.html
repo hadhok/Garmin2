@@ -454,7 +454,7 @@
         </div>
 
         <!-- Score de récupération composite (POC section 1) -->
-        <div class="section-header collapsible" onclick="toggleSection(this)">Score de Récupération Composite <span class="chev">▾</span></div>
+        <div class="section-header collapsible" onclick="toggleSection(this)">Score de Récupération Composite <button class="info-btn" onclick="event.stopPropagation();showInfoModal('recovery-score')" title="En savoir plus">i</button> <span class="chev">▾</span></div>
         <div class="section-body">
           <div class="health-grid">
             <div class="card">
@@ -469,7 +469,7 @@
         </div>
 
         <!-- HRV-Guided Training (POC section 2) -->
-        <div class="section-header collapsible" onclick="toggleSection(this)">HRV-Guided Training <span class="chev">▾</span></div>
+        <div class="section-header collapsible" onclick="toggleSection(this)">HRV-Guided Training <button class="info-btn" onclick="event.stopPropagation();showInfoModal('hrv')" title="En savoir plus">i</button> <span class="chev">▾</span></div>
         <div class="section-body">
           <div class="health-grid">
             <div class="card">
@@ -484,7 +484,7 @@
         </div>
 
         <!-- Tendance FC repos -->
-        <div class="section-header collapsible" onclick="toggleSection(this)">Tendance FC repos <span class="chev">▾</span></div>
+        <div class="section-header collapsible" onclick="toggleSection(this)">Tendance FC repos <button class="info-btn" onclick="event.stopPropagation();showInfoModal('rhr')" title="En savoir plus">i</button> <span class="chev">▾</span></div>
         <div class="section-body">
           <div class="card" id="poc-rhr-trend"></div>
         </div>
@@ -1058,7 +1058,7 @@
 
         <!-- 3. Ratio longue sortie / volume -->
         <div class="section-header collapsible" onclick="toggleSection(this)">
-          3. Ratio Longue Sortie / Volume Hebdomadaire <span class="chev">▾</span>
+          3. Ratio Longue Sortie / Volume Hebdomadaire <button class="info-btn" onclick="event.stopPropagation();showInfoModal('longratio')" title="En savoir plus">i</button> <span class="chev">▾</span>
         </div>
         <div class="section-body">
           <div class="card">
@@ -1075,7 +1075,7 @@
 
         <!-- 4. Détection de phase d'entraînement -->
         <div class="section-header collapsible" onclick="toggleSection(this)">
-          4. Détection Automatique de Phase <span class="chev">▾</span>
+          4. Détection Automatique de Phase <button class="info-btn" onclick="event.stopPropagation();showInfoModal('phase')" title="En savoir plus">i</button> <span class="chev">▾</span>
         </div>
         <div class="section-body">
           <div class="card">
@@ -1092,7 +1092,7 @@
 
         <!-- 5. Pace Reserve -->
         <div class="section-header collapsible" onclick="toggleSection(this)">
-          5. Pace Reserve (RP) <span class="chev">▾</span>
+          5. Pace Reserve (RP) <button class="info-btn" onclick="event.stopPropagation();showInfoModal('pacereserve')" title="En savoir plus">i</button> <span class="chev">▾</span>
         </div>
         <div class="section-body">
           <div class="health-grid">
