@@ -61,8 +61,9 @@ def _renpho_login(email: str, password: str) -> tuple[str, str]:
     if outer.get('code') not in (101, 200, '101', '200', 0, '0'):
         raise ValueError(f'Renpho login failed: {outer}')
     inner   = _decrypt(outer['data'])
-    token   = inner.get('token') or inner.get('accessToken') or ''
-    user_id = str(inner.get('userId') or inner.get('id') or '')
+    login   = inner.get('login') or inner
+    token   = login.get('token') or login.get('accessToken') or ''
+    user_id = str(login.get('id') or login.get('userId') or '')
     if not token:
         raise ValueError(f'Token absent dans {inner}')
     return token, user_id
