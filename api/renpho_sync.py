@@ -19,23 +19,43 @@ SIGN_IN_PATH   = '/api/v3/users/sign_in.json'
 MEASURES_PATH  = '/api/v3/measurements.json'
 
 # ── Authentification ──────────────────────────────────────────────────────────
+_RENPHO_HEADERS = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'User-Agent': 'Renpho/5.0 (iPhone; iOS 16.0)',
+}
+
 def _renpho_login(email: str, password: str) -> str:
     """Retourne le session_key Renpho."""
     pwd_hash = hashlib.md5(password.encode()).hexdigest()
-    resp = requests.post(
-        RENPHO_BASE + SIGN_IN_PATH,
-        json={'secure_flag': '1', 'email': email, 'password': pwd_hash},
-        timeout=20,
-    )
-    if not resp.ok:
-        print(f'[debug] status={resp.status_code} body={resp.text[:500]}')
-    resp.raise_for_status()
-    data = resp.json()
-    token = (data.get('terminal_user_session_key')
-             or data.get('user', {}).get('terminal_user_session_key'))
-    if not token:
-        raise ValueError(f'Renpho login failed: {data}')
-    return token
+
+    # Variantes connues de l'API Renpho
+    attempts = [
+        {'secure_flag': '1', 'email': email, 'password': pwd_hash},
+        {'secure_flag': 1,   'email': email, 'password': pwd_hash},
+        {'secure_flag': '1', 'account': email, 'password': pwd_hash},
+        {'email': email, 'password': pwd_hash},
+    ]
+
+    last_err = None
+    for payload in attempts:
+        resp = requests.post(
+            RENPHO_BASE + SIGN_IN_PATH,
+            json=payload,
+            headers=_RENPHO_HEADERS,
+            timeout=20,
+        )
+        print(f'[debug] payload={list(payload.keys())} status={resp.status_code} body={resp.text[:300]}')
+        if resp.ok:
+            data = resp.json()
+            token = (data.get('terminal_user_session_key')
+                     or data.get('user', {}).get('terminal_user_session_key'))
+            if token:
+                return token
+            raise ValueError(f'Renpho login: token absent dans {data}')
+        last_err = resp
+
+    last_err.raise_for_status()
 
 # ── Récupération des mesures ──────────────────────────────────────────────────
 def _fetch_measurements(token: str, last_at: str | None = None) -> list[dict]:
