@@ -1,9 +1,9 @@
 """
-renpho_sync.py — Synchronise les mesures Renpho vers Supabase (table body_metrics).
+renpho_sync.py — Synchronise les mesures Renpho Health vers Supabase (table body_metrics).
 
 Variables d'environnement requises :
-  RENPHO_EMAIL     — email du compte Renpho
-  RENPHO_PASSWORD  — mot de passe du compte Renpho
+  RENPHO_EMAIL     — email du compte Renpho Health
+  RENPHO_PASSWORD  — mot de passe du compte Renpho Health
   SUPABASE_URL     — URL du projet Supabase
   SUPABASE_KEY     — clé service Supabase
 
@@ -12,87 +12,131 @@ Utilisation standalone :
 """
 import os, json, base64, requests
 from datetime import datetime, timezone
-from Crypto.PublicKey import RSA
-from Crypto.Cipher import PKCS1_v1_5
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
 from supabase import create_client
 
-RENPHO_BASE    = 'https://renpho.qnclouds.com'
-SIGN_IN_PATH   = '/api/v3/users/sign_in.json'
-MEASURES_PATH  = '/api/v3/measurements.json'
+RENPHO_BASE  = 'https://cloud.renpho.com'
+LOGIN_PATH   = '/renpho-aggregation/user/login'
+MEASURE_PATH = '/RenphoHealth/scale/queryAllMeasureDataList'
 
-_PUBLIC_KEY = """-----BEGIN PUBLIC KEY-----
-MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC+25I2upukpfQ7rIaaTZtVE744
-u2zV+HaagrUhDOTq8fMVf9yFQvEZh2/HKxFudUxP0dXUa8F6X4XmWumHdQnum3zm
-Jr04fz2b2WCcN0ta/rbF2nYAnMVAk2OJVZAMudOiMWhcxV1nNJiKgTNNr13de0EQ
-IiOL2CUBzu+HmIfUbQIDAQAB
------END PUBLIC KEY-----"""
+_AES_KEY = b'ed*wijdi$h6fe3ew'
 
-def _encrypt_password(password: str) -> str:
-    key    = RSA.import_key(_PUBLIC_KEY)
-    cipher = PKCS1_v1_5.new(key)
-    return base64.b64encode(cipher.encrypt(password.encode())).decode()
+
+def _encrypt(data: dict) -> str:
+    cipher = AES.new(_AES_KEY, AES.MODE_ECB)
+    plaintext = json.dumps(data, separators=(',', ':')).encode()
+    return base64.b64encode(cipher.encrypt(pad(plaintext, 16))).decode()
+
+
+def _decrypt(enc_b64: str) -> dict:
+    cipher = AES.new(_AES_KEY, AES.MODE_ECB)
+    return json.loads(unpad(cipher.decrypt(base64.b64decode(enc_b64)), 16))
+
 
 # ── Authentification ──────────────────────────────────────────────────────────
-def _renpho_login(email: str, password: str) -> str:
-    """Retourne le session_key Renpho."""
+def _renpho_login(email: str, password: str) -> tuple[str, str]:
+    """Retourne (token, user_id)."""
+    payload = {
+        'questionnaire': {},
+        'login': {
+            'email': email,
+            'password': password,
+            'areaCode': '',
+            'appRevision': '3.0.0',
+            'cellphoneType': '0',
+            'systemType': '0',
+            'platform': 'android',
+        },
+        'bindingList': {'deviceTypes': ['2']},
+    }
     resp = requests.post(
-        RENPHO_BASE + SIGN_IN_PATH,
-        params={'app_id': 'Renpho'},
-        json={'secure_flag': '1', 'email': email, 'password': _encrypt_password(password)},
-        headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+        RENPHO_BASE + LOGIN_PATH,
+        json={'encryptData': _encrypt(payload)},
+        headers={'Content-Type': 'application/json'},
         timeout=20,
     )
     resp.raise_for_status()
-    data = resp.json()
-    if data.get('status_code') not in (None, '20000', 20000):
-        raise ValueError(f"Renpho login failed: {data.get('status_message', data)}")
-    token = (data.get('terminal_user_session_key')
-             or data.get('user', {}).get('terminal_user_session_key'))
+    outer = resp.json()
+    if outer.get('code') not in (101, 200, '101', '200', 0, '0'):
+        raise ValueError(f'Renpho login failed: {outer}')
+    inner   = _decrypt(outer['data'])
+    token   = inner.get('token') or inner.get('accessToken') or ''
+    user_id = str(inner.get('userId') or inner.get('id') or '')
     if not token:
-        raise ValueError(f'Renpho login: token absent dans {data}')
-    return token
+        raise ValueError(f'Token absent dans {inner}')
+    return token, user_id
+
 
 # ── Récupération des mesures ──────────────────────────────────────────────────
-def _fetch_measurements(token: str, last_at: str | None = None) -> list[dict]:
-    """Retourne la liste des mesures depuis last_at (YYYY-MM-DD) ou tout l'historique."""
-    params = {'terminal_user_session_key': token}
-    if last_at:
-        # Renpho accepte last_at_ymd pour filtrer côté serveur
-        params['last_at_ymd'] = last_at.replace('-', '')
-
-    resp = requests.get(RENPHO_BASE + MEASURES_PATH, params=params, timeout=20)
+def _fetch_measurements(token: str, user_id: str, last_at: str | None = None) -> list[dict]:
+    payload = {
+        'userId': user_id,
+        'lastDate': last_at.replace('-', '') if last_at else '19700101',
+    }
+    resp = requests.post(
+        RENPHO_BASE + MEASURE_PATH,
+        json={'encryptData': _encrypt(payload)},
+        headers={
+            'Content-Type': 'application/json',
+            'token': token,
+            'userId': user_id,
+            'appVersion': '3.0.0',
+            'platform': 'android',
+        },
+        timeout=20,
+    )
     resp.raise_for_status()
-    data = resp.json()
-    return data.get('last_ary') or data.get('measurements') or []
+    outer = resp.json()
+    if outer.get('code') not in (101, 200, '101', '200', 0, '0'):
+        raise ValueError(f'Renpho mesures error: {outer}')
+    inner = _decrypt(outer['data'])
+    return (inner.get('measureDataList')
+            or inner.get('list')
+            or inner.get('data')
+            or [])
+
 
 # ── Normalisation d'une mesure ─────────────────────────────────────────────────
 def _normalize(m: dict) -> dict | None:
-    ts = m.get('time_stamp')
+    # Renpho Health peut utiliser measureTime (ms) ou timeStamp (s)
+    ts = m.get('measureTime') or m.get('timeStamp') or m.get('time_stamp')
     if not ts:
         return None
     try:
-        dt   = datetime.fromtimestamp(int(ts), tz=timezone.utc)
+        ts_int = int(ts)
+        # measureTime est en millisecondes si > 1e10
+        if ts_int > 1_000_000_000_000:
+            ts_int //= 1000
+        dt   = datetime.fromtimestamp(ts_int, tz=timezone.utc)
         date = dt.strftime('%Y-%m-%d')
     except Exception:
         return None
 
-    def _f(key, divisor=1):
-        v = m.get(key)
-        return round(float(v) / divisor, 2) if v not in (None, '', '0', 0) else None
+    def _f(*keys):
+        for k in keys:
+            v = m.get(k)
+            if v not in (None, '', '0', 0):
+                try:
+                    return round(float(v), 2)
+                except Exception:
+                    pass
+        return None
 
     return {
         'date':            date,
-        'weight_kg':       _f('weight'),
+        'weight_kg':       _f('weight', 'weightKg'),
         'bmi':             _f('bmi'),
-        'body_fat_pct':    _f('bodyfat'),
-        'muscle_mass_pct': _f('muscle'),
-        'bone_mass_kg':    _f('bone'),
-        'water_pct':       _f('water'),
-        'bmr':             _f('metabolism'),
-        'visceral_fat':    _f('physique_rating'),  # some scales use this slot
-        'protein_pct':     _f('protein'),
-        'body_age':        _f('body_age'),
+        'body_fat_pct':    _f('bodyFat', 'bodyfat', 'fatRate'),
+        'muscle_mass_pct': _f('muscleMass', 'muscle', 'muscleRate'),
+        'bone_mass_kg':    _f('boneMass', 'bone'),
+        'water_pct':       _f('waterRate', 'water'),
+        'bmr':             _f('bmr', 'metabolism'),
+        'visceral_fat':    _f('visceralFat', 'physique_rating'),
+        'protein_pct':     _f('proteinRate', 'protein'),
+        'body_age':        _f('bodyAge', 'body_age'),
     }
+
 
 # ── Sync principal ─────────────────────────────────────────────────────────────
 def run_renpho_sync() -> str:
@@ -101,21 +145,18 @@ def run_renpho_sync() -> str:
     if not email or not password:
         return 'RENPHO_EMAIL / RENPHO_PASSWORD non configurés — sync ignoré'
 
-    sb  = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])
+    sb = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])
 
-    # Date de la dernière mesure connue
     last = sb.table('body_metrics').select('date').order('date', desc=True).limit(1).execute()
     last_at = last.data[0]['date'] if last.data else None
 
-    # Login + fetch
-    token    = _renpho_login(email, password)
-    raw      = _fetch_measurements(token, last_at)
+    token, user_id = _renpho_login(email, password)
+    raw = _fetch_measurements(token, user_id, last_at)
 
     rows = [r for m in raw if (r := _normalize(m))]
     if not rows:
         return 'Renpho : aucune nouvelle mesure'
 
-    # Déduplique par date (garde la dernière mesure du jour)
     by_date: dict[str, dict] = {}
     for r in rows:
         by_date[r['date']] = r
@@ -127,7 +168,6 @@ def run_renpho_sync() -> str:
 
 if __name__ == '__main__':
     import sys, pathlib
-    # Charger .env si disponible
     env_path = pathlib.Path(__file__).parent.parent / '.env'
     if env_path.exists():
         for line in env_path.read_text().splitlines():
