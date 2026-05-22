@@ -256,17 +256,16 @@ def run_renpho_sync() -> str:
     # Fitness age (Nes et al. 2011) — depuis le VO2max Garmin le plus récent
     fitness_age = None
     try:
-        vo2_rows = (sb.table('wellness_days')
-                    .select('date, data')
-                    .order('date', desc=True)
-                    .limit(90)
+        vo2_rows = (sb.table('activities')
+                    .select('start_time, vo2max')
+                    .not_.is_('vo2max', 'null')
+                    .order('start_time', desc=True)
+                    .limit(1)
                     .execute())
-        for row in vo2_rows.data:
-            vo2 = (row.get('data') or {}).get('vo2max')
-            if vo2:
-                age = _age_from_birthday(profile['birthday'])
-                fitness_age = _calc_fitness_age(float(vo2), age, profile['is_male'])
-                break
+        if vo2_rows.data:
+            vo2 = vo2_rows.data[0]['vo2max']
+            age = _age_from_birthday(profile['birthday'])
+            fitness_age = _calc_fitness_age(float(vo2), age, profile['is_male'])
     except Exception:
         pass
 
