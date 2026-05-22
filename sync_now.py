@@ -3,10 +3,11 @@
 sync_now.py — Équivalent local du bouton "Synchroniser" de l'app.
 
 Usage :
-  python3 sync_now.py          # sync Garmin → Supabase
-  python3 sync_now.py --coach  # sync + mise à jour coach.json
-  python3 sync_now.py --plan   # sync + injection du plan d'entraînement dans Garmin Connect
-  python3 sync_now.py --coach --plan  # les deux
+  python3 sync_now.py                        # sync Garmin → Supabase
+  python3 sync_now.py --coach                # sync + mise à jour coach.json
+  python3 sync_now.py --plan                 # sync + injection du plan dans Garmin Connect
+  python3 sync_now.py --renpho               # sync + balance Renpho Health → Supabase
+  python3 sync_now.py --coach --plan --renpho  # tout
 """
 import os, sys, json, subprocess
 from datetime import datetime, timedelta
@@ -91,9 +92,18 @@ def run_sync():
     return result
 
 # ── Main ───────────────────────────────────────────────────────────────────────
+def _load_module(name, path):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod  = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 def main():
-    with_coach = '--coach' in sys.argv
-    with_plan  = '--plan'  in sys.argv
+    with_coach  = '--coach'  in sys.argv
+    with_plan   = '--plan'   in sys.argv
+    with_renpho = '--renpho' in sys.argv
 
     try:
         result = run_sync()
@@ -106,13 +116,7 @@ def main():
     if with_coach:
         print("\n🧠 Mise à jour du coach…")
         try:
-            import importlib.util
-            spec = importlib.util.spec_from_file_location(
-                'update_coach', os.path.join(BASE, 'update_coach.py')
-            )
-            mod = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(mod)
-            mod.main()
+            _load_module('update_coach', os.path.join(BASE, 'update_coach.py')).main()
         except Exception as e:
             print(f"⚠️  Erreur coach : {e}")
 
@@ -120,30 +124,19 @@ def main():
     if with_plan:
         print("\n📋 Injection du plan d'entraînement dans Garmin Connect…")
         try:
-            import importlib.util
-            spec = importlib.util.spec_from_file_location(
-                'push_plan', os.path.join(BASE, 'push_plan.py')
-            )
-            mod = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(mod)
-            mod.push_plan_to_garmin()
+            _load_module('push_plan', os.path.join(BASE, 'push_plan.py')).push_plan_to_garmin()
         except Exception as e:
             print(f"⚠️  Erreur plan : {e}")
             import traceback; traceback.print_exc()
 
-    # Sync Renpho (toujours inclus si les credentials sont présents)
-    print("\n⚖️  Sync Renpho…")
-    try:
-        import importlib.util
-        spec = importlib.util.spec_from_file_location(
-            'renpho_sync', os.path.join(BASE, 'api', 'renpho_sync.py')
-        )
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        msg = mod.run_renpho_sync()
-        print(f"   → {msg}")
-    except Exception as e:
-        print(f"⚠️  Erreur Renpho : {e}")
+    # Sync Renpho si demandé
+    if with_renpho:
+        print("\n⚖️  Sync Renpho Health…")
+        try:
+            msg = _load_module('renpho_sync', os.path.join(BASE, 'api', 'renpho_sync.py')).run_renpho_sync()
+            print(f"   → {msg}")
+        except Exception as e:
+            print(f"⚠️  Erreur Renpho : {e}")
 
 if __name__ == '__main__':
     main()
