@@ -18,12 +18,13 @@ from supabase import create_client
 
 RENPHO_BASE  = 'https://cloud.renpho.com'
 LOGIN_PATH   = '/renpho-aggregation/user/login'
+DEVICE_PATH  = '/renpho-aggregation/device/count'
 MEASURE_PATH = '/RenphoHealth/scale/queryAllMeasureDataList'
 
 _AES_KEY = b'ed*wijdi$h6fe3ew'
 
 
-def _encrypt(data: dict) -> str:
+def _encrypt(data) -> str:
     cipher = AES.new(_AES_KEY, AES.MODE_ECB)
     plaintext = json.dumps(data, separators=(',', ':')).encode()
     return base64.b64encode(cipher.encrypt(pad(plaintext, 16))).decode()
@@ -34,6 +35,16 @@ def _decrypt(enc_b64: str) -> dict:
     return json.loads(unpad(cipher.decrypt(base64.b64decode(enc_b64)), 16))
 
 
+def _headers(token: str, user_id: str) -> dict:
+    return {
+        'Content-Type': 'application/json',
+        'token': token,
+        'userId': user_id,
+        'appVersion': '7.0.0',
+        'platform': 'android',
+    }
+
+
 # ── Authentification ──────────────────────────────────────────────────────────
 def _renpho_login(email: str, password: str) -> tuple[str, str]:
     """Retourne (token, user_id)."""
@@ -42,8 +53,8 @@ def _renpho_login(email: str, password: str) -> tuple[str, str]:
         'login': {
             'email': email,
             'password': password,
-            'areaCode': '',
-            'appRevision': '3.0.0',
+            'areaCode': 'FR',
+            'appRevision': '7.0.0',
             'cellphoneType': '0',
             'systemType': '0',
             'platform': 'android',
@@ -69,44 +80,75 @@ def _renpho_login(email: str, password: str) -> tuple[str, str]:
     return token, user_id
 
 
-# ── Récupération des mesures ──────────────────────────────────────────────────
-def _fetch_measurements(token: str, user_id: str, last_at: str | None = None) -> list[dict]:
-    payload = {
-        'userId': user_id,
-        'lastDate': last_at.replace('-', '') if last_at else '19700101',
-    }
+# ── Récupération des balances ─────────────────────────────────────────────────
+def _get_scale_tables(token: str, user_id: str) -> list[dict]:
+    """Retourne [{table_name, user_ids}] pour chaque balance."""
     resp = requests.post(
-        RENPHO_BASE + MEASURE_PATH,
-        json={'encryptData': _encrypt(payload)},
-        headers={
-            'Content-Type': 'application/json',
-            'token': token,
-            'userId': user_id,
-            'appVersion': '3.0.0',
-            'platform': 'android',
-        },
+        RENPHO_BASE + DEVICE_PATH,
+        json={'encryptData': _encrypt({})},
+        headers=_headers(token, user_id),
         timeout=20,
     )
     resp.raise_for_status()
     outer = resp.json()
     if outer.get('code') not in (101, 200, '101', '200', 0, '0'):
-        raise ValueError(f'Renpho mesures error: {outer}')
-    inner = _decrypt(outer['data'])
-    return (inner.get('measureDataList')
-            or inner.get('list')
-            or inner.get('data')
-            or [])
+        raise ValueError(f'Device info error: {outer}')
+    inner  = _decrypt(outer['data'])
+    scales = inner.get('scale') or []
+    result = [
+        {
+            'table_name': s['tableName'],
+            'user_ids':   [str(uid) for uid in (s.get('userIds') or [user_id])],
+        }
+        for s in scales if s.get('tableName')
+    ]
+    return result or [{'table_name': 'scale_users', 'user_ids': [user_id]}]
+
+
+# ── Récupération des mesures ──────────────────────────────────────────────────
+def _fetch_measurements(token: str, user_id: str,
+                        table_name: str, user_ids: list[str]) -> list[dict]:
+    """Pagine toutes les mesures d'une balance."""
+    all_data: list[dict] = []
+    page = 1
+    while True:
+        payload = {
+            'pageNum':   page,
+            'pageSize':  50,
+            'tableName': table_name,
+            'userIds':   user_ids,
+        }
+        resp = requests.post(
+            RENPHO_BASE + MEASURE_PATH,
+            json={'encryptData': _encrypt(payload)},
+            headers=_headers(token, user_id),
+            timeout=20,
+        )
+        resp.raise_for_status()
+        outer = resp.json()
+        if outer.get('code') not in (101, 200, '101', '200', 0, '0'):
+            raise ValueError(f'Renpho mesures error: {outer}')
+        inner = _decrypt(outer['data'])
+        data  = (inner.get('measureDataList')
+                 or inner.get('list')
+                 or inner.get('data')
+                 or [])
+        if not data:
+            break
+        all_data.extend(data)
+        if len(data) < 50:
+            break
+        page += 1
+    return all_data
 
 
 # ── Normalisation d'une mesure ─────────────────────────────────────────────────
 def _normalize(m: dict) -> dict | None:
-    # Renpho Health peut utiliser measureTime (ms) ou timeStamp (s)
     ts = m.get('measureTime') or m.get('timeStamp') or m.get('time_stamp')
     if not ts:
         return None
     try:
         ts_int = int(ts)
-        # measureTime est en millisecondes si > 1e10
         if ts_int > 1_000_000_000_000:
             ts_int //= 1000
         dt   = datetime.fromtimestamp(ts_int, tz=timezone.utc)
@@ -151,10 +193,19 @@ def run_renpho_sync() -> str:
     last = sb.table('body_metrics').select('date').order('date', desc=True).limit(1).execute()
     last_at = last.data[0]['date'] if last.data else None
 
-    token, user_id = _renpho_login(email, password)
-    raw = _fetch_measurements(token, user_id, last_at)
+    token, user_id  = _renpho_login(email, password)
+    scale_tables    = _get_scale_tables(token, user_id)
+
+    raw: list[dict] = []
+    for st in scale_tables:
+        raw.extend(_fetch_measurements(token, user_id, st['table_name'], st['user_ids']))
 
     rows = [r for m in raw if (r := _normalize(m))]
+
+    # Filtre client-side si on a une date de référence
+    if last_at and rows:
+        rows = [r for r in rows if r['date'] >= last_at]
+
     if not rows:
         return 'Renpho : aucune nouvelle mesure'
 
