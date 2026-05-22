@@ -109,10 +109,10 @@ function renderBodyMetrics() {
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:16px;font-size:11px">
       ${last.water_pct     != null ? `<div style="${kpiStyle}"><div style="color:var(--muted);font-size:9px">Eau</div><b>${last.water_pct.toFixed(1)}%</b>${delta('water_pct')}</div>` : ''}
       ${last.bone_mass_kg  != null ? `<div style="${kpiStyle}"><div style="color:var(--muted);font-size:9px">Os</div><b>${last.bone_mass_kg.toFixed(2)} kg</b></div>` : ''}
-      ${last.bmr           != null ? `<div style="${kpiStyle}"><div style="color:var(--muted);font-size:9px">BMR</div><b>${Math.round(last.bmr)} kcal</b></div>` : ''}
+      ${last.bmr           != null ? `<div style="${kpiStyle}"><div style="color:var(--muted);font-size:9px">BMR <span style="opacity:.6">(Mifflin)</span></div><b>${Math.round(last.bmr)} kcal</b></div>` : ''}
       ${last.visceral_fat  != null ? `<div style="${kpiStyle}"><div style="color:var(--muted);font-size:9px">Graisse visc.</div><b>${last.visceral_fat.toFixed(0)}</b></div>` : ''}
       ${last.protein_pct   != null ? `<div style="${kpiStyle}"><div style="color:var(--muted);font-size:9px">Protéines</div><b>${last.protein_pct.toFixed(1)}%</b></div>` : ''}
-      ${last.body_age      != null ? `<div style="${kpiStyle}"><div style="color:var(--muted);font-size:9px">Âge corp.</div><b>${Math.round(last.body_age)} ans</b></div>` : ''}
+      ${last.body_age      != null ? `<div style="${kpiStyle}"><div style="color:var(--muted);font-size:9px">Âge forme <span style="opacity:.6">(NTNU)</span></div><b>${Math.round(last.body_age)} ans</b></div>` : ''}
     </div>
 
     <canvas id="chart-body-weight" style="max-height:160px"></canvas>`;
