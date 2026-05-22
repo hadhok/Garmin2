@@ -79,7 +79,12 @@ def _renpho_login(email: str, password: str) -> tuple[str, str]:
     user_id = str(login.get('id') or login.get('userId') or '')
     if not token:
         raise ValueError(f'Token absent dans {inner}')
-    return token, user_id
+    profile = {
+        'height_cm': login.get('height') or 170,
+        'is_male':   (login.get('gender') or 1) == 1,
+        'birthday':  login.get('birthday') or '',
+    }
+    return token, user_id, profile
 
 
 # ── Récupération des balances ─────────────────────────────────────────────────
@@ -147,8 +152,41 @@ def _fetch_measurements(token: str, user_id: str,
     return all_data
 
 
+# ── Formules cliniques validées ───────────────────────────────────────────────
+def _calc_bmr(weight_kg: float, height_cm: float, age: int, is_male: bool) -> int:
+    """Mifflin-St Jeor (2002) — formule de référence clinique."""
+    base = 10 * weight_kg + 6.25 * height_cm - 5 * age
+    return round(base + 5 if is_male else base - 161)
+
+
+def _calc_fitness_age(vo2max: float, age: int, is_male: bool) -> int:
+    """
+    Nes et al. (2011), Br J Sports Med — Fitness age NTNU.
+    Âge auquel le VO2max serait à la médiane populationnelle.
+    Borné entre 20 et 80 ans.
+    """
+    if is_male:
+        # 50e percentile hommes : VO2max = 58.5 - 0.475 × âge
+        fitness_age = (58.5 - vo2max) / 0.475
+    else:
+        # 50e percentile femmes : VO2max = 46.5 - 0.363 × âge
+        fitness_age = (46.5 - vo2max) / 0.363
+    return max(20, min(80, round(fitness_age)))
+
+
+def _age_from_birthday(birthday: str) -> int:
+    """Calcule l'âge à partir de 'YYYY-MM-DD'."""
+    try:
+        from datetime import date
+        bd = date.fromisoformat(birthday)
+        today = date.today()
+        return today.year - bd.year - ((today.month, today.day) < (bd.month, bd.day))
+    except Exception:
+        return 40  # fallback
+
+
 # ── Normalisation d'une mesure ─────────────────────────────────────────────────
-def _normalize(m: dict) -> dict | None:
+def _normalize(m: dict, profile: dict | None = None) -> dict | None:
     ts = m.get('measureTime') or m.get('timeStamp') or m.get('time_stamp')
     if not ts:
         return None
@@ -171,18 +209,26 @@ def _normalize(m: dict) -> dict | None:
                     pass
         return None
 
+    weight_kg = _f('weight', 'weightKg')
+
+    # BMR Mifflin-St Jeor si profil disponible
+    bmr = None
+    if profile and weight_kg:
+        age = _age_from_birthday(profile['birthday'])
+        bmr = _calc_bmr(weight_kg, profile['height_cm'], age, profile['is_male'])
+
     return {
         'date':            date,
-        'weight_kg':       _f('weight', 'weightKg'),
+        'weight_kg':       weight_kg,
         'bmi':             _f('bmi'),
         'body_fat_pct':    _f('bodyfat', 'bodyFat', 'fatRate'),
         'muscle_mass_pct': _f('muscle', 'muscleMass', 'muscleRate', 'sinew'),
         'bone_mass_kg':    _f('bone', 'boneMass'),
         'water_pct':       _f('water', 'waterRate'),
-        'bmr':             _f('bmr', 'metabolism'),
+        'bmr':             bmr,
         'visceral_fat':    _f('visfat', 'visceralFat', 'physique_rating'),
         'protein_pct':     _f('protein', 'proteinRate'),
-        'body_age':        _f('bodyage', 'bodyAge', 'body_age'),
+        'body_age':        None,  # remplacé par fitness_age calculé depuis VO2max
     }
 
 
@@ -195,25 +241,47 @@ def run_renpho_sync() -> str:
 
     sb = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])
 
-    token, user_id  = _renpho_login(email, password)
-    scale_tables    = _get_scale_tables(token, user_id)
+    token, user_id, profile = _renpho_login(email, password)
+    scale_tables = _get_scale_tables(token, user_id)
 
     raw: list[dict] = []
     for st in scale_tables:
         raw.extend(_fetch_measurements(token, user_id, st['table_name'], st['user_ids']))
 
-    rows = [r for m in raw if (r := _normalize(m))]
+    rows = [r for m in raw if (r := _normalize(m, profile))]
 
     if not rows:
         return 'Renpho : aucune nouvelle mesure'
+
+    # Fitness age (Nes et al. 2011) — depuis le VO2max Garmin le plus récent
+    fitness_age = None
+    try:
+        vo2_rows = (sb.table('wellness_days')
+                    .select('date, data')
+                    .order('date', desc=True)
+                    .limit(90)
+                    .execute())
+        for row in vo2_rows.data:
+            vo2 = (row.get('data') or {}).get('vo2max')
+            if vo2:
+                age = _age_from_birthday(profile['birthday'])
+                fitness_age = _calc_fitness_age(float(vo2), age, profile['is_male'])
+                break
+    except Exception:
+        pass
 
     by_date: dict[str, dict] = {}
     for r in rows:
         by_date[r['date']] = r
     rows = list(by_date.values())
 
+    # Injecte le fitness_age uniquement dans la mesure la plus récente
+    if fitness_age is not None and rows:
+        rows.sort(key=lambda r: r['date'])
+        rows[-1]['body_age'] = fitness_age
+
     sb.table('body_metrics').upsert(rows, on_conflict='date').execute()
-    return f'Renpho : {len(rows)} mesure(s) synchronisée(s)'
+    return f'Renpho : {len(rows)} mesure(s) synchronisée(s), BMR Mifflin-St Jeor, fitness age NTNU={fitness_age}'
 
 
 if __name__ == '__main__':
