@@ -27,6 +27,8 @@ def _renpho_login(email: str, password: str) -> str:
         json={'secure_flag': '1', 'email': email, 'password': pwd_hash},
         timeout=20,
     )
+    if not resp.ok:
+        print(f'[debug] status={resp.status_code} body={resp.text[:500]}')
     resp.raise_for_status()
     data = resp.json()
     token = (data.get('terminal_user_session_key')
