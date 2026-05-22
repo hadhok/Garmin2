@@ -131,5 +131,19 @@ def main():
             print(f"⚠️  Erreur plan : {e}")
             import traceback; traceback.print_exc()
 
+    # Sync Renpho (toujours inclus si les credentials sont présents)
+    print("\n⚖️  Sync Renpho…")
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            'renpho_sync', os.path.join(BASE, 'api', 'renpho_sync.py')
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        msg = mod.run_renpho_sync()
+        print(f"   → {msg}")
+    except Exception as e:
+        print(f"⚠️  Erreur Renpho : {e}")
+
 if __name__ == '__main__':
     main()
