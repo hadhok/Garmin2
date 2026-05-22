@@ -10,21 +10,35 @@ Variables d'environnement requises :
 Utilisation standalone :
   python3 api/renpho_sync.py
 """
-import os, json, hashlib, requests
+import os, json, base64, requests
 from datetime import datetime, timezone
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_v1_5
 from supabase import create_client
 
 RENPHO_BASE    = 'https://renpho.qnclouds.com'
 SIGN_IN_PATH   = '/api/v3/users/sign_in.json'
 MEASURES_PATH  = '/api/v3/measurements.json'
 
+_PUBLIC_KEY = """-----BEGIN PUBLIC KEY-----
+MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC+25I2upukpfQ7rIaaTZtVE744
+u2zV+HaagrUhDOTq8fMVf9yFQvEZh2/HKxFudUxP0dXUa8F6X4XmWumHdQnum3zm
+Jr04fz2b2WCcN0ta/rbF2nYAnMVAk2OJVZAMudOiMWhcxV1nNJiKgTNNr13de0EQ
+IiOL2CUBzu+HmIfUbQIDAQAB
+-----END PUBLIC KEY-----"""
+
+def _encrypt_password(password: str) -> str:
+    key    = RSA.import_key(_PUBLIC_KEY)
+    cipher = PKCS1_v1_5.new(key)
+    return base64.b64encode(cipher.encrypt(password.encode())).decode()
+
 # ── Authentification ──────────────────────────────────────────────────────────
 def _renpho_login(email: str, password: str) -> str:
     """Retourne le session_key Renpho."""
-    pwd_hash = hashlib.md5(password.encode()).hexdigest()
     resp = requests.post(
         RENPHO_BASE + SIGN_IN_PATH,
-        json={'email': email, 'password': pwd_hash},
+        params={'app_id': 'Renpho'},
+        json={'secure_flag': '1', 'email': email, 'password': _encrypt_password(password)},
         headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
         timeout=20,
     )
