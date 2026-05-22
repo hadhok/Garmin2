@@ -173,14 +173,14 @@ def _normalize(m: dict) -> dict | None:
         'date':            date,
         'weight_kg':       _f('weight', 'weightKg'),
         'bmi':             _f('bmi'),
-        'body_fat_pct':    _f('bodyFat', 'bodyfat', 'fatRate'),
-        'muscle_mass_pct': _f('muscleMass', 'muscle', 'muscleRate'),
-        'bone_mass_kg':    _f('boneMass', 'bone'),
-        'water_pct':       _f('waterRate', 'water'),
+        'body_fat_pct':    _f('bodyfat', 'bodyFat', 'fatRate'),
+        'muscle_mass_pct': _f('muscle', 'muscleMass', 'muscleRate', 'sinew'),
+        'bone_mass_kg':    _f('bone', 'boneMass'),
+        'water_pct':       _f('water', 'waterRate'),
         'bmr':             _f('bmr', 'metabolism'),
-        'visceral_fat':    _f('visceralFat', 'physique_rating'),
-        'protein_pct':     _f('proteinRate', 'protein'),
-        'body_age':        _f('bodyAge', 'body_age'),
+        'visceral_fat':    _f('visfat', 'visceralFat', 'physique_rating'),
+        'protein_pct':     _f('protein', 'proteinRate'),
+        'body_age':        _f('bodyage', 'bodyAge', 'body_age'),
     }
 
 
@@ -193,9 +193,6 @@ def run_renpho_sync() -> str:
 
     sb = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])
 
-    last = sb.table('body_metrics').select('date').order('date', desc=True).limit(1).execute()
-    last_at = last.data[0]['date'] if last.data else None
-
     token, user_id  = _renpho_login(email, password)
     scale_tables    = _get_scale_tables(token, user_id)
 
@@ -204,10 +201,6 @@ def run_renpho_sync() -> str:
         raw.extend(_fetch_measurements(token, user_id, st['table_name'], st['user_ids']))
 
     rows = [r for m in raw if (r := _normalize(m))]
-
-    # Filtre client-side si on a une date de référence
-    if last_at and rows:
-        rows = [r for r in rows if r['date'] >= last_at]
 
     if not rows:
         return 'Renpho : aucune nouvelle mesure'
