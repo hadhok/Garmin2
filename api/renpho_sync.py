@@ -256,16 +256,24 @@ def run_renpho_sync() -> str:
     # Fitness age (Nes et al. 2011) — depuis le VO2max Garmin le plus récent
     fitness_age = None
     try:
-        vo2_rows = (sb.table('activities')
-                    .select('start_time, vo2max')
-                    .not_.is_('vo2max', 'null')
-                    .order('start_time', desc=True)
-                    .limit(1)
-                    .execute())
-        if vo2_rows.data:
-            vo2 = vo2_rows.data[0]['vo2max']
-            age = _age_from_birthday(profile['birthday'])
-            fitness_age = _calc_fitness_age(float(vo2), age, profile['is_male'])
+        age = _age_from_birthday(profile['birthday'])
+        # Priorité : variable d'env RENPHO_VO2MAX (valeur Garmin manuelle)
+        vo2_env = os.environ.get('RENPHO_VO2MAX', '').strip()
+        if vo2_env:
+            fitness_age = _calc_fitness_age(float(vo2_env), age, profile['is_male'])
+        else:
+            # Médiane des 10 dernières activités avec VO2max (plus stable que le max)
+            vo2_rows = (sb.table('activities')
+                        .select('vo2max')
+                        .not_.is_('vo2max', 'null')
+                        .order('start_time', desc=True)
+                        .limit(10)
+                        .execute())
+            values = [float(r['vo2max']) for r in vo2_rows.data if r.get('vo2max')]
+            if values:
+                values.sort()
+                vo2 = values[len(values) // 2]  # médiane
+                fitness_age = _calc_fitness_age(vo2, age, profile['is_male'])
     except Exception:
         pass
 
