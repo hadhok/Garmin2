@@ -129,10 +129,13 @@ def _fetch_measurements(token: str, user_id: str,
         if outer.get('code') not in (101, 200, '101', '200', 0, '0'):
             raise ValueError(f'Renpho mesures error: {outer}')
         inner = _decrypt(outer['data'])
-        data  = (inner.get('measureDataList')
-                 or inner.get('list')
-                 or inner.get('data')
-                 or [])
+        if isinstance(inner, list):
+            data = inner
+        else:
+            data = (inner.get('measureDataList')
+                    or inner.get('list')
+                    or inner.get('data')
+                    or [])
         if not data:
             break
         all_data.extend(data)
