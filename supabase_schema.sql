@@ -54,8 +54,26 @@ CREATE TABLE IF NOT EXISTS sync_meta (
 
 INSERT INTO sync_meta (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
 
+-- ── Mesures corporelles Renpho (1 ligne / jour) ────────────
+CREATE TABLE IF NOT EXISTS body_metrics (
+  date            TEXT  PRIMARY KEY,   -- 'YYYY-MM-DD'
+  weight_kg       FLOAT,
+  bmi             FLOAT,
+  body_fat_pct    FLOAT,
+  muscle_mass_pct FLOAT,
+  bone_mass_kg    FLOAT,
+  water_pct       FLOAT,
+  bmr             FLOAT,               -- métabolisme basal (kcal)
+  visceral_fat    FLOAT,
+  protein_pct     FLOAT,
+  body_age        FLOAT
+);
+
+CREATE INDEX IF NOT EXISTS idx_body_metrics_date ON body_metrics(date DESC);
+
 -- ── Désactiver RLS (données privées, accès via service key) ─
 ALTER TABLE activities    DISABLE ROW LEVEL SECURITY;
 ALTER TABLE wellness_days DISABLE ROW LEVEL SECURITY;
 ALTER TABLE garmin_tokens DISABLE ROW LEVEL SECURITY;
 ALTER TABLE sync_meta     DISABLE ROW LEVEL SECURITY;
+ALTER TABLE body_metrics  DISABLE ROW LEVEL SECURITY;

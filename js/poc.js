@@ -61,6 +61,16 @@ const INFO_CONTENT = {
       { color: '#ef4444', label: '< 1.5 min/km — Faible réserve', desc: 'Profil spécialisé endurance, peu de vitesse maximale' },
     ]
   },
+  'body-metrics': {
+    title: 'Composition Corporelle (Renpho)',
+    text: 'Données synchronisées depuis votre balance Renpho. Chaque mesure inclut le poids, l\'IMC, la masse grasse, la masse musculaire, l\'hydratation et le métabolisme basal. La tendance est comparée à la mesure précédente.',
+    levels: [
+      { color: '#22c55e', label: 'IMC 18.5–24.9',        desc: 'Poids normal' },
+      { color: '#22c55e', label: 'Masse grasse < 22%',   desc: 'Athlétique / en forme (homme)' },
+      { color: '#f97316', label: 'Masse grasse 22–28%',  desc: 'Moyenne — marge de progression' },
+      { color: '#ef4444', label: 'Masse grasse > 28%',   desc: 'Élevée — impact sur performance' },
+    ]
+  },
 };
 
 function showInfoModal(key) {
@@ -851,4 +861,5 @@ function renderPOC() {
   safe(renderPocLongRatio);
   safe(renderPocPhase);
   safe(renderPocPaceReserve);
+  if (typeof renderBodyMetrics === 'function') safe(renderBodyMetrics);
 }

@@ -489,6 +489,12 @@
           <div class="card" id="poc-rhr-trend"></div>
         </div>
 
+        <!-- Composition corporelle Renpho -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">⚖️ Composition Corporelle <button class="info-btn" onclick="event.stopPropagation();showInfoModal('body-metrics')" title="En savoir plus">i</button> <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="card" id="renpho-body-metrics"></div>
+        </div>
+
         <!-- Recovery card (health.js) -->
         <div id="recovery-section" style="display:none;margin-bottom:20px">
           <div class="card recovery-card" id="recovery-card-inner"></div>
@@ -1237,6 +1243,7 @@
 <script src="/js/running.js"></script>
 <script src="/js/xplor.js"></script>
 <script src="/js/poc.js"></script>
+<script src="/js/renpho.js"></script>
 <script src="/js/help.js"></script>
 <script>
   if ('serviceWorker' in navigator) {

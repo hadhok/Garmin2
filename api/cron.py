@@ -4,6 +4,7 @@ import json, os, sys
 # Réutilise la logique de sync
 sys.path.insert(0, os.path.dirname(__file__))
 from sync import _run_sync
+from renpho_sync import run_renpho_sync
 
 
 class handler(BaseHTTPRequestHandler):
@@ -18,13 +19,19 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(b'{"error":"unauthorized"}')
             return
 
+        results = {}
         try:
-            msg  = _run_sync()
-            body = json.dumps({'status': 'ok', 'message': msg})
-            code = 200
+            results['garmin'] = _run_sync()
         except Exception as e:
-            body = json.dumps({'status': 'error', 'message': str(e)})
-            code = 500
+            results['garmin'] = f'error: {e}'
+
+        try:
+            results['renpho'] = run_renpho_sync()
+        except Exception as e:
+            results['renpho'] = f'error: {e}'
+
+        code = 200
+        body = json.dumps({'status': 'ok', 'results': results})
 
         self.send_response(code)
         self.send_header('Content-Type', 'application/json')

@@ -1349,6 +1349,9 @@ async function init() {
   // Load Xplor after other data so week plan projection includes gym sessions
   if (typeof loadXplorSessions === 'function') await loadXplorSessions();
 
+  // Load Renpho body metrics (non-blocking — silently skipped if not configured)
+  if (typeof loadBodyMetrics === 'function') await loadBodyMetrics();
+
   document.body.classList.remove('loading');
   if (syncDot) syncDot.classList.remove('syncing');
 
