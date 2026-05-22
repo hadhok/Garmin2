@@ -67,6 +67,8 @@ def _renpho_login(email: str, password: str) -> tuple[str, str]:
         headers={'Content-Type': 'application/json'},
         timeout=20,
     )
+    if not resp.ok:
+        print(f'[debug] status={resp.status_code} body={resp.text[:500]}')
     resp.raise_for_status()
     outer = resp.json()
     if outer.get('code') not in (101, 200, '101', '200', 0, '0'):
