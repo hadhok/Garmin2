@@ -1,38 +1,38 @@
 {
-  "updated_at": "2026-05-23",
+  "updated_at": "2026-05-24",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "progression",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 35.7,
-    "atl": 44.9,
-    "tsb": -9.1,
-    "effort_idx": 1.45,
-    "body_battery": 28.3,
+    "ctl": 40.4,
+    "atl": 67.3,
+    "tsb": -27.0,
+    "effort_idx": 1.26,
+    "body_battery": 26.3,
     "training_readiness": null,
     "niveau": "Sportif",
-    "total_activites": 217,
-    "total_km": 447
+    "total_activites": 218,
+    "total_km": 470
   },
   "items": [
     {
       "type": "warning",
       "icon": "💪",
       "title": "En progression — adaptation positive",
-      "text": "Effort pondéré 7j : 1.4× (1.0 = charge de base, >2 = intense). TSB -9 pts (CTL 35.7 / ATL 44.9). • HRV 37.9 ms (+3 ms vs S-1) • Sommeil 8.0h/nuit • Body Battery fin de journée : 28%"
+      "text": "Effort pondéré 7j : 1.3× (1.0 = charge de base, >2 = intense). TSB -27 pts (CTL 40.4 / ATL 67.3). • HRV 37.9 ms (+4 ms vs S-1) • Sommeil 8.0h/nuit • Body Battery fin de journée : 26%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "📊 manque de Zone 1-2 (57% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (21%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n🏃 Course : allure en régression (1.0 min/km plus lent — peut indiquer fatigue)"
+      "text": "📊 manque de Zone 1-2 (55% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (24%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n🏃 Course : allure en régression (1.0 min/km plus lent — peut indiquer fatigue)"
     },
     {
       "type": "goal",
       "icon": "📋",
       "title": "Prescription : Récupération active",
-      "text": "20-30 min de marche, mobilité ou yoga. Pas de cardio. Objectif : ne pas aggraver la fatigue. — Z1 uniquement — FC < 120 bpm"
+      "text": "Hier : Aerobic Base (hike). 20-30 min de marche, mobilité ou yoga. Pas de cardio. Objectif : ne pas aggraver la fatigue. — Z1 uniquement — FC < 120 bpm"
     }
   ]
 }
