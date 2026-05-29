@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-05-28",
+  "updated_at": "2026-05-29",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "maintien",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 39.7,
-    "atl": 47.9,
-    "tsb": -8.2,
-    "effort_idx": 1.09,
-    "body_battery": 13.3,
+    "ctl": 38.7,
+    "atl": 41.0,
+    "tsb": -2.3,
+    "effort_idx": 1.0,
+    "body_battery": 10.0,
     "training_readiness": null,
     "niveau": "Sportif",
     "total_activites": 220,
@@ -20,13 +20,13 @@
       "type": "warning",
       "icon": "🟢",
       "title": "En maintien — charge stable",
-      "text": "Effort pondéré 7j : 1.1× (1.0 = charge de base, >2 = intense). TSB -8 pts (CTL 39.7 / ATL 47.9). • HRV 37.1 ms (-1 ms vs S-1) • Sommeil 7.5h/nuit • Body Battery fin de journée : 13%"
+      "text": "Effort pondéré 7j : 1.0× (1.0 = charge de base, >2 = intense). TSB -2 pts (CTL 38.7 / ATL 41.0). • HRV 36.9 ms (-2 ms vs S-1) • Sommeil 7.4h/nuit • Body Battery fin de journée : 10%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "📊 Zone 3 trop présente (24%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n🏃 Course : allure en régression (1.0 min/km plus lent — peut indiquer fatigue)"
+      "text": "💤 Sommeil limite (7.4h) — vise 7h30 minimum\n📊 Zone 3 trop présente (24%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n🏃 Course : allure en régression (1.0 min/km plus lent — peut indiquer fatigue)"
     },
     {
       "type": "goal",
