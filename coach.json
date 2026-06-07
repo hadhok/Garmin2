@@ -5,28 +5,28 @@
     "phase": "progression",
     "fatigue_level": "balanced",
     "garmin_status": null,
-    "ctl": 41.8,
-    "atl": 43.6,
-    "tsb": -1.8,
+    "ctl": 41.9,
+    "atl": 44.3,
+    "tsb": -2.3,
     "effort_idx": 1.08,
     "body_battery": 31.3,
     "training_readiness": null,
     "niveau": "Sportif",
-    "total_activites": 228,
-    "total_km": 551
+    "total_activites": 229,
+    "total_km": 567
   },
   "items": [
     {
       "type": "tip",
       "icon": "💪",
       "title": "En progression — adaptation positive",
-      "text": "Effort pondéré 7j : 1.1× (1.0 = charge de base, >2 = intense). TSB -2 pts (CTL 41.8 / ATL 43.6). • HRV 40.5 ms (+6 ms vs S-1) • Sommeil 7.7h/nuit • Body Battery fin de journée : 31%"
+      "text": "Effort pondéré 7j : 1.1× (1.0 = charge de base, >2 = intense). TSB -2 pts (CTL 41.9 / ATL 44.3). • HRV 40.5 ms (+6 ms vs S-1) • Sommeil 7.7h/nuit • Body Battery fin de journée : 31%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "✅ Structure d'entraînement basse intensité (manque de stimulus) sur 9 séances analysées\n🏃 Course : allure en régression (0.5 min/km plus lent — peut indiquer fatigue)"
+      "text": "✅ Structure d'entraînement basse intensité (manque de stimulus) sur 10 séances analysées\n🏃 Course : allure en régression (0.5 min/km plus lent — peut indiquer fatigue)"
     },
     {
       "type": "goal",
