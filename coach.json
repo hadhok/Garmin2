@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-06-07",
+  "updated_at": "2026-06-09",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "progression",
-    "fatigue_level": "balanced",
+    "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 41.9,
-    "atl": 44.3,
-    "tsb": -2.3,
-    "effort_idx": 1.08,
-    "body_battery": 31.3,
+    "ctl": 39.9,
+    "atl": 32.5,
+    "tsb": 7.4,
+    "effort_idx": 1.28,
+    "body_battery": 29.3,
     "training_readiness": null,
     "niveau": "Sportif",
     "total_activites": 229,
@@ -17,22 +17,22 @@
   },
   "items": [
     {
-      "type": "tip",
+      "type": "warning",
       "icon": "💪",
       "title": "En progression — adaptation positive",
-      "text": "Effort pondéré 7j : 1.1× (1.0 = charge de base, >2 = intense). TSB -2 pts (CTL 41.9 / ATL 44.3). • HRV 40.5 ms (+6 ms vs S-1) • Sommeil 7.7h/nuit • Body Battery fin de journée : 31%"
+      "text": "Effort pondéré 7j : 1.3× (1.0 = charge de base, >2 = intense). TSB +7 pts (CTL 39.9 / ATL 32.5). • HRV 41.1 ms (+3 ms vs S-1) • Sommeil 7.8h/nuit • Body Battery fin de journée : 29%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "✅ Structure d'entraînement basse intensité (manque de stimulus) sur 10 séances analysées\n🏃 Course : allure en régression (0.5 min/km plus lent — peut indiquer fatigue)"
+      "text": "✅ Structure d'entraînement basse intensité (manque de stimulus) sur 8 séances analysées\n🏃 Course : allure en régression (0.5 min/km plus lent — peut indiquer fatigue)"
     },
     {
       "type": "goal",
       "icon": "📋",
-      "title": "Prescription : Séance légère — Zone 2",
-      "text": "Hier : Récupération (hike). 45-60 min à allure conversationnelle. Course lente, vélo ou natation à faible intensité. — Z2 — 60-70% FCmax"
+      "title": "Prescription : Récupération active",
+      "text": "20-30 min de marche, mobilité ou yoga. Pas de cardio. Objectif : ne pas aggraver la fatigue. — Z1 uniquement — FC < 120 bpm"
     }
   ]
 }
