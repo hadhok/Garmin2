@@ -107,10 +107,16 @@ def _deciplus_login(email: str, password: str) -> tuple[str, str]:
     """Retourne (token, club_slug). Essaie plusieurs URLs d'authentification."""
     slug_pref = os.environ.get('DECIPLUS_CLUB_SLUG', '').strip()
 
-    # Essaie d'abord l'URL avec le slug du club si configuré
-    auth_urls = [_AUTHENTICATE_URL]
+    # Essaie d'abord l'URL avec le slug du club (pattern vu sur member-app.deciplus.pro/{slug}/signIn)
+    auth_urls = []
     if slug_pref:
-        auth_urls.insert(0, f'https://api.deciplus.pro/{slug_pref}/members/v1/authenticate')
+        auth_urls += [
+            f'https://api.deciplus.pro/{slug_pref}/deciplus-members/v1/authenticate',
+            f'https://api.deciplus.pro/{slug_pref}/members/v1/authenticate',
+        ]
+    auth_urls += [
+        _AUTHENTICATE_URL,  # https://api.deciplus.pro/deciplus-members/v1/authenticate
+    ]
 
     last_err = None
     resp = None
