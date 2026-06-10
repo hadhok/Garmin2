@@ -1,6 +1,9 @@
 /* ══════════════════════════════════════════════════════════
-   XPLOR ACTIVE — API Deciplus directe
+   XPLOR ACTIVE — API Deciplus (login côté navigateur)
    ══════════════════════════════════════════════════════════ */
+
+const _DECIPLUS_AUTH_URL     = 'https://api.deciplus.pro/deciplus-members/v1/authenticate';
+const _DECIPLUS_BOOKINGS_URL = 'https://api.deciplus.pro/members/v1/bookings/upcoming';
 
 let _xplorSessions    = [];
 let _xplorLoaded      = false;
@@ -11,9 +14,9 @@ async function loadXplorSessions() {
     const r = await fetch('/api/xplor');
     if (!r.ok) return;
     const data = await r.json();
-    _xplorSessions     = data.sessions || [];
+    _xplorSessions      = data.sessions || [];
     _xplorApiConfigured = data.api_configured || false;
-    _xplorLoaded       = true;
+    _xplorLoaded        = true;
   } catch (e) {
     console.warn('[xplor] load', e);
   }
@@ -21,21 +24,61 @@ async function loadXplorSessions() {
 
 function getXplorSessions()  { return _xplorSessions; }
 function isXplorConfigured() { return _xplorApiConfigured; }
-
 function getXplorByDate(dateIso) {
   return _xplorSessions.filter(s => s.date === dateIso);
 }
 
-/* ── Sync manuelle ────────────────────────────────────────────────────────── */
+/* ── Login Deciplus depuis le navigateur ──────────────────────────────────── */
+async function _deciplusLogin(email, password) {
+  const r = await fetch(_DECIPLUS_AUTH_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!r.ok) {
+    const err = await r.text().catch(() => '');
+    throw new Error(`Login échoué (${r.status})${err ? ' : ' + err : ''}`);
+  }
+  const data = await r.json();
+  const clubs = data?.tokens?.clubs;
+  if (!clubs) throw new Error('Réponse inattendue : ' + JSON.stringify(data).slice(0, 200));
+  const slug  = Object.keys(clubs)[0];
+  const token = clubs[slug][0]?.token || clubs[slug]?.token;
+  return { token, slug };
+}
+
+/* ── Récupération des réservations depuis le navigateur ───────────────────── */
+async function _deciplusFetchBookings(token) {
+  const r = await fetch(_DECIPLUS_BOOKINGS_URL, {
+    headers: { 'x-access-token': token, 'Accept': 'application/json' },
+  });
+  if (!r.ok) throw new Error(`Bookings échoué (${r.status})`);
+  const data = await r.json();
+  return data.bookings || [];
+}
+
+/* ── Sync : login navigateur → envoie les séances au serveur ─────────────── */
 async function syncXplor(btnEl) {
   const orig = btnEl ? btnEl.innerHTML : '';
   if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '⏳'; }
 
   try {
+    // Récupère les credentials stockés localement
+    const email    = localStorage.getItem('deciplus_email') || '';
+    const password = localStorage.getItem('deciplus_password') || '';
+    if (!email || !password) {
+      showXplorSetup();
+      return;
+    }
+
+    const { token, slug } = await _deciplusLogin(email, password);
+    const bookings = await _deciplusFetchBookings(token);
+
+    // Envoie au serveur pour stockage Supabase
     const r = await fetch('/api/xplor', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'sync' }),
+      body: JSON.stringify({ action: 'store_bookings', bookings, slug }),
     });
     const data = await r.json();
     if (data.error) {
@@ -45,8 +88,8 @@ async function syncXplor(btnEl) {
       if (typeof markAllDirty === 'function') markAllDirty();
       if (typeof renderAll   === 'function') renderAll();
       const msg = data.synced > 0
-        ? `✓ ${data.synced} séance${data.synced > 1 ? 's' : ''} importée${data.synced > 1 ? 's' : ''}${data.slug ? ` (${data.slug})` : ''}`
-        : (data.message || '✓ Aucune nouvelle séance');
+        ? `✓ ${data.synced} séance${data.synced > 1 ? 's' : ''} importée${data.synced > 1 ? 's' : ''} (${slug})`
+        : (data.message || '✓ Aucune séance à venir');
       _showXplorBanner(msg, 'ok');
     }
   } catch (e) {
@@ -56,10 +99,12 @@ async function syncXplor(btnEl) {
   }
 }
 
-/* ── Dialog de debug API ──────────────────────────────────────────────────── */
+/* ── Dialog login ─────────────────────────────────────────────────────────── */
 function showXplorSetup() {
   const existing = document.getElementById('xplor-setup-overlay');
   if (existing) { existing.remove(); return; }
+
+  const savedEmail = localStorage.getItem('deciplus_email') || '';
 
   const overlay = document.createElement('div');
   overlay.id = 'xplor-setup-overlay';
@@ -71,40 +116,45 @@ function showXplorSetup() {
     <div style="background:var(--surface);border-radius:16px;padding:24px;max-width:500px;width:100%;
                 box-shadow:0 24px 48px rgba(0,0,0,.2);margin:auto">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-        <div style="font-size:16px;font-weight:700">𝕏 Xplor Active — Réglages</div>
+        <div style="font-size:16px;font-weight:700">𝕏 Xplor Active — Connexion</div>
         <button onclick="document.getElementById('xplor-setup-overlay').remove()"
           style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted)">✕</button>
       </div>
 
-      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;padding:10px;
-                  background:var(--surface2);border-radius:8px;line-height:1.6">
-        L'authentification utilise les variables d'environnement<br>
-        <code style="color:#6366f1">DECIPLUS_EMAIL</code> et <code style="color:#6366f1">DECIPLUS_PASSWORD</code>
-        configurées sur le serveur.<br>
-        Statut : ${_xplorApiConfigured
-          ? '<span style="color:#22c55e">✓ Identifiants configurés</span>'
-          : '<span style="color:#ef4444">✗ Variables non configurées</span>'}
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6">
+        Identifiants de ton compte <b>Xplor Active / Deciplus</b>.<br>
+        Stockés localement sur cet appareil uniquement.
       </div>
 
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px">Email</label>
+      <input id="xplor-email-input" type="email" placeholder="ton@email.com" value="${savedEmail}"
+        style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;
+               background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box;margin-bottom:10px" />
+
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px">Mot de passe</label>
+      <input id="xplor-password-input" type="password" placeholder="••••••••"
+        style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;
+               background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box;margin-bottom:14px" />
+
       <div id="xplor-debug-zone" style="display:none;margin-bottom:14px;padding:10px;background:var(--surface2);
-           border-radius:8px;font-size:11px;font-family:monospace;max-height:200px;overflow-y:auto;
+           border-radius:8px;font-size:11px;font-family:monospace;max-height:160px;overflow-y:auto;
            color:var(--text2);white-space:pre-wrap;word-break:break-all"></div>
 
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button onclick="_debugDeciplus(this)"
+        <button onclick="_deciplusLoginTest(this)"
           style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;
                  background:none;color:var(--muted);cursor:pointer;font-size:12px">
-          🔍 Tester la connexion
-        </button>
-        <button onclick="_syncFromDialog(this)"
-          style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;
-                 background:none;color:var(--muted);cursor:pointer;font-size:12px">
-          ↺ Sync
+          🔍 Tester
         </button>
         <button onclick="document.getElementById('xplor-setup-overlay').remove()"
+          style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;
+                 background:none;color:var(--muted);cursor:pointer;font-size:12px">
+          Annuler
+        </button>
+        <button onclick="_saveAndSyncDeciplus(this)"
           style="flex:1;padding:8px 14px;border:none;border-radius:8px;background:#6366f1;
                  color:#fff;font-weight:600;cursor:pointer;font-size:13px">
-          Fermer
+          Enregistrer et synchroniser
         </button>
       </div>
     </div>`;
@@ -113,55 +163,83 @@ function showXplorSetup() {
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
 }
 
-async function _syncFromDialog(btnEl) {
+async function _getDialogCredentials() {
+  const email    = document.getElementById('xplor-email-input')?.value?.trim();
+  const password = document.getElementById('xplor-password-input')?.value?.trim();
+  if (!email || !password) throw new Error('Email et mot de passe requis');
+  return { email, password };
+}
+
+async function _deciplusLoginTest(btnEl) {
+  const zone = document.getElementById('xplor-debug-zone');
+  zone.style.display = 'block';
+  zone.textContent = '⏳ Connexion…';
+  btnEl.disabled = true;
+  try {
+    const { email, password } = await _getDialogCredentials();
+    const { token, slug } = await _deciplusLogin(email, password);
+    const bookings = await _deciplusFetchBookings(token);
+    zone.textContent = `✓ Connecté — club: ${slug}\n${bookings.length} réservation(s) à venir`;
+  } catch (e) {
+    zone.textContent = '❌ ' + e;
+  } finally {
+    btnEl.disabled = false;
+  }
+}
+
+async function _saveAndSyncDeciplus(btnEl) {
+  const zone = document.getElementById('xplor-debug-zone');
+  zone.style.display = 'block';
   const orig = btnEl.innerHTML;
   btnEl.disabled = true; btnEl.innerHTML = '⏳';
   try {
+    const { email, password } = await _getDialogCredentials();
+    zone.textContent = '⏳ Connexion à Deciplus…';
+
+    const { token, slug } = await _deciplusLogin(email, password);
+    zone.textContent = `✓ Connecté (${slug})\n⏳ Récupération des séances…`;
+
+    const bookings = await _deciplusFetchBookings(token);
+    zone.textContent += `\n✓ ${bookings.length} réservation(s) — envoi au serveur…`;
+
+    // Sauvegarde locale des credentials
+    localStorage.setItem('deciplus_email', email);
+    localStorage.setItem('deciplus_password', password);
+
+    // Envoie au serveur pour stockage Supabase
     const r = await fetch('/api/xplor', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'sync' }),
+      body: JSON.stringify({ action: 'store_bookings', bookings, slug }),
     });
     const data = await r.json();
-    const zone = document.getElementById('xplor-debug-zone');
-    if (zone) {
-      zone.style.display = 'block';
-      zone.textContent = data.error
-        ? '❌ ' + data.error
-        : `✓ ${data.synced ?? 0} séance(s) importée(s)${data.slug ? ` — club: ${data.slug}` : ''}${data.message ? '\n' + data.message : ''}`;
-    }
-    if (!data.error) {
-      await loadXplorSessions();
-      if (typeof markAllDirty === 'function') markAllDirty();
-      if (typeof renderAll   === 'function') renderAll();
-    }
+    if (data.error) throw new Error(data.error);
+
+    zone.textContent += `\n✓ ${data.synced} séance(s) enregistrée(s)`;
+    await loadXplorSessions();
+    if (typeof markAllDirty === 'function') markAllDirty();
+    if (typeof renderAll   === 'function') renderAll();
+    setTimeout(() => document.getElementById('xplor-setup-overlay')?.remove(), 1500);
   } catch (e) {
-    const zone = document.getElementById('xplor-debug-zone');
-    if (zone) { zone.style.display = 'block'; zone.textContent = '❌ ' + e; }
-  } finally {
+    zone.textContent = (zone.textContent.includes('⏳') ? zone.textContent.replace(/⏳[^\n]*/g, '') + '\n' : '') + '❌ ' + e;
     btnEl.disabled = false; btnEl.innerHTML = orig;
   }
 }
 
-/* ── Debug : teste la connexion API et affiche les réservations brutes ──── */
+/* ── Debug legacy (kept for compat) ──────────────────────────────────────── */
 async function _debugDeciplus(btnEl) {
   const zone = document.getElementById('xplor-debug-zone');
   if (!zone) return;
   zone.style.display = 'block';
-  zone.textContent = '⏳ Connexion à l\'API Deciplus…';
+  zone.textContent = '⏳ Connexion…';
   btnEl.disabled = true;
-
   try {
-    const r = await fetch('/api/xplor', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'debug' }),
-    });
-    const data = await r.json();
-    if (data.error) {
-      zone.textContent = '❌ ' + data.error;
-    } else {
-      const lines = [`✓ Connecté — club: ${data.slug}\n${data.raw_count} réservation(s) à venir\n`];
+    const email    = localStorage.getItem('deciplus_email') || '';
+    const password = localStorage.getItem('deciplus_password') || '';
+    if (!email || !password) { zone.textContent = '❌ Aucun identifiant sauvegardé'; return; }
+    const { token, slug } = await _deciplusLogin(email, password);
+    const bookings = await _deciplusFetchBookings(token);
+    const lines = [`✓ Connecté — club: ${slug}\n${bookings.length} réservation(s) à venir\n`];
       (data.sample || []).forEach((item, i) => {
         const b = item.booking || item;
         lines.push(`── ${i+1}. ${b.startDate?.slice(0,10) || '?'} ──`);

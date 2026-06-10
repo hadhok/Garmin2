@@ -174,20 +174,10 @@ def _estimate_load(act_type: str, duration_min: int, sb) -> tuple:
 
 
 # ── Sync principal ────────────────────────────────────────────────────────────
-def _do_sync_api(sb) -> dict:
-    email    = os.environ.get('DECIPLUS_EMAIL', '').strip()
-    password = os.environ.get('DECIPLUS_PASSWORD', '').strip()
-    if not email or not password:
-        return {'error': 'DECIPLUS_EMAIL / DECIPLUS_PASSWORD non configurés'}
-
-    try:
-        token, slug = _deciplus_login(email, password)
-    except Exception as e:
-        return {'error': f'Login Deciplus échoué : {e}'}
-
-    raw_bookings = _get_upcoming_bookings(token)
+def _process_bookings(raw_bookings: list, slug: str, sb) -> dict:
+    """Normalise et stocke les réservations brutes en base."""
     if not raw_bookings:
-        return {'ok': True, 'synced': 0, 'message': f'Aucune réservation à venir (club: {slug})', 'slug': slug}
+        return {'ok': True, 'synced': 0, 'message': 'Aucune réservation reçue', 'slug': slug}
 
     now    = datetime.now()
     cutoff = now + timedelta(days=30)
@@ -201,9 +191,7 @@ def _do_sync_api(sb) -> dict:
 
         if not start_str:
             continue
-
         try:
-            # Parse ISO datetime (avec ou sans Z)
             start_dt = datetime.fromisoformat(start_str.replace('Z', '+00:00')).astimezone().replace(tzinfo=None)
         except Exception:
             continue
@@ -221,7 +209,6 @@ def _do_sync_api(sb) -> dict:
         duration = int((end_dt - start_dt).total_seconds() / 60) if end_dt else 60
         act_type = _classify(name)
         load, conf = _estimate_load(act_type, duration, sb)
-
         uid = b.get('id') or b.get('bookingId') or f"{start_dt.isoformat()}_{name[:20]}"
         sessions.append({
             'id':              f'xplor_{re.sub(r"[^a-zA-Z0-9]", "_", str(uid))[:60]}',
@@ -245,7 +232,6 @@ def _do_sync_api(sb) -> dict:
     for i in range(0, len(sessions), 50):
         sb.table('planned_sessions').upsert(sessions[i:i+50]).execute()
 
-    # Marquer les séances déjà réalisées
     try:
         today = now.strftime('%Y-%m-%d')
         acts  = (sb.table('activities').select('date,type').gte('date', today).execute()).data or []
@@ -257,6 +243,21 @@ def _do_sync_api(sb) -> dict:
         pass
 
     return {'ok': True, 'synced': len(sessions), 'slug': slug}
+
+
+def _do_sync_api(sb) -> dict:
+    email    = os.environ.get('DECIPLUS_EMAIL', '').strip()
+    password = os.environ.get('DECIPLUS_PASSWORD', '').strip()
+    if not email or not password:
+        return {'error': 'DECIPLUS_EMAIL / DECIPLUS_PASSWORD non configurés'}
+
+    try:
+        token, slug = _deciplus_login(email, password)
+    except Exception as e:
+        return {'error': f'Login Deciplus échoué : {e}'}
+
+    raw_bookings = _get_upcoming_bookings(token)
+    return _process_bookings(raw_bookings, slug, sb)
 
 
 # ── Legacy iCal sync (conservé pour rétrocompatibilité) ──────────────────────
@@ -325,6 +326,18 @@ class handler(BaseHTTPRequestHandler):
             sb     = self._sb()
 
             if action in ('sync', 'sync_ical'):
+                self._reply(200, _do_sync_api(sb))
+
+            elif action == 'store_bookings':
+                # Reçoit les réservations brutes depuis le navigateur (login côté client)
+                raw_bookings = body.get('bookings', [])
+                slug         = body.get('slug', 'unknown')
+                if not raw_bookings:
+                    self._reply(200, {'ok': True, 'synced': 0, 'message': 'Aucune réservation reçue'})
+                    return
+                self._reply(200, _process_bookings(raw_bookings, slug, sb))
+
+            elif action in ('sync', 'sync_ical'):
                 self._reply(200, _do_sync_api(sb))
 
             elif action == 'debug':
