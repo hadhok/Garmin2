@@ -1,12 +1,19 @@
 """
-Xplor Active — import via flux iCal.
+Xplor Active (Deciplus) — synchronisation via API REST directe.
+
+Variables d'environnement requises :
+  DECIPLUS_EMAIL     — email du compte Xplor Active / Deciplus
+  DECIPLUS_PASSWORD  — mot de passe
+
+Variables optionnelles :
+  DECIPLUS_CLUB_SLUG — slug du club (ex: girondinsfitness). Si absent, le premier
+                       club trouvé dans la réponse d'authentification est utilisé.
 
 GET  /api/xplor               → sessions planifiées depuis Supabase
-POST /api/xplor {"action":"sync_ical"}              → sync depuis l'URL iCal stockée
-POST /api/xplor {"action":"save_url","url":"..."}   → enregistre l'URL iCal dans Supabase
+POST /api/xplor {"action":"sync"}          → sync depuis l'API Deciplus
+POST /api/xplor {"action":"sync_ical"}     → (legacy) sync depuis iCal si configuré
 
 Setup Supabase (une seule fois) :
-  -- Table des séances planifiées
   CREATE TABLE IF NOT EXISTS planned_sessions (
     id              TEXT PRIMARY KEY,
     source          TEXT DEFAULT 'xplor',
@@ -23,31 +30,23 @@ Setup Supabase (une seule fois) :
     raw             JSONB,
     synced_at       TIMESTAMPTZ DEFAULT NOW()
   );
-
-  -- Clé de config (réutilise la table sync_meta si elle existe, sinon crée app_settings)
   CREATE TABLE IF NOT EXISTS app_settings (
     key   TEXT PRIMARY KEY,
     value TEXT
   );
-
-Comment obtenir son URL iCal Xplor Active :
-  1. Dans l'app Xplor Active, réserve une séance et utilise "Ajouter au calendrier"
-     → choisir Google Calendar ou Apple Calendar
-  2. Option A — Google Calendar :
-       • Ouvre calendar.google.com → les 3 points à côté du calendrier "Xplor" → Paramètres
-       → Adresse secrète au format iCal → copie l'URL
-  3. Option B — Apple Calendar :
-       • Fichier → Exporter → Export… n'est pas un flux ; utilise plutôt une app tierce
-       ou partage le calendrier iCal depuis iCloud
-  4. Colle l'URL dans le champ "iCal Xplor" du dashboard (onglet Entraînement → Plan de la semaine)
 """
 
 from http.server import BaseHTTPRequestHandler
-import json, os, re
+import json, os, re, urllib.request, urllib.error
 from datetime import datetime, timedelta, timezone
-from urllib.request import urlopen, Request
 
-# ── Type mapping depuis le nom de la séance ─────────────────────────────────
+# ── Deciplus API ─────────────────────────────────────────────────────────────
+_DECIPLUS_BASE         = 'https://api.deciplus.pro'
+_AUTHENTICATE_URL      = f'{_DECIPLUS_BASE}/deciplus-members/v1/authenticate'
+_BOOKINGS_UPCOMING_URL = f'{_DECIPLUS_BASE}/members/v1/bookings/upcoming'
+_ACTIVITIES_URL        = f'{_DECIPLUS_BASE}/members/v1/activities/upcoming'
+
+# ── Type mapping ─────────────────────────────────────────────────────────────
 _TYPE_RULES = [
     (['spinning', 'cycling', 'vélo', 'indoor cycling', 'rpm', 'biking'],  'bike'),
     (['natation', 'aqua', 'swim', 'nage'],                                 'swim'),
@@ -84,114 +83,46 @@ def _classify(name: str) -> str:
     return 'other'
 
 
-def _parse_dt(s: str) -> datetime | None:
-    """Parse iCal datetime: 20260520T100000Z, 20260520T100000, 20260520"""
-    s = s.strip().split(';')[-1]  # remove TZID= prefix if any
-    if ':' in s:
-        s = s.split(':')[-1]  # TZID=Europe/Paris:20260520T100000
-    s = s.strip()
-    fmts = [
-        ('%Y%m%dT%H%M%SZ', timezone.utc),
-        ('%Y%m%dT%H%M%S',  None),
-        ('%Y%m%d',          None),
-    ]
-    for fmt, tz in fmts:
-        try:
-            dt = datetime.strptime(s[:len(fmt.replace('%', '').replace('Y','yyyy').replace('m','mm').replace('d','dd').replace('H','hh').replace('M','mm').replace('S','ss'))], fmt)
-            return dt.replace(tzinfo=tz) if tz else dt
-        except Exception:
-            pass
-    # Fallback: try common lengths
-    for fmt in ('%Y%m%dT%H%M%SZ', '%Y%m%dT%H%M%S', '%Y%m%d'):
-        try:
-            return datetime.strptime(s[:len(fmt.replace('%Y','1234').replace('%m','12').replace('%d','31').replace('%H','23').replace('%M','59').replace('%S','59').replace('T','T').replace('Z','Z'))], fmt)
-        except Exception:
-            pass
-    return None
+# ── HTTP helpers ──────────────────────────────────────────────────────────────
+def _http(url: str, method: str = 'GET', body: dict = None, token: str = None) -> dict:
+    data = json.dumps(body).encode() if body else None
+    headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+    if token:
+        headers['x-access-token'] = token
+    req = urllib.request.Request(url, data=data, headers=headers, method=method)
+    with urllib.request.urlopen(req, timeout=15) as r:
+        return json.loads(r.read())
 
 
-def _parse_dt_simple(s: str) -> datetime | None:
-    """Simplified parser for common iCal date formats. Returns naive local datetime."""
-    s = re.sub(r'^.*:', '', s.strip())  # strip TZID= prefix
-    is_utc = s.strip().endswith('Z')
-    s = s.strip().rstrip('Z')
-    for fmt in ('%Y%m%dT%H%M%S', '%Y%m%d'):
-        try:
-            l  = len(fmt.replace('%Y','1234').replace('%m','12').replace('%d','31')
-                        .replace('%H','23').replace('%M','59').replace('%S','59'))
-            dt = datetime.strptime(s[:l], fmt)
-            if is_utc:
-                # Convert UTC → local so comparisons with datetime.now() are correct
-                dt = dt.replace(tzinfo=timezone.utc).astimezone().replace(tzinfo=None)
-            return dt
-        except Exception:
-            pass
-    return None
+# ── Deciplus auth ─────────────────────────────────────────────────────────────
+def _deciplus_login(email: str, password: str) -> tuple[str, str]:
+    """Retourne (token, club_slug)."""
+    resp = _http(_AUTHENTICATE_URL, 'POST', {'email': email, 'password': password})
+    clubs = resp.get('tokens', {}).get('clubs', {})
+    if not clubs:
+        raise ValueError(f'Authentification Deciplus échouée : {resp}')
+
+    slug_pref = os.environ.get('DECIPLUS_CLUB_SLUG', '').strip()
+    if slug_pref and slug_pref in clubs:
+        slug = slug_pref
+    else:
+        slug = next(iter(clubs))
+
+    token_list = clubs[slug]
+    token = token_list[0]['token'] if isinstance(token_list, list) else token_list['token']
+    return token, slug
 
 
-def _parse_ical(text: str) -> list[dict]:
-    """Parse iCal text, return list of event dicts."""
-    events = []
-    blocks = re.split(r'\r?\nBEGIN:VEVENT\r?\n', text, flags=re.IGNORECASE)
-    for block in blocks[1:]:
-        end_idx = block.upper().find('END:VEVENT')
-        if end_idx >= 0:
-            block = block[:end_idx]
-
-        # Unfold multi-line values (RFC 5545)
-        block = re.sub(r'\r?\n[ \t]', '', block)
-
-        def field(name):
-            m = re.search(rf'^{name}[;:][^\r\n]*', block, re.MULTILINE | re.IGNORECASE)
-            if not m:
-                return ''
-            val = m.group(0)
-            val = re.sub(rf'^{name}[;][^:]*:', '', val, flags=re.IGNORECASE)
-            val = re.sub(rf'^{name}:', '', val, flags=re.IGNORECASE)
-            return val.strip()
-
-        dtstart_raw = field('DTSTART')
-        dtend_raw   = field('DTEND')
-        summary     = field('SUMMARY').replace('\\n', ' ').replace('\\,', ',')
-        uid         = field('UID')
-        location    = field('LOCATION')
-        description = field('DESCRIPTION')
-
-        if not dtstart_raw or not summary:
-            continue
-
-        dtstart = _parse_dt_simple(dtstart_raw)
-        dtend   = _parse_dt_simple(dtend_raw) if dtend_raw else None
-        if not dtstart:
-            continue
-
-        dur = int((dtend - dtstart).total_seconds() / 60) if dtend else 60
-
-        events.append({
-            'uid':         uid,
-            'summary':     summary,
-            'dtstart':     dtstart,
-            'dtend':       dtend,
-            'duration':    dur,
-            'location':    location,
-            'description': description,
-        })
-    return events
+# ── Récupération des réservations à venir ────────────────────────────────────
+def _get_upcoming_bookings(token: str) -> list[dict]:
+    try:
+        resp = _http(_BOOKINGS_UPCOMING_URL, token=token)
+        return resp.get('bookings', [])
+    except Exception:
+        return []
 
 
-def _fetch_ical(url: str) -> str:
-    req = Request(url, headers={'User-Agent': 'GarminDashboard/1.0'})
-    with urlopen(req, timeout=15) as r:
-        raw = r.read()
-    # Try UTF-8 first, then latin-1
-    for enc in ('utf-8', 'latin-1', 'cp1252'):
-        try:
-            return raw.decode(enc)
-        except Exception:
-            pass
-    return raw.decode('utf-8', errors='replace')
-
-
+# ── Load estimation ───────────────────────────────────────────────────────────
 def _estimate_load(act_type: str, duration_min: int, sb) -> tuple:
     try:
         res = (sb.table('activities')
@@ -214,109 +145,99 @@ def _estimate_load(act_type: str, duration_min: int, sb) -> tuple:
     return round(avg * duration_min, 1), conf
 
 
-def _get_setting(sb, key: str) -> str | None:
+# ── Sync principal ────────────────────────────────────────────────────────────
+def _do_sync_api(sb) -> dict:
+    email    = os.environ.get('DECIPLUS_EMAIL', '').strip()
+    password = os.environ.get('DECIPLUS_PASSWORD', '').strip()
+    if not email or not password:
+        return {'error': 'DECIPLUS_EMAIL / DECIPLUS_PASSWORD non configurés'}
+
     try:
-        r = sb.table('app_settings').select('value').eq('key', key).limit(1).execute()
-        return r.data[0]['value'] if r.data else None
-    except Exception:
-        return None
-
-
-def _get_ical_url(sb) -> str | None:
-    return _get_setting(sb, 'xplor_ical_url')
-
-
-def _save_ical_url(sb, url: str) -> None:
-    sb.table('app_settings').upsert({'key': 'xplor_ical_url', 'value': url}).execute()
-
-
-def _location_matches(event_location: str, filter_str: str) -> bool:
-    """True si tous les mots du filtre se retrouvent dans la location (insensible à la casse)."""
-    if not filter_str:
-        return True
-    loc = (event_location or '').lower()
-    # Match si au moins un "mot clé significatif" du filtre est présent
-    words = [w for w in re.split(r'[\s,\-]+', filter_str.lower()) if len(w) >= 4]
-    return any(w in loc for w in words)
-
-
-def _do_sync(sb) -> dict:
-    ical_url      = _get_ical_url(sb)
-    location_filter = _get_setting(sb, 'xplor_location_filter') or ''
-
-    if not ical_url:
-        return {'error': 'Aucune URL iCal configurée. Colle ton URL dans le dashboard.'}
-
-    # Fetch + parse iCal
-    try:
-        ical_text = _fetch_ical(ical_url)
+        token, slug = _deciplus_login(email, password)
     except Exception as e:
-        return {'error': f'Impossible de charger le flux iCal : {e}'}
+        return {'error': f'Login Deciplus échoué : {e}'}
 
-    events = _parse_ical(ical_text)
-    if not events:
-        return {'ok': True, 'synced': 0, 'message': 'Aucun événement trouvé dans le flux iCal'}
+    raw_bookings = _get_upcoming_bookings(token)
+    if not raw_bookings:
+        return {'ok': True, 'synced': 0, 'message': f'Aucune réservation à venir (club: {slug})', 'slug': slug}
 
-    # Keep only future events (next 30 days)
     now    = datetime.now()
     cutoff = now + timedelta(days=30)
-    future = [e for e in events if e['dtstart'] >= now and e['dtstart'] <= cutoff]
-
-    # Filter by location if configured
-    if location_filter:
-        before = len(future)
-        future = [e for e in future if _location_matches(e['location'], location_filter)]
-        filtered_out = before - len(future)
-    else:
-        filtered_out = 0
-
-    if not future:
-        msg = 'Aucune séance à venir'
-        if filtered_out:
-            msg += f' (filtre lieu actif : {filtered_out} événement(s) exclus)'
-        return {'ok': True, 'synced': 0, 'message': msg}
-
-    # Build sessions with load estimation
     sessions = []
-    for e in future:
-        act_type = _classify(e['summary'])
-        load, conf = _estimate_load(act_type, e['duration'], sb)
-        uid = e['uid'] or f"{e['dtstart'].isoformat()}_{e['summary'][:20]}"
+
+    for item in raw_bookings:
+        b = item.get('booking') or item
+        start_str = b.get('startDate') or b.get('start_date') or b.get('startTime') or ''
+        end_str   = b.get('endDate')   or b.get('end_date')   or b.get('endTime')   or ''
+        name      = (b.get('activity') or {}).get('name') or b.get('name') or b.get('title') or 'Séance'
+
+        if not start_str:
+            continue
+
+        try:
+            # Parse ISO datetime (avec ou sans Z)
+            start_dt = datetime.fromisoformat(start_str.replace('Z', '+00:00')).astimezone().replace(tzinfo=None)
+        except Exception:
+            continue
+
+        if start_dt < now or start_dt > cutoff:
+            continue
+
+        end_dt = None
+        if end_str:
+            try:
+                end_dt = datetime.fromisoformat(end_str.replace('Z', '+00:00')).astimezone().replace(tzinfo=None)
+            except Exception:
+                pass
+
+        duration = int((end_dt - start_dt).total_seconds() / 60) if end_dt else 60
+        act_type = _classify(name)
+        load, conf = _estimate_load(act_type, duration, sb)
+
+        uid = b.get('id') or b.get('bookingId') or f"{start_dt.isoformat()}_{name[:20]}"
         sessions.append({
-            'id':              f'xplor_{re.sub(r"[^a-zA-Z0-9]", "_", uid)[:60]}',
+            'id':              f'xplor_{re.sub(r"[^a-zA-Z0-9]", "_", str(uid))[:60]}',
             'source':          'xplor',
-            'date':            e['dtstart'].strftime('%Y-%m-%d'),
-            'start_time':      e['dtstart'].isoformat(),
-            'end_time':        e['dtend'].isoformat() if e['dtend'] else None,
-            'name':            e['summary'],
+            'date':            start_dt.strftime('%Y-%m-%d'),
+            'start_time':      start_dt.isoformat(),
+            'end_time':        end_dt.isoformat() if end_dt else None,
+            'name':            name,
             'type':            act_type,
             'icon':            TYPE_ICONS.get(act_type, '⚡'),
-            'duration_min':    e['duration'],
+            'duration_min':    duration,
             'estimated_load':  load,
             'load_confidence': conf,
             'status':          'planned',
-            'raw':             {'location': e['location'], 'description': e['description']},
+            'raw':             {k: v for k, v in b.items() if k not in ('activity',)},
         })
 
-    # Upsert
+    if not sessions:
+        return {'ok': True, 'synced': 0, 'message': 'Aucune séance dans les 30 prochains jours', 'slug': slug}
+
     for i in range(0, len(sessions), 50):
         sb.table('planned_sessions').upsert(sessions[i:i+50]).execute()
 
-    # Mark completed: if a Garmin activity exists on same date + same type
+    # Marquer les séances déjà réalisées
     try:
         today = now.strftime('%Y-%m-%d')
         acts  = (sb.table('activities').select('date,type').gte('date', today).execute()).data or []
         done  = {(a['date'], a['type']) for a in acts}
         for s in sessions:
             if (s['date'], s['type']) in done:
-                (sb.table('planned_sessions')
-                   .update({'status': 'completed'})
-                   .eq('id', s['id'])
-                   .execute())
+                sb.table('planned_sessions').update({'status': 'completed'}).eq('id', s['id']).execute()
     except Exception:
         pass
 
-    return {'ok': True, 'synced': len(sessions)}
+    return {'ok': True, 'synced': len(sessions), 'slug': slug}
+
+
+# ── Legacy iCal sync (conservé pour rétrocompatibilité) ──────────────────────
+def _get_setting(sb, key: str) -> str | None:
+    try:
+        r = sb.table('app_settings').select('value').eq('key', key).limit(1).execute()
+        return r.data[0]['value'] if r.data else None
+    except Exception:
+        return None
 
 
 def _get_sessions(sb) -> list:
@@ -334,6 +255,7 @@ def _get_sessions(sb) -> list:
         return []
 
 
+# ── Handler HTTP ──────────────────────────────────────────────────────────────
 class handler(BaseHTTPRequestHandler):
     def _sb(self):
         from supabase import create_client
@@ -356,15 +278,13 @@ class handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         try:
-            sb              = self._sb()
-            sessions        = _get_sessions(sb)
-            ical_url        = _get_ical_url(sb) or ''
-            location_filter = _get_setting(sb, 'xplor_location_filter') or ''
+            sb       = self._sb()
+            sessions = _get_sessions(sb)
+            has_creds = bool(os.environ.get('DECIPLUS_EMAIL'))
             self._reply(200, {
-                'sessions':         sessions,
-                'ical_configured':  bool(ical_url),
-                'ical_url_preview': (ical_url[:40] + '…') if len(ical_url) > 40 else ical_url,
-                'location_filter':  location_filter,
+                'sessions':        sessions,
+                'api_configured':  has_creds,
+                'ical_configured': False,  # legacy
             })
         except Exception as e:
             self._reply(500, {'error': str(e)})
@@ -373,48 +293,22 @@ class handler(BaseHTTPRequestHandler):
         try:
             length = int(self.headers.get('Content-Length', 0))
             body   = json.loads(self.rfile.read(length)) if length else {}
-            action = body.get('action', 'sync_ical')
+            action = body.get('action', 'sync')
             sb     = self._sb()
 
-            if action == 'sync_ical':
-                self._reply(200, _do_sync(sb))
+            if action in ('sync', 'sync_ical'):
+                self._reply(200, _do_sync_api(sb))
 
-            elif action == 'save_url':
-                url = (body.get('url') or '').strip()
-                if not url:
-                    self._reply(400, {'error': 'URL vide'})
-                    return
-                _save_ical_url(sb, url)
-                self._reply(200, {'ok': True})
-
-            elif action == 'save_filter':
-                loc = (body.get('location') or '').strip()
-                sb.table('app_settings').upsert({'key': 'xplor_location_filter', 'value': loc}).execute()
-                self._reply(200, {'ok': True})
-
-            elif action == 'debug_ical':
-                # Retourne les 10 premiers events bruts pour diagnostiquer
-                ical_url = _get_ical_url(sb)
-                if not ical_url:
-                    self._reply(400, {'error': 'Aucune URL iCal configurée'})
+            elif action == 'debug':
+                email    = os.environ.get('DECIPLUS_EMAIL', '').strip()
+                password = os.environ.get('DECIPLUS_PASSWORD', '').strip()
+                if not email or not password:
+                    self._reply(400, {'error': 'DECIPLUS_EMAIL / DECIPLUS_PASSWORD non configurés'})
                     return
                 try:
-                    text = _fetch_ical(ical_url)
-                    events = _parse_ical(text)
-                    now = datetime.now()
-                    sample = [
-                        {
-                            'summary':     e['summary'],
-                            'dtstart':     e['dtstart'].isoformat(),
-                            'duration':    e['duration'],
-                            'location':    e['location'],
-                            'description': (e['description'] or '')[:120],
-                            'classified':  _classify(e['summary']),
-                        }
-                        for e in events
-                        if e['dtstart'] >= now
-                    ][:10]
-                    self._reply(200, {'total_future': len([e for e in events if e['dtstart'] >= now]), 'sample': sample})
+                    token, slug = _deciplus_login(email, password)
+                    raw = _get_upcoming_bookings(token)
+                    self._reply(200, {'slug': slug, 'raw_count': len(raw), 'sample': raw[:3]})
                 except Exception as e:
                     self._reply(500, {'error': str(e)})
 
