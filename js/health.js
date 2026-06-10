@@ -594,6 +594,7 @@ function renderHealth() {
 
 function setHealthPeriod(n) {
   state.healthDays = n;
+  localStorage.setItem('health_days', n);
   document.querySelectorAll('.hpb').forEach(b => b.classList.toggle('active', +b.dataset.days === n));
   renderHealth();
 }

@@ -424,6 +424,7 @@ function renderProfile() {
 
 function setProfileGranularity(g, btn) {
   state.profileGranularity = g;
+  localStorage.setItem('profile_granularity', g);
   document.querySelectorAll('.pgran-btn').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
   renderProfile();
