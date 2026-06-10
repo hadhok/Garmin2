@@ -77,7 +77,11 @@ function trimpForSession(durationMin, zoneNum, pctInZone = 0.8) {
    CTL / ATL / TSB — runs only (délègue à computeFormeCurve, source TRIMP)
    ══════════════════════════════════════════════════════════ */
 function computeRunForm() {
-  return computeFormeCurve(getRuns(), 90);
+  const days = runState.globalPeriod === '3m' ? 90
+             : runState.globalPeriod === '6m' ? 180
+             : runState.globalPeriod === '1y' ? 365
+             : 730;
+  return computeFormeCurve(getRuns(), days);
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -652,7 +656,11 @@ function renderRunFormChart() {
   const curve = computeRunForm();
   if (!curve.length) return;
 
-  const allCurve = computeFormeCurve(getAll(), 90);
+  const days = runState.globalPeriod === '3m' ? 90
+             : runState.globalPeriod === '6m' ? 180
+             : runState.globalPeriod === '1y' ? 365
+             : 730;
+  const allCurve = computeFormeCurve(getAll(), days);
 
   const labels   = curve.map(d => new Date(d.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
   const ctlVals  = curve.map(d => d.ctl);
@@ -1712,6 +1720,7 @@ function setGlobalPeriod(p) {
   localStorage.setItem('run_period', p);
   document.querySelectorAll('[data-gperiod]').forEach(b =>
     b.classList.toggle('active', b.dataset.gperiod === p));
+  if (typeof markAllDirty === 'function') markAllDirty();
   renderRunning();
 }
 
