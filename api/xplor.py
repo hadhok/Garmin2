@@ -87,13 +87,8 @@ def _classify(name: str) -> str:
 def _http(url: str, method: str = 'GET', body: dict = None, token: str = None) -> dict:
     data = json.dumps(body).encode() if body else None
     headers = {
-        'Content-Type':   'application/json',
-        'Accept':         'application/json',
-        'User-Agent':     'DeciPlus/7.0.0 (Android; okhttp/4.9.3)',
-        'Origin':         'https://member-app.deciplus.pro',
-        'Referer':        'https://member-app.deciplus.pro/',
-        'x-app-version':  '7.0.0',
-        'x-platform':     'android',
+        'Content-Type': 'application/json',
+        'Accept':       'application/json',
     }
     if token:
         headers['x-access-token'] = token
