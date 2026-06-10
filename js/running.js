@@ -28,7 +28,7 @@ function hrZoneBounds(z) {
 const runState = {
   period: '6m',
   year: new Date().getFullYear(),
-  globalPeriod: '6m',
+  globalPeriod: localStorage.getItem('run_period') || '6m',
   calendarMonth: new Date().getMonth(),
   calendarYear: new Date().getFullYear(),
   sortCol: 'date',
@@ -77,7 +77,11 @@ function trimpForSession(durationMin, zoneNum, pctInZone = 0.8) {
    CTL / ATL / TSB — runs only (délègue à computeFormeCurve, source TRIMP)
    ══════════════════════════════════════════════════════════ */
 function computeRunForm() {
-  return computeFormeCurve(getRuns(), 90);
+  const days = runState.globalPeriod === '3m' ? 90
+             : runState.globalPeriod === '6m' ? 180
+             : runState.globalPeriod === '1y' ? 365
+             : 730;
+  return computeFormeCurve(getRuns(), days);
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -652,7 +656,11 @@ function renderRunFormChart() {
   const curve = computeRunForm();
   if (!curve.length) return;
 
-  const allCurve = computeFormeCurve(getAll(), 90);
+  const days = runState.globalPeriod === '3m' ? 90
+             : runState.globalPeriod === '6m' ? 180
+             : runState.globalPeriod === '1y' ? 365
+             : 730;
+  const allCurve = computeFormeCurve(getAll(), days);
 
   const labels   = curve.map(d => new Date(d.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
   const ctlVals  = curve.map(d => d.ctl);
@@ -1709,9 +1717,21 @@ function getRunsForGlobalPeriod() {
 
 function setGlobalPeriod(p) {
   runState.globalPeriod = p;
+  localStorage.setItem('run_period', p);
   document.querySelectorAll('[data-gperiod]').forEach(b =>
     b.classList.toggle('active', b.dataset.gperiod === p));
+  if (typeof markAllDirty === 'function') markAllDirty();
   renderRunning();
+}
+
+function toggleRunAdvanced() {
+  const view = document.getElementById('view-running');
+  if (!view) return;
+  const on = view.classList.toggle('run-advanced');
+  const btn = document.getElementById('btn-run-advanced');
+  if (btn) btn.textContent = on ? '− Avancé' : '+ Avancé';
+  localStorage.setItem('run_advanced', on ? '1' : '0');
+  if (on) renderRunning();
 }
 
 function toggleSection(header) {
@@ -2793,6 +2813,15 @@ function renderRacePredictor() {
    ══════════════════════════════════════════════════════════ */
 function renderRunning() {
   const safe = (fn) => { try { fn(); } catch(e) { console.error('[Running]', fn.name, e); } };
+  // Restaurer l'état avancé et le bouton période
+  const runView = document.getElementById('view-running');
+  if (runView && localStorage.getItem('run_advanced') === '1' && !runView.classList.contains('run-advanced')) {
+    runView.classList.add('run-advanced');
+    const btn = document.getElementById('btn-run-advanced');
+    if (btn) btn.textContent = '− Avancé';
+  }
+  document.querySelectorAll('[data-gperiod]').forEach(b =>
+    b.classList.toggle('active', b.dataset.gperiod === runState.globalPeriod));
   safe(renderRunKPIs);
   safe(renderWeekPlan);
   safe(renderRunPR);
@@ -2930,13 +2959,18 @@ function populateCompareSelectors() {
     return `<option value="${r.id}">${date} ${dist}${pace}${name}</option>`;
   }).join('');
 
-  ['compare-sel-a', 'compare-sel-b'].forEach(id => {
+  ['compare-sel-a', 'compare-sel-b'].forEach((id, idx) => {
     const sel = document.getElementById(id);
     if (!sel) return;
     const prev = sel.value;
     sel.innerHTML = '<option value="">— Choisir une course —</option>' + opts;
-    if (prev) sel.value = prev;
+    if (prev) {
+      sel.value = prev;
+    } else if (runs.length > idx) {
+      sel.value = String(runs[idx].id);
+    }
   });
+  updateRunCompare();
 }
 
 function updateRunCompare() {

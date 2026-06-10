@@ -4,7 +4,7 @@
 
 /* ── Period filter state for activities view ── */
 const actState = {
-  period: 'month',  // week | month | year | all
+  period: localStorage.getItem('act_period') || 'month',  // week | month | year | all
   sort:   { col: 'date', dir: 'desc' },
   page:   0,
 };
@@ -24,6 +24,7 @@ function sortActBy(col) {
 function setActPeriod(p, btn) {
   actState.period = p;
   actState.page   = 0;
+  localStorage.setItem('act_period', p);
   document.querySelectorAll('.act-period-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   renderActivities();

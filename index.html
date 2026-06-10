@@ -83,6 +83,11 @@
         <span class="nav-label">Profil</span>
         <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
+      <button class="nav-item" data-view="poc" onclick="switchView('poc')">
+        <span class="nav-icon">🔬</span>
+        <span class="nav-label">Science</span>
+        <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
     </div>
 
     <div class="sidebar-footer">
@@ -90,6 +95,10 @@
         <span class="sync-dot" id="sync-dot"></span>
         <span id="sync-label">Chargement…</span>
       </div>
+      <button onclick="switchView('profile');setTimeout(()=>document.getElementById('profile-settings')?.scrollIntoView({behavior:'smooth'}),200)" style="margin-top:8px;width:100%;background:none;border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;font-size:11px;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:6px;justify-content:center" title="Paramètres FC">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Paramètres FC
+      </button>
     </div>
   </nav>
 
@@ -109,10 +118,6 @@
         <span class="topbar-title" id="topbar-title">Dashboard</span>
       </div>
       <div class="topbar-right">
-        <!-- Bouton Cards (mobile only) -->
-        <button class="btn-topbar-cards" id="btn-shorts" onclick="toggleShorts()" title="Vue cartes">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-        </button>
         <button class="btn btn-ghost btn-sync-mobile" onclick="openSyncModal()" style="font-size:12px;padding:6px 12px">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
           Sync
@@ -389,8 +394,13 @@
           <button class="filter-btn" data-type="swim"      onclick="setFilter('swim')"><span class="filter-dot" style="background:var(--swim)"></span>Natation</button>
           <button class="filter-btn" data-type="hiit"      onclick="setFilter('hiit')"><span class="filter-dot" style="background:var(--hiit)"></span>HIIT</button>
           <button class="filter-btn" data-type="rowing"    onclick="setFilter('rowing')"><span class="filter-dot" style="background:var(--rowing)"></span>Rameur</button>
+          <button class="filter-btn" data-type="jump_rope" onclick="setFilter('jump_rope')"><span class="filter-dot" style="background:var(--jump_rope)"></span>Jump Rope</button>
           <button class="filter-btn" data-type="strength"  onclick="setFilter('strength')"><span class="filter-dot" style="background:var(--strength)"></span>Muscu</button>
+          <button class="filter-btn" data-type="hockey"    onclick="setFilter('hockey')"><span class="filter-dot" style="background:var(--hockey)"></span>Hockey</button>
+          <button class="filter-btn" data-type="tennis"    onclick="setFilter('tennis')"><span class="filter-dot" style="background:var(--tennis)"></span>Tennis</button>
           <button class="filter-btn" data-type="bike"      onclick="setFilter('bike')"><span class="filter-dot" style="background:var(--bike)"></span>Vélo</button>
+          <button class="filter-btn" data-type="walk"      onclick="setFilter('walk')"><span class="filter-dot" style="background:var(--walk)"></span>Marche</button>
+          <button class="filter-btn" data-type="pilates"   onclick="setFilter('pilates')"><span class="filter-dot" style="background:var(--pilates)"></span>Pilates</button>
         </div>
 
         <!-- KPI strip -->
@@ -767,7 +777,7 @@
         <div class="badges-grid" id="profile-badges"></div>
 
         <!-- Paramètres -->
-        <div class="section-header" style="margin-top:24px">Paramètres</div>
+        <div id="profile-settings" class="section-header" style="margin-top:24px">Paramètres</div>
         <div class="card" style="max-width:480px">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
             <div>
@@ -798,23 +808,35 @@
           <button class="subtab" data-gperiod="all" onclick="setGlobalPeriod('all')">Tout</button>
         </div>
 
+        <!-- Mini-nav sections -->
+        <div class="run-mini-nav" id="run-mini-nav">
+          <button onclick="document.getElementById('rsh-form').scrollIntoView({behavior:'smooth',block:'start'})">Forme</button>
+          <button onclick="document.getElementById('rsh-pronostics').scrollIntoView({behavior:'smooth',block:'start'})">Pronostics</button>
+          <button onclick="document.getElementById('rsh-acwr').scrollIntoView({behavior:'smooth',block:'start'})">ACWR</button>
+          <button onclick="document.getElementById('rsh-compare').scrollIntoView({behavior:'smooth',block:'start'})">Comparer</button>
+          <button onclick="document.getElementById('rsh-history').scrollIntoView({behavior:'smooth',block:'start'})">Historique</button>
+          <button onclick="document.getElementById('rsh-calendar').scrollIntoView({behavior:'smooth',block:'start'})">Calendrier</button>
+          <button onclick="document.getElementById('rsh-prs').scrollIntoView({behavior:'smooth',block:'start'})">Records</button>
+          <button class="run-mini-nav-adv" id="btn-run-advanced" onclick="toggleRunAdvanced()">+ Avancé</button>
+        </div>
+
         <!-- KPI bar -->
         <div class="kpi-grid" id="run-kpis"></div>
 
         <!-- Plan de la semaine -->
-        <div class="section-header collapsible" onclick="toggleSection(this)">Plan de la semaine <span class="chev">▾</span></div>
+        <div id="rsh-weekplan" class="section-header collapsible" onclick="toggleSection(this)">Plan de la semaine <span class="chev">▾</span></div>
         <div class="section-body">
           <div class="card" id="run-week-plan"></div>
         </div>
 
         <!-- Records personnels -->
-        <div class="section-header collapsible" onclick="toggleSection(this)">Records personnels <span class="chev">▾</span></div>
+        <div id="rsh-prs" class="section-header collapsible" onclick="toggleSection(this)">Records personnels <span class="chev">▾</span></div>
         <div class="section-body">
           <div class="card"><div id="run-prs"></div></div>
         </div>
 
         <!-- Forme running -->
-        <div class="section-header collapsible" onclick="toggleSection(this)">Forme &amp; Fatigue <span class="chev">▾</span></div>
+        <div id="rsh-form" class="section-header collapsible" onclick="toggleSection(this)">Forme &amp; Fatigue <span class="chev">▾</span></div>
         <div class="section-body">
           <div class="health-grid" style="margin-top:0">
             <div class="card health-full">
@@ -841,7 +863,7 @@
         </div>
 
         <!-- Pronostics + Allures -->
-        <div class="section-header collapsible" onclick="toggleSection(this)">Pronostics &amp; Allures <span class="chev">▾</span></div>
+        <div id="rsh-pronostics" class="section-header collapsible" onclick="toggleSection(this)">Pronostics &amp; Allures <span class="chev">▾</span></div>
         <div class="section-body">
           <div class="health-grid">
             <div class="card">
@@ -905,7 +927,7 @@
         </div>
 
         <!-- ACWR — Risque de blessure -->
-        <div class="section-header collapsible" onclick="toggleSection(this)">ACWR — Risque de blessure <span class="chev">▾</span></div>
+        <div id="rsh-acwr" class="section-header collapsible" onclick="toggleSection(this)">ACWR — Risque de blessure <span class="chev">▾</span></div>
         <div class="section-body">
           <div class="card">
             <div class="section-header" style="margin:0 0 12px">Ratio Charge Aiguë / Chronique (7j ÷ 28j)</div>
@@ -981,13 +1003,13 @@
         </div>
 
         <!-- Calendrier -->
-        <div class="section-header collapsible" onclick="toggleSection(this)">Calendrier <span class="chev">▾</span></div>
+        <div id="rsh-calendar" class="section-header collapsible" onclick="toggleSection(this)">Calendrier <span class="chev">▾</span></div>
         <div class="section-body">
           <div class="card" id="run-calendar"></div>
         </div>
 
         <!-- Comparer deux sessions course -->
-        <div class="section-header collapsible" onclick="toggleSection(this)">Comparer deux sessions <span class="chev">▾</span></div>
+        <div id="rsh-compare" class="section-header collapsible" onclick="toggleSection(this)">Comparer deux sessions <span class="chev">▾</span></div>
         <div class="section-body">
           <div class="card" id="run-compare-card">
             <div class="compare-selectors">
@@ -1010,7 +1032,7 @@
         </div>
 
         <!-- Tableau des sorties -->
-        <div class="section-header collapsible" onclick="toggleSection(this)">Historique des courses <span class="chev">▾</span></div>
+        <div id="rsh-history" class="section-header collapsible" onclick="toggleSection(this)">Historique des courses <span class="chev">▾</span></div>
         <div class="section-body">
           <div class="card" style="padding:0;overflow:hidden">
             <table class="acts-table" id="run-table">
@@ -1126,13 +1148,6 @@
       ════════════════════════════════════════════════ -->
       <div id="view-help" class="view"></div>
 
-      <!-- ════════════════════════════════════════════════
-           VIEW : SHORTS — cartes snap-scroll (mobile)
-      ════════════════════════════════════════════════ -->
-      <div id="view-shorts" class="view">
-        <div class="shorts-container" id="shorts-container"></div>
-      </div>
-
     </main>
   </div><!-- /main-area -->
 </div><!-- /app-shell -->
@@ -1232,6 +1247,10 @@
   <button class="bottom-nav-item" data-view="profile" onclick="switchView('profile')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     Profil
+  </button>
+  <button class="bottom-nav-item" data-view="poc" onclick="switchView('poc')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
+    Science
   </button>
 </nav>
 
