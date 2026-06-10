@@ -2733,7 +2733,9 @@ function renderTEDistribution() {
     },
   });
 
+  el.querySelector('.te-stats')?.remove();
   const statsEl = document.createElement('div');
+  statsEl.className = 'te-stats';
   statsEl.style.cssText = 'margin-top:10px;font-size:12px;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap';
   statsEl.innerHTML = `
     <span>Semaine en cours — Aérobie : <b style="color:#3b82f6">${curAer}</b></span>
@@ -2793,7 +2795,9 @@ function renderCadenceTrend() {
     },
   });
 
+  el.querySelector('.cadence-stats')?.remove();
   const statsEl = document.createElement('div');
+  statsEl.className = 'cadence-stats';
   statsEl.style.cssText = 'margin-top:10px;font-size:12px;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap';
   statsEl.innerHTML = `
     <span>Min : <b style="color:var(--text)">${minC} spm</b></span>
