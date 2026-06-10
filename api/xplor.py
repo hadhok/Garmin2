@@ -86,7 +86,15 @@ def _classify(name: str) -> str:
 # ── HTTP helpers ──────────────────────────────────────────────────────────────
 def _http(url: str, method: str = 'GET', body: dict = None, token: str = None) -> dict:
     data = json.dumps(body).encode() if body else None
-    headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+    headers = {
+        'Content-Type':   'application/json',
+        'Accept':         'application/json',
+        'User-Agent':     'DeciPlus/7.0.0 (Android; okhttp/4.9.3)',
+        'Origin':         'https://member-app.deciplus.pro',
+        'Referer':        'https://member-app.deciplus.pro/',
+        'x-app-version':  '7.0.0',
+        'x-platform':     'android',
+    }
     if token:
         headers['x-access-token'] = token
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
@@ -96,13 +104,32 @@ def _http(url: str, method: str = 'GET', body: dict = None, token: str = None) -
 
 # ── Deciplus auth ─────────────────────────────────────────────────────────────
 def _deciplus_login(email: str, password: str) -> tuple[str, str]:
-    """Retourne (token, club_slug)."""
-    resp = _http(_AUTHENTICATE_URL, 'POST', {'email': email, 'password': password})
+    """Retourne (token, club_slug). Essaie plusieurs URLs d'authentification."""
+    slug_pref = os.environ.get('DECIPLUS_CLUB_SLUG', '').strip()
+
+    # Essaie d'abord l'URL avec le slug du club si configuré
+    auth_urls = [_AUTHENTICATE_URL]
+    if slug_pref:
+        auth_urls.insert(0, f'https://api.deciplus.pro/{slug_pref}/members/v1/authenticate')
+
+    last_err = None
+    resp = None
+    for url in auth_urls:
+        try:
+            resp = _http(url, 'POST', {'email': email, 'password': password})
+            if resp.get('tokens'):
+                break
+        except Exception as e:
+            last_err = e
+            continue
+
+    if not resp or not resp.get('tokens'):
+        raise ValueError(f'Authentification Deciplus échouée : {last_err or resp}')
+
     clubs = resp.get('tokens', {}).get('clubs', {})
     if not clubs:
         raise ValueError(f'Authentification Deciplus échouée : {resp}')
 
-    slug_pref = os.environ.get('DECIPLUS_CLUB_SLUG', '').strip()
     if slug_pref and slug_pref in clubs:
         slug = slug_pref
     else:
