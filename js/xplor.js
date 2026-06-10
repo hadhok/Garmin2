@@ -1,55 +1,33 @@
 /* ══════════════════════════════════════════════════════════
-   XPLOR ACTIVE — import iCal
+   XPLOR ACTIVE — API Deciplus directe
    ══════════════════════════════════════════════════════════ */
 
-let _xplorSessions       = [];
-let _xplorLoaded         = false;
-let _xplorIcalConfigured = false;
-let _xplorLocationFilter = '';
+let _xplorSessions    = [];
+let _xplorLoaded      = false;
+let _xplorApiConfigured = false;
 
 async function loadXplorSessions() {
   try {
     const r = await fetch('/api/xplor');
     if (!r.ok) return;
     const data = await r.json();
-    _xplorSessions       = data.sessions || [];
-    _xplorIcalConfigured = data.ical_configured || false;
-    _xplorLocationFilter = data.location_filter || '';
-    _xplorLoaded         = true;
+    _xplorSessions     = data.sessions || [];
+    _xplorApiConfigured = data.api_configured || false;
+    _xplorLoaded       = true;
   } catch (e) {
     console.warn('[xplor] load', e);
   }
 }
 
-function getXplorSessions()       { return _xplorSessions; }
-function isXplorConfigured()      { return _xplorIcalConfigured; }
+function getXplorSessions()  { return _xplorSessions; }
+function isXplorConfigured() { return _xplorApiConfigured; }
 
 function getXplorByDate(dateIso) {
   return _xplorSessions.filter(s => s.date === dateIso);
 }
 
-/* ── Sauvegarde de l'URL iCal ─────────────────────────────────────────────── */
-async function saveXplorIcalUrl(url) {
-  const r = await fetch('/api/xplor', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'save_url', url }),
-  });
-  const data = await r.json();
-  if (data.ok) {
-    _xplorIcalConfigured = true;
-    return true;
-  }
-  throw new Error(data.error || 'Erreur lors de la sauvegarde');
-}
-
 /* ── Sync manuelle ────────────────────────────────────────────────────────── */
 async function syncXplor(btnEl) {
-  if (!_xplorIcalConfigured) {
-    // Show the URL setup dialog instead
-    showXplorSetup();
-    return;
-  }
   const orig = btnEl ? btnEl.innerHTML : '';
   if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '⏳'; }
 
@@ -57,7 +35,7 @@ async function syncXplor(btnEl) {
     const r = await fetch('/api/xplor', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'sync_ical' }),
+      body: JSON.stringify({ action: 'sync' }),
     });
     const data = await r.json();
     if (data.error) {
@@ -67,7 +45,7 @@ async function syncXplor(btnEl) {
       if (typeof markAllDirty === 'function') markAllDirty();
       if (typeof renderAll   === 'function') renderAll();
       const msg = data.synced > 0
-        ? `✓ ${data.synced} séance${data.synced > 1 ? 's' : ''} importée${data.synced > 1 ? 's' : ''}`
+        ? `✓ ${data.synced} séance${data.synced > 1 ? 's' : ''} importée${data.synced > 1 ? 's' : ''}${data.slug ? ` (${data.slug})` : ''}`
         : (data.message || '✓ Aucune nouvelle séance');
       _showXplorBanner(msg, 'ok');
     }
@@ -78,7 +56,7 @@ async function syncXplor(btnEl) {
   }
 }
 
-/* ── Dialog de configuration URL iCal ────────────────────────────────────── */
+/* ── Dialog de debug API ──────────────────────────────────────────────────── */
 function showXplorSetup() {
   const existing = document.getElementById('xplor-setup-overlay');
   if (existing) { existing.remove(); return; }
@@ -98,39 +76,25 @@ function showXplorSetup() {
           style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted)">✕</button>
       </div>
 
-      <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px">URL iCal</label>
-      <input id="xplor-ical-input" type="url" placeholder="https://calendar.google.com/calendar/ical/..."
-        style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;
-               background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box;margin-bottom:6px" />
-      <details style="margin-bottom:14px;font-size:11px;color:var(--muted)">
-        <summary style="cursor:pointer">Comment obtenir cette URL ?</summary>
-        <div style="margin-top:8px;line-height:1.7;padding:8px;background:var(--surface2);border-radius:8px">
-          <b>Google Calendar :</b><br>
-          1. Réserve une séance → "Ajouter au calendrier" → Google Calendar<br>
-          2. calendar.google.com → ⋮ à côté du calendrier → Paramètres<br>
-          3. Section <i>"Intégrer l'agenda"</i> → <i>"Adresse secrète au format iCal"</i> → copie
-        </div>
-      </details>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;padding:10px;
+                  background:var(--surface2);border-radius:8px;line-height:1.6">
+        L'authentification utilise les variables d'environnement<br>
+        <code style="color:#6366f1">DECIPLUS_EMAIL</code> et <code style="color:#6366f1">DECIPLUS_PASSWORD</code>
+        configurées sur le serveur.<br>
+        Statut : ${_xplorApiConfigured
+          ? '<span style="color:#22c55e">✓ Identifiants configurés</span>'
+          : '<span style="color:#ef4444">✗ Variables non configurées</span>'}
+      </div>
 
-      <label style="display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px">
-        Filtre lieu <span style="font-weight:400;color:var(--muted)">(mot-clé dans le champ lieu de l'événement)</span>
-      </label>
-      <input id="xplor-location-input" type="text"
-        placeholder="ex: Girondins, Mérignac…"
-        value="${_xplorLocationFilter}"
-        style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;
-               background:var(--surface);color:var(--text);font-size:13px;box-sizing:border-box;margin-bottom:14px" />
-
-      <!-- Zone debug -->
       <div id="xplor-debug-zone" style="display:none;margin-bottom:14px;padding:10px;background:var(--surface2);
            border-radius:8px;font-size:11px;font-family:monospace;max-height:200px;overflow-y:auto;
            color:var(--text2);white-space:pre-wrap;word-break:break-all"></div>
 
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button onclick="_debugIcal(this)"
+        <button onclick="_debugDeciplus(this)"
           style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;
                  background:none;color:var(--muted);cursor:pointer;font-size:12px">
-          🔍 Tester
+          🔍 Tester la connexion
         </button>
         <button onclick="_syncFromDialog(this)"
           style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;
@@ -138,53 +102,15 @@ function showXplorSetup() {
           ↺ Sync
         </button>
         <button onclick="document.getElementById('xplor-setup-overlay').remove()"
-          style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;
-                 background:none;color:var(--muted);cursor:pointer;font-size:12px">
-          Fermer
-        </button>
-        <button id="xplor-save-btn"
           style="flex:1;padding:8px 14px;border:none;border-radius:8px;background:#6366f1;
-                 color:#fff;font-weight:600;cursor:pointer;font-size:13px"
-          onclick="_saveAndSyncIcal(this)">
-          Enregistrer
+                 color:#fff;font-weight:600;cursor:pointer;font-size:13px">
+          Fermer
         </button>
       </div>
     </div>`;
 
   document.body.appendChild(overlay);
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-
-  const input = document.getElementById('xplor-ical-input');
-  const btn   = document.getElementById('xplor-save-btn');
-  if (input) {
-    input.addEventListener('input', () => {
-      btn.style.opacity = input.value.trim() ? '1' : '0.5';
-    });
-  }
-}
-
-async function _saveAndSyncIcal(btnEl) {
-  const url = document.getElementById('xplor-ical-input')?.value?.trim();
-  const loc = document.getElementById('xplor-location-input')?.value?.trim() || '';
-  if (!url) return;
-  btnEl.disabled = true;
-  btnEl.textContent = '⏳ Enregistrement…';
-  try {
-    await saveXplorIcalUrl(url);
-    // Save location filter
-    await fetch('/api/xplor', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'save_filter', location: loc }),
-    });
-    _xplorLocationFilter = loc;
-    document.getElementById('xplor-setup-overlay')?.remove();
-    await syncXplor(null);
-  } catch (e) {
-    btnEl.disabled = false;
-    btnEl.textContent = 'Enregistrer et synchroniser';
-    _showXplorBanner(String(e), 'error');
-  }
 }
 
 async function _syncFromDialog(btnEl) {
@@ -194,7 +120,7 @@ async function _syncFromDialog(btnEl) {
     const r = await fetch('/api/xplor', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'sync_ical' }),
+      body: JSON.stringify({ action: 'sync' }),
     });
     const data = await r.json();
     const zone = document.getElementById('xplor-debug-zone');
@@ -202,7 +128,7 @@ async function _syncFromDialog(btnEl) {
       zone.style.display = 'block';
       zone.textContent = data.error
         ? '❌ ' + data.error
-        : `✓ ${data.synced ?? 0} séance(s) importée(s)${data.message ? ' — ' + data.message : ''}`;
+        : `✓ ${data.synced ?? 0} séance(s) importée(s)${data.slug ? ` — club: ${data.slug}` : ''}${data.message ? '\n' + data.message : ''}`;
     }
     if (!data.error) {
       await loadXplorSessions();
@@ -217,32 +143,32 @@ async function _syncFromDialog(btnEl) {
   }
 }
 
-/* ── Debug : affiche les événements bruts du flux iCal ───────────────────── */
-async function _debugIcal(btnEl) {
+/* ── Debug : teste la connexion API et affiche les réservations brutes ──── */
+async function _debugDeciplus(btnEl) {
   const zone = document.getElementById('xplor-debug-zone');
   if (!zone) return;
   zone.style.display = 'block';
-  zone.textContent = '⏳ Chargement…';
+  zone.textContent = '⏳ Connexion à l\'API Deciplus…';
   btnEl.disabled = true;
 
   try {
     const r = await fetch('/api/xplor', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'debug_ical' }),
+      body: JSON.stringify({ action: 'debug' }),
     });
     const data = await r.json();
     if (data.error) {
       zone.textContent = '❌ ' + data.error;
     } else {
-      const lines = [`${data.total_future} événements à venir\n`];
-      (data.sample || []).forEach((e, i) => {
-        lines.push(`── ${i+1}. ${e.dtstart.slice(0,10)} ──`);
-        lines.push(`   Nom      : ${e.summary}`);
-        lines.push(`   Lieu     : ${e.location || '(vide)'}`);
-        lines.push(`   Desc     : ${e.description || '(vide)'}`);
-        lines.push(`   Durée    : ${e.duration} min`);
-        lines.push(`   Type det.: ${e.classified}`);
+      const lines = [`✓ Connecté — club: ${data.slug}\n${data.raw_count} réservation(s) à venir\n`];
+      (data.sample || []).forEach((item, i) => {
+        const b = item.booking || item;
+        lines.push(`── ${i+1}. ${b.startDate?.slice(0,10) || '?'} ──`);
+        lines.push(`   Activité : ${b.activity?.name || b.name || '?'}`);
+        lines.push(`   Durée    : ${b.endDate && b.startDate
+          ? Math.round((new Date(b.endDate)-new Date(b.startDate))/60000) + ' min'
+          : '?'}`);
         lines.push('');
       });
       zone.textContent = lines.join('\n');
