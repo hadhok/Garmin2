@@ -240,17 +240,13 @@ async function _debugDeciplus(btnEl) {
     const { token, slug } = await _deciplusLogin(email, password);
     const bookings = await _deciplusFetchBookings(token);
     const lines = [`✓ Connecté — club: ${slug}\n${bookings.length} réservation(s) à venir\n`];
-      (data.sample || []).forEach((item, i) => {
-        const b = item.booking || item;
-        lines.push(`── ${i+1}. ${b.startDate?.slice(0,10) || '?'} ──`);
-        lines.push(`   Activité : ${b.activity?.name || b.name || '?'}`);
-        lines.push(`   Durée    : ${b.endDate && b.startDate
-          ? Math.round((new Date(b.endDate)-new Date(b.startDate))/60000) + ' min'
-          : '?'}`);
-        lines.push('');
-      });
-      zone.textContent = lines.join('\n');
-    }
+    bookings.slice(0, 3).forEach((item, i) => {
+      const b = item.booking || item;
+      lines.push(`── ${i+1}. ${(b.startDate || '').slice(0,10) || '?'} ──`);
+      lines.push(`   Activité : ${b.activity?.name || b.name || '?'}`);
+      lines.push('');
+    });
+    zone.textContent = lines.join('\n');
   } catch (e) {
     zone.textContent = '❌ ' + e;
   } finally {
