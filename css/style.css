@@ -2089,7 +2089,7 @@ body.loading main::before {
 /* Mini-nav horizontale sticky */
 .run-mini-nav {
   position: sticky;
-  top: 52px;
+  top: 142px; /* slicer height ~90px + topbar 52px */
   z-index: 20;
   display: flex;
   gap: 6px;
@@ -2129,4 +2129,115 @@ body.loading main::before {
   background: rgba(99,102,241,0.2);
   border-color: #6366f1;
   color: #a5b4fc;
+}
+
+/* ══════════════════════════════════════════════════════════
+   RUN SLICER — double poignée de période
+   ══════════════════════════════════════════════════════════ */
+.run-slicer {
+  position: sticky;
+  top: 52px;
+  z-index: 21;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 4px 8px;
+  user-select: none;
+}
+
+/* Ligne date gauche / durée centre / date droite */
+.slicer-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.slicer-date {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text2);
+  min-width: 60px;
+}
+.slicer-date:last-child { text-align: right; }
+.slicer-dur {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: .04em;
+}
+
+/* Zone de la piste + les deux inputs */
+.slicer-wrap {
+  position: relative;
+  height: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.slicer-track-bg {
+  position: absolute;
+  left: 0; right: 0;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border2);
+}
+
+.slicer-track-fill {
+  position: absolute;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+  pointer-events: none;
+}
+
+/* Les deux inputs range superposés */
+.slicer-input {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  pointer-events: none;
+  outline: none;
+}
+
+.slicer-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: all;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2.5px solid var(--bg);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+  cursor: grab;
+  transition: transform .1s;
+}
+.slicer-input::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.2); }
+
+.slicer-input::-moz-range-thumb {
+  pointer-events: all;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+  cursor: grab;
+}
+
+/* Axe de dates en dessous */
+.slicer-axis {
+  position: relative;
+  height: 14px;
+  margin-top: 4px;
+}
+.slicer-axis span {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 9px;
+  color: var(--muted);
+  white-space: nowrap;
 }

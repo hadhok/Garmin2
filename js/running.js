@@ -28,7 +28,9 @@ function hrZoneBounds(z) {
 const runState = {
   period: '6m',
   year: new Date().getFullYear(),
-  globalPeriod: localStorage.getItem('run_period') || '6m',
+  globalPeriod: '6m', // kept for legacy refs, driven by slicer
+  periodFrom: null,   // ISO date string | null = earliest
+  periodTo:   null,   // ISO date string | null = today
   calendarMonth: new Date().getMonth(),
   calendarYear: new Date().getFullYear(),
   sortCol: 'date',
@@ -77,10 +79,12 @@ function trimpForSession(durationMin, zoneNum, pctInZone = 0.8) {
    CTL / ATL / TSB — runs only (délègue à computeFormeCurve, source TRIMP)
    ══════════════════════════════════════════════════════════ */
 function computeRunForm() {
-  const days = runState.globalPeriod === '3m' ? 90
-             : runState.globalPeriod === '6m' ? 180
-             : runState.globalPeriod === '1y' ? 365
-             : 730;
+  let days = 180;
+  if (runState.periodFrom) {
+    const from = new Date(runState.periodFrom + 'T12:00:00');
+    const to   = runState.periodTo ? new Date(runState.periodTo + 'T12:00:00') : new Date(TODAY);
+    days = Math.max(30, Math.ceil((to - from) / 86400000));
+  }
   return computeFormeCurve(getRuns(), days);
 }
 
@@ -1704,24 +1708,130 @@ function getRunsForPeriod() {
   return runs.filter(r => new Date(r.date) >= cutoff);
 }
 
-/* Helper : runs filtrés selon la période globale */
+/* Helper : runs filtrés selon la plage du slicer */
 function getRunsForGlobalPeriod() {
   const runs = getRuns();
-  if (runState.globalPeriod === 'all') return runs;
-  const months = runState.globalPeriod === '3m' ? 3 : runState.globalPeriod === '6m' ? 6 : 12;
-  const cutoff = new Date(TODAY);
-  cutoff.setMonth(cutoff.getMonth() - months);
-  const cutoffIso = cutoff.toLocaleDateString('sv-SE');
-  return runs.filter(r => (r.date || '') >= cutoffIso);
+  const from = runState.periodFrom;
+  const to   = runState.periodTo;
+  if (!from && !to) return runs;
+  return runs.filter(r => {
+    if (from && r.date < from) return false;
+    if (to   && r.date > to)   return false;
+    return true;
+  });
 }
 
-function setGlobalPeriod(p) {
-  runState.globalPeriod = p;
-  localStorage.setItem('run_period', p);
-  document.querySelectorAll('[data-gperiod]').forEach(b =>
-    b.classList.toggle('active', b.dataset.gperiod === p));
+/* ══════════════════════════════════════════════════════════
+   SLICER DE PÉRIODE — double poignée
+   ══════════════════════════════════════════════════════════ */
+function initRunSlicer() {
+  const runs = getRuns();
+  if (!runs.length) return;
+
+  const allSorted = runs.slice().sort((a, b) => a.date.localeCompare(b.date));
+  const minDate   = new Date(allSorted[0].date + 'T12:00:00');
+  const maxDate   = new Date(TODAY);
+
+  // Granularité : semaines
+  const totalWeeks = Math.max(1, Math.ceil((maxDate - minDate) / (7 * 86400000)));
+
+  const inputFrom = document.getElementById('slicer-from');
+  const inputTo   = document.getElementById('slicer-to');
+  if (!inputFrom || !inputTo) return;
+
+  inputFrom.min = 0; inputFrom.max = totalWeeks;
+  inputTo.min   = 0; inputTo.max   = totalWeeks;
+
+  // Restaurer depuis localStorage ou défaut 6 mois
+  const saved = JSON.parse(localStorage.getItem('run_slicer') || 'null');
+  let fromW, toW;
+  if (saved && saved.from != null && saved.to != null) {
+    fromW = Math.min(saved.from, totalWeeks);
+    toW   = Math.min(saved.to,   totalWeeks);
+  } else {
+    toW   = totalWeeks;
+    fromW = Math.max(0, totalWeeks - 26); // défaut 6 mois
+  }
+
+  inputFrom.value = fromW;
+  inputTo.value   = toW;
+
+  _applySlider(inputFrom, inputTo, minDate, totalWeeks);
+
+  inputFrom.addEventListener('input', () => {
+    if (+inputFrom.value >= +inputTo.value) inputFrom.value = +inputTo.value - 1;
+    _applySlider(inputFrom, inputTo, minDate, totalWeeks);
+  });
+  inputTo.addEventListener('input', () => {
+    if (+inputTo.value <= +inputFrom.value) inputTo.value = +inputFrom.value + 1;
+    _applySlider(inputFrom, inputTo, minDate, totalWeeks);
+  });
+
+  _buildSliderAxis(minDate, totalWeeks);
+}
+
+function _weekToDate(minDate, weeks) {
+  const d = new Date(minDate);
+  d.setDate(d.getDate() + weeks * 7);
+  return d;
+}
+
+function _applySlider(inputFrom, inputTo, minDate, totalWeeks) {
+  const fromW = +inputFrom.value;
+  const toW   = +inputTo.value;
+  const pct   = v => (v / totalWeeks * 100).toFixed(2);
+
+  // Fill bar
+  const fill = document.getElementById('slicer-fill');
+  if (fill) {
+    fill.style.left  = pct(fromW) + '%';
+    fill.style.width = (pct(toW) - pct(fromW)) + '%';
+  }
+
+  // Date labels
+  const fromDate = _weekToDate(minDate, fromW);
+  const toDate   = _weekToDate(minDate, toW);
+  const fmt = d => d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+  const isToday = toW >= totalWeeks;
+  document.getElementById('slicer-from-lbl').textContent = fmt(fromDate);
+  document.getElementById('slicer-to-lbl').textContent   = isToday ? "Aujourd'hui" : fmt(toDate);
+
+  // Duration label
+  const diffDays  = Math.round((toDate - fromDate) / 86400000);
+  const diffMonths = Math.round(diffDays / 30.4);
+  const durLabel  = diffMonths >= 24 ? `${Math.round(diffMonths/12)} ans`
+                  : diffMonths >= 2  ? `${diffMonths} mois`
+                  : `${diffDays} j`;
+  document.getElementById('slicer-dur-lbl').textContent = durLabel;
+
+  // Update state
+  runState.periodFrom = fromDate.toLocaleDateString('sv-SE');
+  runState.periodTo   = isToday ? null : toDate.toLocaleDateString('sv-SE');
+
+  // Compute globalPeriod approx for legacy refs
+  runState.globalPeriod = diffMonths <= 4 ? '3m'
+                        : diffMonths <= 8 ? '6m'
+                        : diffMonths <= 14 ? '1y' : 'all';
+
+  localStorage.setItem('run_slicer', JSON.stringify({ from: fromW, to: toW }));
+
   if (typeof markAllDirty === 'function') markAllDirty();
   renderRunning();
+}
+
+function _buildSliderAxis(minDate, totalWeeks) {
+  const axis = document.getElementById('slicer-axis');
+  if (!axis) return;
+  // Place a label every ~6 months
+  const stepWeeks = totalWeeks <= 52 ? 13 : totalWeeks <= 104 ? 26 : 52;
+  let html = '';
+  for (let w = 0; w <= totalWeeks; w += stepWeeks) {
+    const d = _weekToDate(minDate, w);
+    const pct = (w / totalWeeks * 100).toFixed(1);
+    const lbl = d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+    html += `<span style="left:${pct}%">${lbl}</span>`;
+  }
+  axis.innerHTML = html;
 }
 
 function toggleRunAdvanced() {
@@ -2813,15 +2923,18 @@ function renderRacePredictor() {
    ══════════════════════════════════════════════════════════ */
 function renderRunning() {
   const safe = (fn) => { try { fn(); } catch(e) { console.error('[Running]', fn.name, e); } };
-  // Restaurer l'état avancé et le bouton période
+  // Restaurer l'état avancé
   const runView = document.getElementById('view-running');
   if (runView && localStorage.getItem('run_advanced') === '1' && !runView.classList.contains('run-advanced')) {
     runView.classList.add('run-advanced');
     const btn = document.getElementById('btn-run-advanced');
     if (btn) btn.textContent = '− Avancé';
   }
-  document.querySelectorAll('[data-gperiod]').forEach(b =>
-    b.classList.toggle('active', b.dataset.gperiod === runState.globalPeriod));
+  // Initialiser le slicer si pas encore fait
+  if (!document.getElementById('slicer-from')?._slicerReady) {
+    const el = document.getElementById('slicer-from');
+    if (el) { el._slicerReady = true; initRunSlicer(); return; }
+  }
   safe(renderRunKPIs);
   safe(renderWeekPlan);
   safe(renderRunPR);

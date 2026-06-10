@@ -800,12 +800,20 @@
       ════════════════════════════════════════════════ -->
       <div id="view-running" class="view">
 
-        <!-- Filtre période global -->
-        <div class="run-period-bar">
-          <button class="subtab" data-gperiod="3m"  onclick="setGlobalPeriod('3m')">3 mois</button>
-          <button class="subtab active" data-gperiod="6m"  onclick="setGlobalPeriod('6m')">6 mois</button>
-          <button class="subtab" data-gperiod="1y"  onclick="setGlobalPeriod('1y')">1 an</button>
-          <button class="subtab" data-gperiod="all" onclick="setGlobalPeriod('all')">Tout</button>
+        <!-- Slicer de période -->
+        <div class="run-slicer" id="run-slicer">
+          <div class="slicer-info">
+            <span class="slicer-date" id="slicer-from-lbl">—</span>
+            <span class="slicer-dur" id="slicer-dur-lbl"></span>
+            <span class="slicer-date" id="slicer-to-lbl">Aujourd'hui</span>
+          </div>
+          <div class="slicer-wrap">
+            <div class="slicer-track-bg"></div>
+            <div class="slicer-track-fill" id="slicer-fill"></div>
+            <input type="range" id="slicer-from" class="slicer-input" step="1" value="0">
+            <input type="range" id="slicer-to"   class="slicer-input" step="1" value="100">
+          </div>
+          <div class="slicer-axis" id="slicer-axis"></div>
         </div>
 
         <!-- Mini-nav sections -->
