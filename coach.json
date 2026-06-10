@@ -1,38 +1,38 @@
 {
-  "updated_at": "2026-06-09",
+  "updated_at": "2026-06-10",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "progression",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 39.9,
-    "atl": 32.5,
-    "tsb": 7.4,
-    "effort_idx": 1.28,
-    "body_battery": 29.3,
+    "ctl": 41.9,
+    "atl": 43.2,
+    "tsb": -1.3,
+    "effort_idx": 1.6,
+    "body_battery": 30.0,
     "training_readiness": null,
     "niveau": "Sportif",
-    "total_activites": 229,
-    "total_km": 567
+    "total_activites": 231,
+    "total_km": 573
   },
   "items": [
     {
       "type": "warning",
       "icon": "💪",
       "title": "En progression — adaptation positive",
-      "text": "Effort pondéré 7j : 1.3× (1.0 = charge de base, >2 = intense). TSB +7 pts (CTL 39.9 / ATL 32.5). • HRV 41.1 ms (+3 ms vs S-1) • Sommeil 7.8h/nuit • Body Battery fin de journée : 29%"
+      "text": "Effort pondéré 7j : 1.6× (1.0 = charge de base, >2 = intense). TSB -1 pts (CTL 41.9 / ATL 43.2). • HRV 42.1 ms (+6 ms vs S-1) • Sommeil 8.0h/nuit • Body Battery fin de journée : 30%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "✅ Structure d'entraînement basse intensité (manque de stimulus) sur 8 séances analysées\n🏃 Course : allure en régression (0.5 min/km plus lent — peut indiquer fatigue)"
+      "text": "✅ Structure d'entraînement pyramidale sur 10 séances analysées\n🏃 Course : allure en progression (+1.0 min/km plus rapide)"
     },
     {
       "type": "goal",
       "icon": "📋",
       "title": "Prescription : Récupération active",
-      "text": "20-30 min de marche, mobilité ou yoga. Pas de cardio. Objectif : ne pas aggraver la fatigue. — Z1 uniquement — FC < 120 bpm"
+      "text": "Hier : Unknown (pilates). 20-30 min de marche, mobilité ou yoga. Pas de cardio. Objectif : ne pas aggraver la fatigue. — Z1 uniquement — FC < 120 bpm"
     }
   ]
 }
