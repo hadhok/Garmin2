@@ -138,7 +138,6 @@ function renderActivities() {
   }).join('');
 
   _renderActsPagination(total, totalPages);
-  if (typeof populateCompareSelectors === 'function') populateCompareSelectors();
 }
 
 function _renderActsPagination(total, totalPages) {
