@@ -370,7 +370,7 @@ function renderWeekPlan() {
    RENDER : KPIs
    ══════════════════════════════════════════════════════════ */
 function renderRunKPIs() {
-  const runs = getRuns();
+  const runs = getRunsForGlobalPeriod();
   const el = document.getElementById('run-kpis');
   if (!el) return;
 
@@ -382,7 +382,7 @@ function renderRunKPIs() {
   // VO2max le plus récent — wellness (get_max_metrics) en priorité, activités en fallback
   const wellnessDays = state.wellness?.days || {};
   const vo2Points = [];
-  getRuns().filter(r => r.vo2max > 0).forEach(r => vo2Points.push({ date: r.date, vo2max: r.vo2max }));
+  runs.filter(r => r.vo2max > 0).forEach(r => vo2Points.push({ date: r.date, vo2max: r.vo2max }));
   Object.entries(wellnessDays).forEach(([date, day]) => { if (day.vo2max > 0) { const i = vo2Points.findIndex(p => p.date === date); if (i >= 0) vo2Points[i].vo2max = Math.max(vo2Points[i].vo2max, day.vo2max); else vo2Points.push({ date, vo2max: day.vo2max }); } });
   vo2Points.sort((a, b) => b.date.localeCompare(a.date));
   const vo2 = vo2Points[0]?.vo2max || null;
