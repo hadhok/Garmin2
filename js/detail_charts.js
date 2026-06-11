@@ -64,6 +64,50 @@ async function loadActivityDetails(activityId) {
   renderDetailCharts();
 }
 
+/* ── Carte Leaflet ────────────────────────────────────────────────────────── */
+let _detailMap = null;
+
+function renderDetailMap(samples) {
+  const wrap = document.getElementById('detail-map-wrap');
+  const mapEl = document.getElementById('detail-map');
+  if (!wrap || !mapEl) return;
+
+  const coords = samples
+    .filter(s => s.lat != null && s.lon != null && s.lat !== 0 && s.lon !== 0)
+    .map(s => [s.lat, s.lon]);
+
+  if (coords.length < 2) {
+    wrap.style.display = 'none';
+    return;
+  }
+
+  wrap.style.display = '';
+
+  if (_detailMap) {
+    _detailMap.remove();
+    _detailMap = null;
+    mapEl.innerHTML = '';
+  }
+
+  _detailMap = L.map(mapEl, { zoomControl: true, attributionControl: false });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+  }).addTo(_detailMap);
+
+  const line = L.polyline(coords, { color: '#3b82f6', weight: 3, opacity: 0.85 }).addTo(_detailMap);
+
+  // Marqueurs début/fin
+  const iconDot = (color) => L.divIcon({
+    html: `<div style="width:10px;height:10px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)"></div>`,
+    className: '', iconAnchor: [5, 5],
+  });
+  L.marker(coords[0], { icon: iconDot('#22c55e') }).addTo(_detailMap);
+  L.marker(coords[coords.length - 1], { icon: iconDot('#ef4444') }).addTo(_detailMap);
+
+  _detailMap.fitBounds(line.getBounds(), { padding: [20, 20] });
+}
+
 /* ── Render principal ─────────────────────────────────────────────────────── */
 function renderDetailCharts() {
   const el = document.getElementById('detail-charts-wrap');
@@ -114,6 +158,7 @@ function renderDetailCharts() {
     </div>` : ''}
   `;
 
+  renderDetailMap(_detailSamples);
   _buildDetailChart();
 }
 

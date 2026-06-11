@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Garmin Dashboard</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1220,6 +1222,9 @@
       <div id="detail-zones-wrap" style="display:none">
         <div class="detail-section">Zones cardio</div>
         <div id="detail-zones"></div>
+      </div>
+      <div id="detail-map-wrap" style="display:none">
+        <div id="detail-map"></div>
       </div>
       <div id="detail-charts-wrap" style="display:none">
         <div class="detail-section">Analyse détaillée</div>
