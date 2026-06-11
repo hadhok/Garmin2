@@ -22,7 +22,7 @@ const _METRIC_CFG = {
 
 /* ── Charge les détails depuis l'API ──────────────────────────────────────── */
 async function loadActivityDetails(activityId) {
-  if (_detailActivityId === activityId) return;  // déjà chargé
+  if (_detailActivityId === activityId && _detailSamples) return;  // déjà chargé
   _detailActivityId = activityId;
   _detailSamples    = null;
   _detailSplits     = null;

@@ -572,6 +572,7 @@ function openDetail(id) {
 
 function closeDetail() {
   document.getElementById('detail-modal').classList.remove('open');
+  _detailActivityId = null;  // force reload on next open
 }
 
 /* ══════════════════════════════════════════════════════════
