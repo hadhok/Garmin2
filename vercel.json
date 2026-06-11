@@ -1,9 +1,6 @@
 {
   "functions": {
     "api/*.py": {
-      "maxDuration": 60
-    },
-    "api/activity_details.py": {
       "maxDuration": 300
     }
   },

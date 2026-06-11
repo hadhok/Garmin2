@@ -560,6 +560,13 @@ function openDetail(id) {
     zWrap.style.display = '';
   } else { zWrap.style.display = 'none'; }
 
+  // Graphes détaillés
+  const chartsWrap = document.getElementById('detail-charts-wrap');
+  if (chartsWrap) {
+    chartsWrap.style.display = '';
+    if (typeof loadActivityDetails === 'function') loadActivityDetails(a.id);
+  }
+
   document.getElementById('detail-modal').classList.add('open');
 }
 

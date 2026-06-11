@@ -1246,6 +1246,43 @@ body.loading main::before {
 .detail-row-label  { color:var(--muted); }
 .detail-row-value  { font-weight:600; }
 
+/* ── Detail charts ────────────────────────────────────── */
+.detail-charts-loading,
+.detail-charts-empty {
+  font-size:12px; color:var(--muted); text-align:center;
+  padding:20px 0;
+}
+.detail-chart-container {
+  height:180px; margin-bottom:12px;
+  position:relative;
+}
+.detail-metric-pills {
+  display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;
+}
+.detail-metric-pill {
+  font-size:11px; font-weight:600; padding:4px 10px;
+  border-radius:20px; border:1px solid var(--border);
+  background:none; color:var(--muted); cursor:pointer;
+  transition:all .15s;
+}
+.detail-metric-pill.active { opacity:1; }
+/* Splits table */
+.detail-splits-table {
+  font-size:12px;
+}
+.detail-splits-head {
+  display:grid; grid-template-columns:40px 1fr 1fr 1fr 1fr;
+  font-size:10px; font-weight:700; color:var(--muted);
+  text-transform:uppercase; letter-spacing:.4px;
+  padding:4px 0; border-bottom:1px solid var(--border);
+}
+.detail-splits-row {
+  display:grid; grid-template-columns:40px 1fr 1fr 1fr 1fr;
+  padding:6px 0; border-bottom:1px solid var(--border);
+  color:var(--text2);
+}
+.detail-splits-row:last-child { border-bottom:none; }
+
 /* ══════════════════════════════════════════════════════════
    TOAST
    ══════════════════════════════════════════════════════════ */
