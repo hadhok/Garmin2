@@ -1,38 +1,38 @@
 {
-  "updated_at": "2026-06-11",
+  "updated_at": "2026-06-12",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "progression",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 44.6,
-    "atl": 56.7,
-    "tsb": -12.1,
-    "effort_idx": 1.33,
-    "body_battery": 40.3,
+    "ctl": 44.4,
+    "atl": 53.1,
+    "tsb": -8.7,
+    "effort_idx": 1.29,
+    "body_battery": 43.3,
     "training_readiness": null,
     "niveau": "Sportif",
-    "total_activites": 232,
-    "total_km": 579
+    "total_activites": 234,
+    "total_km": 582
   },
   "items": [
     {
       "type": "warning",
       "icon": "💪",
       "title": "En progression — adaptation positive",
-      "text": "Effort pondéré 7j : 1.3× (1.0 = charge de base, >2 = intense). TSB -12 pts (CTL 44.6 / ATL 56.7). • HRV 42.6 ms (+7 ms vs S-1) • Sommeil 8.0h/nuit • Body Battery fin de journée : 40%"
+      "text": "Effort pondéré 7j : 1.3× (1.0 = charge de base, >2 = intense). TSB -9 pts (CTL 44.4 / ATL 53.1). • HRV 42.6 ms (+7 ms vs S-1) • Sommeil 8.1h/nuit • Body Battery fin de journée : 43%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "✅ Structure d'entraînement pyramidale sur 11 séances analysées\n🏃 Course : allure en progression (+0.8 min/km plus rapide)"
+      "text": "✅ Structure d'entraînement pyramidale sur 13 séances analysées\n🏃 Course : allure en progression (+0.8 min/km plus rapide)"
     },
     {
       "type": "goal",
       "icon": "📋",
       "title": "Prescription : Séance légère — Zone 2",
-      "text": "Hier : Vo2Max (run). 45-60 min à allure conversationnelle. Course lente, vélo ou natation à faible intensité. — Z2 — 60-70% FCmax"
+      "text": "Hier : Unknown (pilates). 45-60 min à allure conversationnelle. Course lente, vélo ou natation à faible intensité. — Z2 — 60-70% FCmax"
     }
   ]
 }
