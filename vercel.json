@@ -11,6 +11,6 @@
     }
   ],
   "rewrites": [
-    { "source": "/((?!api|icons|css|js|data|coach\\.json|manifest\\.json|sw\\.js).*)", "destination": "/index.html" }
+    { "source": "/((?!api|icons|css|js|data|coach\\.json|manifest\\.json|sw\\.js|ROWING_PLAN\\.md).*)", "destination": "/index.html" }
   ]
 }
