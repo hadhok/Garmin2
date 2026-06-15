@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-06-14",
+  "updated_at": "2026-06-15",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "maintien",
     "fatigue_level": "balanced",
     "garmin_status": null,
-    "ctl": 42.3,
-    "atl": 39.0,
-    "tsb": 3.2,
+    "ctl": 41.2,
+    "atl": 33.5,
+    "tsb": 7.7,
     "effort_idx": 1.32,
-    "body_battery": 36.0,
+    "body_battery": 31.3,
     "training_readiness": null,
     "niveau": "Sportif",
     "total_activites": 234,
@@ -20,13 +20,13 @@
       "type": "tip",
       "icon": "🟢",
       "title": "En maintien — charge stable",
-      "text": "Effort pondéré 7j : 1.3× (1.0 = charge de base, >2 = intense). TSB +3 pts (CTL 42.3 / ATL 39.0). • HRV 41.4 ms (+2 ms vs S-1) • Sommeil 8.3h/nuit • Body Battery fin de journée : 36%"
+      "text": "Effort pondéré 7j : 1.3× (1.0 = charge de base, >2 = intense). TSB +8 pts (CTL 41.2 / ATL 33.5). • HRV 41.0 ms (+0 ms vs S-1) • Sommeil 8.0h/nuit • Body Battery fin de journée : 31%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "✅ Structure d'entraînement pyramidale sur 13 séances analysées\n🏃 Course : allure en progression (+0.8 min/km plus rapide)"
+      "text": "✅ Structure d'entraînement pyramidale sur 12 séances analysées\n🏃 Course : allure en progression (+0.8 min/km plus rapide)"
     },
     {
       "type": "goal",
