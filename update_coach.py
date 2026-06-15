@@ -38,6 +38,11 @@ TE_WEIGHT = {
     None: 1.0,
 }
 
+# Poids de l'effort par type de sport (pour effort_index)
+SPORT_WEIGHT = {
+    'run': 1.0, 'bike': 0.85, 'swim': 0.9, 'rowing': 1.2, 'strength': 1.5,
+}
+
 # ── Utilitaires ────────────────────────────────────────────────────────────────
 def _load_env():
     p = os.path.join(BASE, '.env')
@@ -375,6 +380,12 @@ def analyze(activities, wellness_by_date):
     top_sport_key   = max(type_time, key=type_time.get) if type_time else None
     top_sport_label = type_label.get(top_sport_key, top_sport_key or '–')
 
+    # Rowing metrics 30j
+    rowing_acts_30d = [a for a in acts_30d if a.get('type') == 'rowing']
+    nb_rowing = len(rowing_acts_30d)
+    rowing_vol_min = sum(a.get('duration_min', 0) for a in rowing_acts_30d)
+    avg_rowing_load = round(sum(a.get('training_load', 0) for a in rowing_acts_30d) / max(nb_rowing, 1), 1) if nb_rowing > 0 else None
+
     return dict(
         # CTL/ATL
         ctl=round(ctl,1), atl=round(atl,1), tsb=round(tsb,1),
@@ -393,6 +404,8 @@ def analyze(activities, wellness_by_date):
         # Forme
         avg_bb_high=avg_bb_high, pace_trend=pace_trend, speed_trend=speed_trend,
         nb_runs=nb_runs, nb_bikes=nb_bikes,
+        # Rowing (30j)
+        nb_rowing=nb_rowing, rowing_vol_min=rowing_vol_min, avg_rowing_load=avg_rowing_load,
         # Hier
         yesterday_te=yesterday_te, yesterday_type=yesterday_type,
         # Corps
@@ -500,6 +513,10 @@ def generate_coach(s):
             vigilance.append(f"🚴 Vélo : vitesse en hausse (+{s['speed_trend']} km/h)")
         elif s['speed_trend'] < -0.5:
             vigilance.append(f"🚴 Vélo : vitesse en baisse ({s['speed_trend']} km/h) — surveille la récupération")
+
+    # Rameur
+    if s['nb_rowing'] > 0:
+        vigilance.append(f"🚣 Rameur : {s['nb_rowing']} séances, {s['rowing_vol_min']} min, charge moy. {s['avg_rowing_load']} pts")
 
     # Body Battery high
     if s['avg_bb_high'] and s['avg_bb_high'] < 50:

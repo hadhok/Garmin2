@@ -34,5 +34,77 @@
       "title": "Prescription : Séance légère — Zone 2",
       "text": "45-60 min à allure conversationnelle. Course lente, vélo ou natation à faible intensité. — Z2 — 60-70% FCmax"
     }
-  ]
+  ],
+  "rowing_plan": {
+    "enabled": true,
+    "start_date": "2026-06-17",
+    "status": "adaptation",
+    "next_review": "2026-07-01",
+    "summary": "Plan d'ajout de rameur : 1 séance/semaine, matin (6h30-7h30), Z2 progressif",
+    "phases": [
+      {
+        "phase": "Adaptation",
+        "weeks": "W1-4",
+        "frequency": "1×/semaine",
+        "day": "Mardi matin",
+        "duration": "30-40 min",
+        "intensity": "Zone 2 (60-70% FCmax)",
+        "focus": "Technique, HRV stabilité",
+        "notes": "Priorité: dos droit, jambes compress. en dernier, respiratoire régulier"
+      },
+      {
+        "phase": "Consolidation",
+        "weeks": "W5-12",
+        "frequency": "1×/semaine",
+        "day": "Mardi matin",
+        "duration": "45-60 min",
+        "intensity": "Zone 2 + 1 session Z3/semaine",
+        "focus": "Capacité aérobie, force endurance",
+        "notes": "Ajouter rameur jeudi 40 min Z2-Z3 si 2/sem souhaité"
+      },
+      {
+        "phase": "Progression",
+        "weeks": "W13+",
+        "frequency": "1-2×/semaine",
+        "day": "Mardi + Samedi (optionnel)",
+        "duration": "50-70 min",
+        "intensity": "Mix Z2/Z3/Z4",
+        "focus": "Force, capacité lactate, puissance",
+        "notes": "Évaluer impact HRV + TSB avant d'ajouter 2e séance"
+      }
+    ],
+    "benefits": [
+      "Complémentaire running (85% muscles vs 40% running)",
+      "Faible impact (récupère rachis lombaire)",
+      "Cardio efficace (1 rameur = 1.2 running)",
+      "Force haut du corps (prévention déséquilibres)",
+      "Aérobie pure (excellent Z2)"
+    ],
+    "precautions": [
+      "Technique importante (sinon risque lombaire)",
+      "4-6 semaines adaptation",
+      "HRV peut baisser 1-2 jours (normal)"
+    ],
+    "timing": {
+      "recommended": "Matin 6h30-7h30",
+      "rationale": "Core frais, technique meilleure, boost énergie, n'interfère pas après-midi",
+      "backup": "Soir acceptable si contraintes"
+    },
+    "load_impact": {
+      "current_effort_index": 1.32,
+      "per_session_tss": 25,
+      "projected_ctl_increase": "41.2 → 45-47",
+      "projected_tsb_change": "7.7 → 3-5 (meilleur stimulus)",
+      "hrv_impact": "Peut baisser -1 à -2 ms temporairement, puis se renforce"
+    },
+    "micro_cycle": {
+      "lundi": "Repos ou Z1 (8-10 min)",
+      "mardi": "🚣 RAMEUR 45 min Z2 (matin)",
+      "mercredi": "Course 5-8 km Z2 (léger)",
+      "jeudi": "Repos",
+      "vendredi": "Optionnel — 🚣 RAMEUR 40 min Z2-Z3 (si 2/sem)",
+      "samedi": "Course + tempo 30 min (seuil)",
+      "dimanche": "Repos actif (marche, stretching)"
+    }
+  }
 }
