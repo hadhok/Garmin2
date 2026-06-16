@@ -3105,7 +3105,7 @@ function updateRunCompare() {
     return;
   }
 
-  const runs = getRuns();
+  const runs = getAll().filter(a => a.type === 'run');
   const a = runs.find(r => String(r.id) === String(idA));
   const b = runs.find(r => String(r.id) === String(idB));
   if (!a || !b) return;
