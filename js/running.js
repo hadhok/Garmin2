@@ -3067,9 +3067,9 @@ function renderRunWeekCompare() {
    COMPARER DEUX SESSIONS
    ══════════════════════════════════════════════════════════ */
 function populateCompareSelectors() {
-  const runs = getRuns().sort((a, b) =>
-    (b.start_time || b.date || '').localeCompare(a.start_time || a.date || '')
-  );
+  const runs = getAll()
+    .filter(a => a.type === 'run' && (a.duration_min || 0) >= 5)
+    .sort((a, b) => (b.start_time || b.date || '').localeCompare(a.start_time || a.date || ''));
   const opts = runs.map(r => {
     const dateStr = r.date || (r.start_time || '').slice(0, 10);
     const date = dateStr ? new Date(dateStr + 'T12:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: '2-digit' }) : '–';
