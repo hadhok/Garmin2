@@ -39,7 +39,9 @@ const runState = {
 
 /* ── Helpers ── */
 function getRuns() {
-  return getAll().filter(a => a.type === 'run' && (a.distance_km || 0) >= MIN_DIST);
+  return getAll().filter(a => a.type === 'run' && (
+    (a.distance_km || 0) >= MIN_DIST || (a.duration_min || 0) >= 10
+  ));
 }
 
 function paceToSec(p) {
@@ -3067,8 +3069,7 @@ function renderRunWeekCompare() {
    COMPARER DEUX SESSIONS
    ══════════════════════════════════════════════════════════ */
 function populateCompareSelectors() {
-  const runs = getAll()
-    .filter(a => a.type === 'run' && (a.duration_min || 0) >= 5)
+  const runs = getRuns()
     .sort((a, b) => (b.start_time || b.date || '').localeCompare(a.start_time || a.date || ''));
   const opts = runs.map(r => {
     const dateStr = r.date || (r.start_time || '').slice(0, 10);
@@ -3105,7 +3106,7 @@ function updateRunCompare() {
     return;
   }
 
-  const runs = getAll().filter(a => a.type === 'run');
+  const runs = getRuns();
   const a = runs.find(r => String(r.id) === String(idA));
   const b = runs.find(r => String(r.id) === String(idB));
   if (!a || !b) return;
