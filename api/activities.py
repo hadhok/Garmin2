@@ -12,7 +12,7 @@ class handler(BaseHTTPRequestHandler):
         try:
             sb = _sb()
 
-            result = sb.table('activities').select('*').order('start_time', desc=True).execute()
+            result = sb.table('activities').select('*').order('start_time', desc=True).limit(10000).execute()
             meta   = sb.table('sync_meta').select('last_sync, total_activities').eq('id', 1).limit(1).execute()
 
             last_sync = meta.data[0]['last_sync'] if meta.data else None
