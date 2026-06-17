@@ -31,6 +31,26 @@ GARMIN_SIGNAL = {
     'EN MAINTIEN': 0, 'RÉCUPÉRATION': -1, 'PIC DE FORME': 1,
 }
 
+# Termes Garmin → icône + label affiché
+GARMIN_STATUS_LABEL = {
+    'PRODUCTIVE':    ('💪', 'Productif'),
+    'PEAKING':       ('🚀', 'Pic de forme'),
+    'MAINTAINING':   ('🟢', 'En maintien'),
+    'OVERREACHING':  ('🔴', 'Surcharge'),
+    'STRAINED':      ('🟡', 'Sous tension'),
+    'UNPRODUCTIVE':  ('🟡', 'Non productif'),
+    'RECOVERY':      ('🔵', 'Récupération'),
+    'DETRAINING':    ('⚪', 'Désentraînement'),
+    'NO_DATA':       ('⚖️', 'Pas de données'),
+    # Variantes françaises
+    'PRODUCTIF':     ('💪', 'Productif'),
+    'PIC DE FORME':  ('🚀', 'Pic de forme'),
+    'EN MAINTIEN':   ('🟢', 'En maintien'),
+    'SURCHARGE':     ('🔴', 'Surcharge'),
+    'SOUS TENSION':  ('🟡', 'Sous tension'),
+    'RÉCUPÉRATION':  ('🔵', 'Récupération'),
+}
+
 # Poids de l'effort par te_label (Training Effect)
 TE_WEIGHT = {
     'Récupération': 0.4, 'Base': 1.0, 'Amélioration': 1.5,
@@ -427,19 +447,22 @@ def generate_coach(s):
     ctl, atl, tsb = s['ctl'], s['atl'], s['tsb']
     ei      = s['effort_idx']
 
-    # Si fatigue_level dit "tired" mais phase dit "maintien/progression",
-    # on remonte au niveau de vigilance pour cohérence avec TSB/BB
-    if fl == 'tired' and phase in ('maintien', 'progression'):
-        phase = 'vigilance'
-
-    PHASE_LABEL = {
-        'fatigue':     ('🔴', 'Fatigué — récupération prioritaire'),
-        'vigilance':   ('🟡', 'Sous tension — charge élevée'),
-        'maintien':    ('🟢', 'En maintien — charge stable'),
-        'progression': ('💪', 'En progression — adaptation positive'),
-        'pic_de_forme':('🚀', 'Pic de forme — moment idéal pour performer'),
-    }
-    icon, label = PHASE_LABEL.get(phase, ('⚖️', 'Équilibre — charge normale'))
+    # Priorité au statut Garmin, fallback sur phase calculée
+    gs_key = (gs or '').upper().strip()
+    if gs_key and gs_key in GARMIN_STATUS_LABEL:
+        icon, label = GARMIN_STATUS_LABEL[gs_key]
+    else:
+        # Fallback : phase calculée (cohérente avec fatigue_level)
+        if fl == 'tired' and phase in ('maintien', 'progression'):
+            phase = 'vigilance'
+        PHASE_LABEL = {
+            'fatigue':     ('🔴', 'Fatigué'),
+            'vigilance':   ('🟡', 'Sous tension'),
+            'maintien':    ('🟢', 'En maintien'),
+            'progression': ('💪', 'Productif'),
+            'pic_de_forme':('🚀', 'Pic de forme'),
+        }
+        icon, label = PHASE_LABEL.get(phase, ('⚖️', 'En maintien'))
 
     gs_str    = f" • Garmin : {gs}" if gs else ""
     hrv_str   = (f" • HRV {s['avg_hrv']} ms" + (f" ({s['hrv_delta']:+.0f} ms vs S-1)" if s['hrv_delta'] else "")) if s['avg_hrv'] else ""
