@@ -206,8 +206,11 @@ def _run_sync():
             # Training status & readiness (jour courant seulement)
             tr_status = {}; tr_readiness = {}
             if i == 0:
-                try: tr_status   = client.get_training_status(date_str) or {}
-                except Exception: pass
+                try:
+                    tr_status = client.get_training_status(date_str) or {}
+                    print(f"[DEBUG] training_status raw: {tr_status}")
+                except Exception as e:
+                    print(f"[DEBUG] training_status error: {e}")
                 try: tr_readiness = client.get_training_readiness(date_str) or {}
                 except Exception: pass
             day = {
