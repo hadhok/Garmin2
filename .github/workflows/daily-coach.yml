@@ -27,6 +27,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install supabase garminconnect
 
+      - name: Configure git credentials
+        run: |
+          git config user.name "Coach Bot"
+          git config user.email "coach@garmin2.local"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/hadhok/Garmin2.git
+
       - name: Run coach analysis
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -34,11 +40,3 @@ jobs:
           GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
           GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
         run: python3 sync_now.py --coach --plan --renpho
-
-      - name: Commit and push coach.json
-        run: |
-          git config user.name "Coach Bot"
-          git config user.email "coach@garmin2.local"
-          git add coach.json
-          git commit -m "coach: analyse du $(date +'%d/%m/%Y %H:%M')" || echo "Pas de changement"
-          git push
