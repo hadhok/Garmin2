@@ -653,6 +653,11 @@ def main():
         json.dump(coach, f, ensure_ascii=False, indent=2)
     print(f"\n📝 coach.json mis à jour")
 
+    # En CI (GitHub Actions), le workflow gère le commit/push
+    if os.environ.get('GITHUB_ACTIONS'):
+        print("ℹ️  CI détecté — git géré par le workflow.")
+        return
+
     try:
         subprocess.run(['git', 'add', 'coach.json'], cwd=BASE, check=True)
         msg = f"coach: analyse du {datetime.now().strftime('%d/%m/%Y %H:%M')}"
