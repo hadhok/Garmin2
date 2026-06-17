@@ -33,7 +33,7 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
           GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
-        run: python3 sync_now.py --coach
+        run: python3 sync_now.py --coach --plan --renpho
 
       - name: Commit and push coach.json
         run: |
