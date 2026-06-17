@@ -4,6 +4,7 @@ import json, os, sys
 sys.path.insert(0, os.path.dirname(__file__))
 from sync import _run_sync
 from renpho_sync import run_renpho_sync
+from update_coach import run_coach_update
 
 
 def _sync_recent_details():
@@ -69,6 +70,11 @@ class handler(BaseHTTPRequestHandler):
             results['details'] = _sync_recent_details()
         except Exception as e:
             results['details'] = f'error: {e}'
+
+        try:
+            results['coach'] = run_coach_update()
+        except Exception as e:
+            results['coach'] = f'error: {e}'
 
         body = json.dumps({'status': 'ok', 'results': results})
         self.send_response(200)

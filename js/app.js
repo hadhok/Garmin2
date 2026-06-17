@@ -205,7 +205,7 @@ async function triggerCoachUpdate(btn) {
 
 async function loadCoach() {
   try {
-    const r = await fetch('/coach.json?v=' + Date.now(), { cache: 'no-store' });
+    const r = await fetch('/api/coach', { cache: 'no-store' });
     if (!r.ok) return;
     const data = await r.json();
     /* Populate both dashboard and profile coach sections independently */
@@ -625,9 +625,10 @@ async function runSync() {
       await Promise.all([loadData(), loadWellness()]);
       markAllDirty();
       renderAll();
-      // Déclenche la mise à jour du coach en arrière-plan
-      fetch('/api/trigger-coach', { method: 'POST' })
-        .then(() => showToast('Analyse coach lancée (~1 min)', 'ok'))
+      // Mise à jour du coach en arrière-plan
+      fetch('/api/update-coach', { method: 'POST' })
+        .then(r => r.json())
+        .then(d => { if (d.status === 'ok') loadCoach(); })
         .catch(() => {});
     } else {
       log.textContent = data.message;
