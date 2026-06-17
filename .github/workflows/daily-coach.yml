@@ -1,0 +1,40 @@
+name: Daily Coach Analysis
+
+on:
+  schedule:
+    - cron: '0 9 * * *'  # 9h du matin chaque jour (UTC)
+  workflow_dispatch:      # Permet de lancer manuellement
+
+jobs:
+  coach-update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install supabase garminconnect
+
+      - name: Run coach analysis
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+        run: python3 sync_now.py --coach
+
+      - name: Commit and push coach.json
+        run: |
+          git config user.name "Coach Bot"
+          git config user.email "coach@garmin2.local"
+          git add coach.json
+          git commit -m "coach: analyse du $(date +'%d/%m/%Y %H:%M')" || echo "Pas de changement"
+          git push
