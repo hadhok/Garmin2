@@ -186,6 +186,23 @@ function _renderCoachItems(sectionId, dateId, itemsId, data) {
   } catch(e) { console.warn('coach render error', sectionId, e); }
 }
 
+async function triggerCoachUpdate(btn) {
+  if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
+  try {
+    const r = await fetch('/api/trigger-coach', { method: 'POST' });
+    const data = await r.json();
+    if (r.ok) {
+      showToast('Mise à jour du coach lancée (~1 min)', 'ok');
+    } else {
+      showToast('Erreur : ' + (data.error || 'inconnue'), 'err');
+    }
+  } catch(e) {
+    showToast('Erreur de connexion', 'err');
+  } finally {
+    if (btn) { btn.textContent = '🔄'; btn.disabled = false; }
+  }
+}
+
 async function loadCoach() {
   try {
     const r = await fetch('/coach.json?v=' + Date.now(), { cache: 'no-store' });

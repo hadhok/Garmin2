@@ -11,6 +11,7 @@
     }
   ],
   "rewrites": [
+    { "source": "/api/trigger-coach", "destination": "/api/trigger_coach.py" },
     { "source": "/((?!api|icons|css|js|data|coach\\.json|manifest\\.json|sw\\.js).*)", "destination": "/index.html" }
   ]
 }
