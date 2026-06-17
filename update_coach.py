@@ -427,9 +427,14 @@ def generate_coach(s):
     ctl, atl, tsb = s['ctl'], s['atl'], s['tsb']
     ei      = s['effort_idx']
 
+    # Si fatigue_level dit "tired" mais phase dit "maintien/progression",
+    # on remonte au niveau de vigilance pour cohérence avec TSB/BB
+    if fl == 'tired' and phase in ('maintien', 'progression'):
+        phase = 'vigilance'
+
     PHASE_LABEL = {
         'fatigue':     ('🔴', 'Fatigué — récupération prioritaire'),
-        'vigilance':   ('🟡', 'Sous tension — vigilance requise'),
+        'vigilance':   ('🟡', 'Sous tension — charge élevée'),
         'maintien':    ('🟢', 'En maintien — charge stable'),
         'progression': ('💪', 'En progression — adaptation positive'),
         'pic_de_forme':('🚀', 'Pic de forme — moment idéal pour performer'),
