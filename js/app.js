@@ -625,6 +625,10 @@ async function runSync() {
       await Promise.all([loadData(), loadWellness()]);
       markAllDirty();
       renderAll();
+      // Déclenche la mise à jour du coach en arrière-plan
+      fetch('/api/trigger-coach', { method: 'POST' })
+        .then(() => showToast('Analyse coach lancée (~1 min)', 'ok'))
+        .catch(() => {});
     } else {
       log.textContent = data.message;
       showToast('Erreur de synchro', 'err');
