@@ -139,8 +139,10 @@ function _renderCoachItems(sectionId, dateId, itemsId, data) {
     if (!itemsEl) return;
 
     if (dateEl && data.updated_at) {
-      const d = new Date(data.updated_at + 'T12:00:00');
-      dateEl.textContent = d.toLocaleDateString('fr-FR', {day:'numeric', month:'long'});
+      const d = new Date(data.updated_at);
+      const dateStr = d.toLocaleDateString('fr-FR', {day:'numeric', month:'long'});
+      const timeStr = d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+      dateEl.textContent = `${dateStr} à ${timeStr}`;
     }
 
     // Coach name

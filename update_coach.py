@@ -630,7 +630,7 @@ def main():
         print(f"   {it['icon']} [{it['type']}] {it['title']}")
 
     coach = {
-        "updated_at": datetime.now().strftime('%Y-%m-%d'),
+        "updated_at": datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
         "coach": "Claude",
         "stats_snapshot": {
             "phase":           stats['phase'],
