@@ -235,50 +235,51 @@ def prescribe(s):
     yesterday_te = s.get('yesterday_te')
     yesterday_type = s.get('yesterday_type')
 
-    # Score de fraîcheur 0-100 basé sur bb actuelle en priorité
-    freshness = 50
-    if tr:
-        freshness = tr
-    elif bb:
-        freshness = bb
-    # Ajuste selon fatigue globale et TSB
+    # Score de fraîcheur 0-100 : BB en priorité, modulé par TSB et fatigue
     tsb = s.get('tsb', 0)
-    if fl == 'tired' or tsb < -15: freshness = min(freshness, 40)
-    if fl == 'peak'  or tsb > 5:   freshness = max(freshness, 65)
+    freshness = bb or tr or 50
+    # TSB très négatif = fatigue accumulée → réduit la fraîcheur de 10-15 pts max
+    if tsb < -20:  freshness = max(freshness - 15, 20)
+    elif tsb < -10: freshness = max(freshness - 8, 25)
+    # TSB positif = frais → boost léger
+    if tsb > 5:   freshness = min(freshness + 8, 95)
+    # Readiness Garmin override si dispo
+    if tr: freshness = (freshness + tr) / 2
 
     # Séance d'hier était-elle intense ?
     hard_yesterday = yesterday_te in ('Seuil', 'Surcharge', 'Tempo')
     recovery_yesterday = yesterday_te in ('Récupération', 'Base')
 
-    # Contexte Body Battery pour le conseil
-    bb_ctx = f'Body Battery à {round(bb)}% — ' if bb else ''
+    bb_str = f'Body Battery {round(bb)}%' if bb else ''
+    tsb_str = f'TSB {tsb:+.0f}' if tsb else ''
+    ctx = ' · '.join(filter(None, [bb_str, tsb_str]))
+    ctx = f'[{ctx}] ' if ctx else ''
 
-    # Prescription selon fraîcheur réelle
-    if freshness <= 30 or fl == 'fatigue':
-        ptype  = 'Récupération active'
-        detail = f'{bb_ctx}réserves très basses. 20-30 min de marche, mobilité ou yoga. Pas de cardio.'
-        intensity = 'Z1 uniquement — FC < 120 bpm'
+    if freshness <= 30:
+        ptype     = 'Récupération active'
+        detail    = f'{ctx}Réserves très basses. 20-30 min marche, mobilité ou yoga uniquement.'
+        intensity = 'Z1 — FC < 120 bpm'
     elif freshness <= 45 or hard_yesterday:
-        ptype  = 'Séance légère — Zone 2'
-        detail = f'{bb_ctx}suffisant pour une sortie douce. 45-60 min à allure conversationnelle.'
+        ptype     = 'Séance légère — Zone 2'
+        detail    = f'{ctx}Fatigue accumulée malgré une BB correcte. 45-60 min à allure conversationnelle.'
         intensity = 'Z2 — 60-70% FCmax'
-    elif freshness <= 60:
-        ptype  = 'Séance modérée — Tempo'
-        detail = f'{bb_ctx}bonne base pour travailler. 50 min : 10 min Z2 + 25 min tempo + 15 min cool-down.'
-        intensity = 'Z3 progressif vers Z4'
-    elif freshness >= 70 and not hard_yesterday:
+    elif freshness <= 62:
+        ptype     = 'Séance modérée — Tempo'
+        detail    = f'{ctx}Forme correcte. 50 min : 10 min Z2 + 25 min tempo + 15 min retour au calme.'
+        intensity = 'Z3 → Z4'
+    elif not hard_yesterday:
         if s.get('z45', 0) < 10:
-            ptype  = 'Séance de qualité — Fractionné'
-            detail = f'{bb_ctx}tu es frais, exploite-le ! 45 min : 15 min Z2 + 6×3 min à 90-95% FCmax (récup 90s) + 10 min cool-down.'
+            ptype     = 'Séance de qualité — Fractionné'
+            detail    = f'{ctx}Tu es frais — profite-en ! 45 min : 15 min Z2 + 6×3 min à 90-95% FCmax (récup 90s) + 10 min cool-down.'
             intensity = 'Z4-Z5 — 88-95% FCmax'
         else:
-            ptype  = 'Séance longue — Endurance fondamentale'
-            detail = f'{bb_ctx}bonne forme, mise sur le volume. 60-90 min à allure modérée.'
+            ptype     = 'Séance longue — Endurance fondamentale'
+            detail    = f'{ctx}Bonne forme, mise sur le volume. 60-90 min à allure modérée.'
             intensity = 'Z2 — 65-75% FCmax'
     else:
-        ptype  = 'Séance modérée — Tempo'
-        detail = f'{bb_ctx}forme correcte. 50 min : 10 min Z2 + 25 min tempo + 15 min retour au calme.'
-        intensity = 'Z3 progressif vers Z4'
+        ptype     = 'Séance modérée — Tempo'
+        detail    = f'{ctx}Forme correcte. 50 min : 10 min Z2 + 25 min tempo + 15 min retour au calme.'
+        intensity = 'Z3 → Z4'
 
     # Ajustement poids/masse grasse
     fat_note = ''
