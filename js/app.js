@@ -625,6 +625,7 @@ async function runSync() {
       closeSyncModal();
       cacheClear();
       await Promise.all([loadData(), loadWellness()]);
+      if (typeof loadBodyMetrics === 'function') await loadBodyMetrics();
       markAllDirty();
       renderAll();
       // Mise à jour du coach en arrière-plan

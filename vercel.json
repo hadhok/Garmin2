@@ -11,8 +11,9 @@
     }
   ],
   "rewrites": [
-    { "source": "/api/update-coach", "destination": "/api/update_coach.py" },
-    { "source": "/api/coach",        "destination": "/api/coach.py" },
+    { "source": "/api/update-coach",  "destination": "/api/update_coach.py" },
+    { "source": "/api/coach",         "destination": "/api/coach.py" },
+    { "source": "/api/body_metrics",  "destination": "/api/body_metrics.py" },
     { "source": "/((?!api|icons|css|js|data|coach\\.json|manifest\\.json|sw\\.js).*)", "destination": "/index.html" }
   ]
 }
