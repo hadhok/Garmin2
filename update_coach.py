@@ -331,10 +331,11 @@ def analyze(activities, wellness_by_date):
     avg_bb_end   = _avg(well_7d[:3], 'body_battery_end')
     avg_bb_high  = _avg(well_7d[:3], 'body_battery_high')
 
-    # Body Battery actuelle = valeur la plus récente disponible aujourd'hui
+    # Body Battery du matin = pic après la nuit (cohérent avec résumé du matin)
     today_well = wellness_by_date.get(today.isoformat(), {})
-    bb_now = (today_well.get('body_battery_end')
-              or today_well.get('body_battery_high')
+    bb_now = (today_well.get('body_battery_high')
+              or avg_bb_high
+              or today_well.get('body_battery_end')
               or avg_bb_end)
 
     garmin_status = next((w['training_status'] for w in reversed(well_7d) if w.get('training_status')), None)
