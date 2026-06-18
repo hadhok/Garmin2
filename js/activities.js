@@ -118,6 +118,11 @@ function renderActivities() {
     return;
   }
 
+  const escape = (str) => {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  };
   tbody.innerHTML = page.map(a => {
     ACT_MAP[a.id] = a;
     const dateStr  = a.date ? new Date(a.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}) : '–';
@@ -126,10 +131,11 @@ function renderActivities() {
     const hr       = a.hr_avg ? `${a.hr_avg} bpm` : '–';
     const cal      = a.calories ? Math.round(a.calories).toLocaleString('fr') : '–';
     const load     = a.training_load > 0 ? Math.round(a.training_load) : '–';
+    const safeName = escape(a.name);
     return `<tr onclick="openDetail(${a.id})">
       <td class="td-date">${dateStr}</td>
       <td>${typeBadge(a.type, label)}</td>
-      <td class="td-name">${a.name}</td>
+      <td class="td-name">${safeName}</td>
       <td class="td-num">${fmt_dur(a.duration_min)}</td>
       <td class="td-num">${dist}</td>
       <td class="td-num col-hr">${hr}</td>

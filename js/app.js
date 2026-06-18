@@ -5,6 +5,14 @@
 /* ── Global activity map for detail modal ── */
 const ACT_MAP = {};
 
+/* ── Date ISO helper ── */
+function dateToISO(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 /* ── Application state ── */
 const state = {
   view:               'today',      // today | training | recovery | history | profile
@@ -103,10 +111,18 @@ async function loadData() {
     if (cached) {
       state.data = cached;
     } else {
-      const r = await fetch('/api/activities');
-      if (!r.ok) throw new Error('not found');
-      state.data = await r.json();
-      cacheSet('cache_activities', state.data);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      try {
+        const r = await fetch('/api/activities', { signal: controller.signal });
+        clearTimeout(timeout);
+        if (!r.ok) throw new Error('not found');
+        state.data = await r.json();
+        cacheSet('cache_activities', state.data);
+      } catch (e) {
+        clearTimeout(timeout);
+        throw e;
+      }
     }
     const ls = state.data.last_sync ? state.data.last_sync.slice(0,16).replace('T',' ') : '–';
     const labelEl = document.getElementById('sync-label');
@@ -123,8 +139,16 @@ async function loadWellness() {
   try {
     const cached = cacheGet('cache_wellness');
     if (cached) { state.wellness = cached; return; }
-    const r = await fetch('/api/wellness');
-    if (r.ok) { state.wellness = await r.json(); cacheSet('cache_wellness', state.wellness); }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+      const r = await fetch('/api/wellness', { signal: controller.signal });
+      clearTimeout(timeout);
+      if (r.ok) { state.wellness = await r.json(); cacheSet('cache_wellness', state.wellness); }
+    } catch (e) {
+      clearTimeout(timeout);
+      throw e;
+    }
   } catch {}
 }
 
@@ -165,21 +189,33 @@ function _renderCoachItems(sectionId, dateId, itemsId, data) {
       if (snap.fatigue_level)   pills.push(['Fatigue',      FATIGUE_LBL[snap.fatigue_level] || snap.fatigue_level,       FATIGUE_COLOR[snap.fatigue_level] || '#6b7280']);
       if (snap.body_battery != null) pills.push(['Body Battery', Math.round(snap.body_battery) + '%',                    bbColor]);
 
-      snapEl.innerHTML = pills.map(([lbl, val, color]) =>
-        `<div class="coach-snap-pill"><span class="coach-snap-lbl">${lbl}</span><span class="coach-snap-val" style="color:${color}">${val}</span></div>`
-      ).join('');
+      snapEl.innerHTML = pills.map(([lbl, val, color]) => {
+        const safeLbl = escape(lbl);
+        const safeVal = escape(val);
+        const safeColor = /^#[0-9a-f]{6}$/i.test(color) ? color : '#6b7280';
+        return `<div class="coach-snap-pill"><span class="coach-snap-lbl">${safeLbl}</span><span class="coach-snap-val" style="color:${safeColor}">${safeVal}</span></div>`;
+      }).join('');
       snapEl.style.display = pills.length ? 'flex' : 'none';
     }
 
+    // Sanitize HTML content to prevent XSS
+    const escape = (str) => {
+      const div = document.createElement('div');
+      div.textContent = str || '';
+      return div.innerHTML;
+    };
     itemsEl.innerHTML = data.items.map(item => {
-      const text = (item.text || '').replace(/\n/g, '<br>');
+      const safeTitle = escape(item.title || '');
+      const safeText = escape(item.text || '').replace(/\n/g, '<br>');
+      const safeIcon = escape(item.icon || '💬');
+      const safeType = /^(tip|warning|goal)$/.test(item.type) ? item.type : 'tip';
       return `
-        <div class="coach-item ${item.type || 'tip'}">
+        <div class="coach-item ${safeType}">
           <div class="coach-item-header">
-            <span class="coach-item-icon">${item.icon || '💬'}</span>
-            <span class="coach-item-title">${item.title || ''}</span>
+            <span class="coach-item-icon">${safeIcon}</span>
+            <span class="coach-item-title">${safeTitle}</span>
           </div>
-          <div class="coach-item-text">${text}</div>
+          <div class="coach-item-text">${safeText}</div>
         </div>`;
     }).join('');
     section.style.display = '';
@@ -205,12 +241,20 @@ async function triggerCoachUpdate(btn) {
 
 async function loadCoach() {
   try {
-    const r = await fetch('/api/coach', { cache: 'no-store' });
-    if (!r.ok) return;
-    const data = await r.json();
-    /* Populate both dashboard and profile coach sections independently */
-    _renderCoachItems('coach-section-dash', 'coach-date-dash', 'coach-items-dash', data);
-    _renderCoachItems('coach-section',      'coach-date',      'coach-items',      data);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+      const r = await fetch('/api/coach', { cache: 'no-store', signal: controller.signal });
+      clearTimeout(timeout);
+      if (!r.ok) return;
+      const data = await r.json();
+      /* Populate both dashboard and profile coach sections independently */
+      _renderCoachItems('coach-section-dash', 'coach-date-dash', 'coach-items-dash', data);
+      _renderCoachItems('coach-section',      'coach-date',      'coach-items',      data);
+    } catch (e) {
+      clearTimeout(timeout);
+      throw e;
+    }
   } catch(e) { console.warn('loadCoach error', e); }
 }
 
@@ -342,8 +386,8 @@ function computeRecoveryScoreDay(today, last28) {
   }
   const b = { hrv: avg(d=>d.hrv_rmssd||d.hrv_weekly_avg), hr: avg(d=>d.resting_hr), bb: avg(d=>d.body_battery_high), sleep: avg(d=>d.sleep_duration_h) };
   const sc = [];
-  if (b.hrv  && today.hrv_rmssd)       sc.push({ s: Math.min(100,Math.max(0, 50 + (today.hrv_rmssd - b.hrv) / b.hrv * 150)),         w: 0.30 });
-  if (b.hr   && today.resting_hr)      sc.push({ s: Math.min(100,Math.max(0, 50 - (today.resting_hr - b.hr)  / b.hr  * 150)),         w: 0.25 });
+  if (b.hrv  && b.hrv > 0 && today.hrv_rmssd)       sc.push({ s: Math.min(100,Math.max(0, 50 + (today.hrv_rmssd - b.hrv) / b.hrv * 150)),         w: 0.30 });
+  if (b.hr   && b.hr > 0  && today.resting_hr)      sc.push({ s: Math.min(100,Math.max(0, 50 - (today.resting_hr - b.hr)  / b.hr  * 150)),         w: 0.25 });
   if (today.body_battery_high != null) sc.push({ s: today.body_battery_high,                                                            w: 0.25 });
   if (today.sleep_duration_h  != null) sc.push({ s: Math.min(100,Math.max(0, 50 + (today.sleep_duration_h - 7.5) / 1.5 * 50)),         w: 0.20 });
   if (!sc.length) return null;
@@ -1064,9 +1108,10 @@ function generateMorningSummary() {
 
   // Moyennes 7 jours pour contextualiser
   const last7    = days.slice(0, 7);
-  const avgHrv   = last7.map(d=>d.hrv_overnight_avg).filter(Boolean).reduce((s,v,_,a)=>s+v/a.length,0);
-  const avgRhr   = last7.map(d=>d.resting_hr).filter(Boolean).reduce((s,v,_,a)=>s+v/a.length,0);
-  const avgSleep = last7.map(d=>d.sleep_total_min).filter(Boolean).reduce((s,v,_,a)=>s+v/a.length,0);
+  const _avg = (arr) => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : null;
+  const avgHrv   = _avg(last7.map(d=>d.hrv_overnight_avg).filter(Boolean));
+  const avgRhr   = _avg(last7.map(d=>d.resting_hr).filter(Boolean));
+  const avgSleep = _avg(last7.map(d=>d.sleep_total_min).filter(Boolean));
 
   const lines = [];
 
