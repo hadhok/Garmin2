@@ -1,4 +1,4 @@
-const CACHE = 'garmin-v10';
+const CACHE = 'garmin-v11';
 const ASSETS = [
   '/',
   '/index.html',
@@ -10,8 +10,10 @@ const ASSETS = [
   '/js/profile.js',
   '/js/running.js',
   '/js/xplor.js',
+  '/js/detail_charts.js',
   '/js/poc.js',
   '/js/help.js',
+  '/js/renpho.js',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/manifest.json',
