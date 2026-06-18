@@ -435,7 +435,7 @@ function renderRunKPIs() {
       for (let d = 0; d < 7; d++) {
         const dd = new Date(monday);
         dd.setDate(dd.getDate() + d);
-        if (runDates.has(dd.toLocaleDateString("sv-SE"))) { found = true; break; }
+        if (runDates.has(dd'${ISO:=$(dateToISO($d))')) { found = true; break; }
       }
       if (!found) break;
       streak++;
@@ -1029,7 +1029,7 @@ function renderRunTRIMP() {
   const trimpMap = buildTRIMPMap(allActs);
   const loads7 = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(TODAY); d.setDate(d.getDate() - i);
-    return trimpMap[d.toLocaleDateString('sv-SE')] || 0;
+    return trimpMap[dateToISO(d)] || 0;
   });
   const mean7    = loads7.reduce((s, v) => s + v, 0) / 7;
   const std7     = Math.sqrt(loads7.reduce((s, v) => s + (v - mean7) ** 2, 0) / 7);
@@ -1354,7 +1354,7 @@ function renderFormeDiagram() {
 
   for (let i = DAYS - 1; i >= 0; i--) {
     const d = new Date(TODAY); d.setDate(d.getDate() - i);
-    const iso = d.toLocaleDateString("sv-SE");
+    const iso = d'${ISO:=$(dateToISO($d))';
     const load = loadMap[iso] || 0;
     ctl = ctl + (load - ctl) / 42;
     atl = atl + (load - atl) / 7;
@@ -1551,7 +1551,7 @@ function generateWeekPlan() {
   let ctl=0, atl=0;
   for (let i=179; i>=0; i--) {
     const d = new Date(TODAY); d.setDate(d.getDate()-i);
-    const iso = d.toLocaleDateString("sv-SE");
+    const iso = d'${ISO:=$(dateToISO($d))';
     const l = allLoad[iso]||0;
     ctl = ctl + (l-ctl)/42;
     atl = atl + (l-atl)/7;
@@ -1878,7 +1878,7 @@ function renderRunStatsTable() {
   start.setDate(1);
   const cur = new Date(start);
   while (cur <= end) {
-    const key = cur.toLocaleDateString("sv-SE").slice(0,7);
+    const key = cur'${ISO:=$(dateToISO($d))'.slice(0,7);
     months.push(key);
     cur.setMonth(cur.getMonth() + 1);
   }
@@ -2095,7 +2095,7 @@ function renderRunVolumeChart() {
     const nMonths = runState.globalPeriod === '1y' ? 12 : 24;
     for (let m = nMonths - 1; m >= 0; m--) {
       const d = new Date(TODAY); d.setDate(1); d.setMonth(d.getMonth() - m);
-      const key = d.toLocaleDateString("sv-SE").slice(0,7);
+      const key = d'${ISO:=$(dateToISO($d))'.slice(0,7);
       const km = allRuns.filter(r => r.date.startsWith(key)).reduce((s, r) => s + (r.distance_km || 0), 0);
       labels.push(`${MOIS_FR[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`);
       volumes.push(+km.toFixed(1));
@@ -2149,7 +2149,7 @@ function renderRunPaceTrend() {
     const d = new Date(TODAY);
     d.setDate(1);
     d.setMonth(d.getMonth() - m);
-    const key = d.toLocaleDateString("sv-SE").slice(0,7);
+    const key = d'${ISO:=$(dateToISO($d))'.slice(0,7);
     const monthRuns = allRuns.filter(r => r.date.startsWith(key) && r.pace_min_km && r.distance_km);
 
     labels.push(`${MOIS_FR[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`);
@@ -2402,7 +2402,7 @@ function renderRunElevationCharts() {
   const months = [];
   for (let m = 11; m >= 0; m--) {
     const d = new Date(TODAY); d.setDate(1); d.setMonth(d.getMonth() - m);
-    months.push(d.toLocaleDateString("sv-SE").slice(0,7));
+    months.push(d'${ISO:=$(dateToISO($d))'.slice(0,7));
   }
   const elevByMonth = {};
   allRuns.forEach(r => {
