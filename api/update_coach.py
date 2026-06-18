@@ -38,7 +38,7 @@ def run_coach_update():
             'atl':                stats['atl'],
             'tsb':                stats['tsb'],
             'effort_idx':         stats['effort_idx'],
-            'body_battery':       stats['avg_bb_end'],
+            'body_battery':       stats.get('bb_now') or stats['avg_bb_end'],
             'training_readiness': stats['training_readiness'],
             'niveau':             stats['athlete_level'],
             'total_activites':    stats['total_acts'],
