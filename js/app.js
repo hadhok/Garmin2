@@ -5,14 +5,6 @@
 /* ── Global activity map for detail modal ── */
 const ACT_MAP = {};
 
-/* ── Date ISO helper ── */
-function dateToISO(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
 /* ── Application state ── */
 const state = {
   view:               'today',      // today | training | recovery | history | profile
