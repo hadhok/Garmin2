@@ -975,6 +975,66 @@ body.loading main::before {
 .day-mini-act:hover { background:var(--surface3); color:var(--text); }
 
 /* ══════════════════════════════════════════════════════════
+   SPORT BREAKDOWN CARDS
+   ══════════════════════════════════════════════════════════ */
+.sport-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+.sport-card {
+  background: var(--surface2);
+  border-radius: 12px;
+  padding: 14px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: transform .15s, box-shadow .15s;
+}
+.sport-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,.15);
+}
+.sport-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sport-card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.sport-card-label {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.sport-card-count {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.sport-card-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.sport-card-stats span {
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--surface);
+  border-radius: 6px;
+  padding: 3px 7px;
+  color: var(--text2);
+}
+
+/* ══════════════════════════════════════════════════════════
    HISTORY CALENDAR VIEW
    ══════════════════════════════════════════════════════════ */
 .calendar-header-nav {

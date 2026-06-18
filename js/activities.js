@@ -86,6 +86,9 @@ function renderActivities() {
       <div class="kpi-value" style="font-size:20px">${k.val}<span class="kpi-unit">${k.unit}</span></div>
     </div>`).join('');
 
+  /* Sport breakdown cards */
+  renderSportCards(acts);
+
   /* Afficher calendrier ou table */
   if (actState.view === 'calendar') {
     renderHistoryCalendar();
@@ -182,6 +185,55 @@ function actChangePage(dir) {
   actState.page += dir;
   renderActivities();
   document.querySelector('.table-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ══════════════════════════════════════════════════════════
+   SPORT BREAKDOWN CARDS
+   ══════════════════════════════════════════════════════════ */
+function renderSportCards(acts) {
+  const el = document.getElementById('acts-sport-cards');
+  if (!el) return;
+
+  // Agréger par type
+  const byType = {};
+  acts.forEach(a => {
+    const t = a.type || 'other';
+    if (!byType[t]) byType[t] = { count: 0, duration: 0, distance: 0, calories: 0, load: 0, icon: a.icon || '⚡' };
+    byType[t].count++;
+    byType[t].duration  += a.duration_min  || 0;
+    byType[t].distance  += a.distance_km   || 0;
+    byType[t].calories  += a.calories      || 0;
+    byType[t].load      += a.training_load || 0;
+  });
+
+  const types = Object.entries(byType).sort((a, b) => b[1].count - a[1].count);
+  if (!types.length) { el.innerHTML = ''; return; }
+
+  const cards = types.map(([type, s]) => {
+    const color = TYPE_COLOR[type] || '#888';
+    const label = TYPE_LABEL[type] || type;
+    const icon  = s.icon;
+
+    const lines = [];
+    if (s.distance > 0) lines.push(`<span>${s.distance.toFixed(0)} km</span>`);
+    if (s.duration > 0) lines.push(`<span>${fmt_dur(s.duration)}</span>`);
+    if (s.calories > 0) lines.push(`<span>${Math.round(s.calories).toLocaleString('fr')} kcal</span>`);
+    if (s.load > 0)     lines.push(`<span>⚡${Math.round(s.load)} pts</span>`);
+
+    return `
+      <div class="sport-card" style="border-top:3px solid ${color}">
+        <div class="sport-card-head">
+          <div class="sport-card-icon" style="background:${color}20;color:${color}">${icon}</div>
+          <div>
+            <div class="sport-card-label" style="color:${color}">${label}</div>
+            <div class="sport-card-count">${s.count} séance${s.count > 1 ? 's' : ''}</div>
+          </div>
+        </div>
+        <div class="sport-card-stats">${lines.join('')}</div>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `<div class="sport-cards-grid">${cards}</div>`;
 }
 
 /* ══════════════════════════════════════════════════════════
