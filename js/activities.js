@@ -7,6 +7,7 @@ const actState = {
   period: localStorage.getItem('act_period') || 'month',  // week | month | year | all
   sort:   { col: 'date', dir: 'desc' },
   page:   0,
+  view:   localStorage.getItem('act_view') || 'table',    // table | calendar
 };
 const ACT_PAGE_SIZE = 50;
 
@@ -52,9 +53,20 @@ function getActivitiesByPeriod() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   RENDER ACTIVITIES TABLE
+   RENDER ACTIVITIES TABLE or CALENDAR
    ══════════════════════════════════════════════════════════ */
 function renderActivities() {
+  // Toggle view visibility
+  const tableEl = document.getElementById('acts-table-container');
+  const calEl = document.getElementById('acts-calendar');
+  if (tableEl) tableEl.style.display = actState.view === 'table' ? '' : 'none';
+  if (calEl) calEl.style.display = actState.view === 'calendar' ? '' : 'none';
+
+  if (actState.view === 'calendar') {
+    renderHistoryCalendar();
+    return;
+  }
+
   const raw  = getActivitiesByPeriod();
 
   /* Search filter */
@@ -169,4 +181,112 @@ function actChangePage(dir) {
   actState.page += dir;
   renderActivities();
   document.querySelector('.table-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ══════════════════════════════════════════════════════════
+   CALENDAR VIEW
+   ══════════════════════════════════════════════════════════ */
+function switchHistoryView(mode) {
+  actState.view = mode;
+  localStorage.setItem('act_view', mode);
+  document.querySelectorAll('.history-view-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`history-view-${mode}`)?.classList.add('active');
+  renderActivities();
+}
+
+function renderHistoryCalendar() {
+  const el = document.getElementById('acts-calendar');
+  if (!el) return;
+
+  const acts = getActivitiesByPeriod();
+  if (!acts.length) {
+    el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted)">Aucune activité sur cette période</div>';
+    return;
+  }
+
+  // Déterminer l'intervalle de dates
+  const dates = acts.map(a => a.date || new Date(a.start_time).toISOString().split('T')[0]).sort();
+  const minDate = new Date(dates[0] + 'T12:00:00');
+  const maxDate = new Date(dates[dates.length - 1] + 'T12:00:00');
+
+  // Ajouter mois complet avant/après
+  const startDate = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+  const endDate = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0);
+
+  // Grouper activités par date
+  const actsByDate = {};
+  acts.forEach(a => {
+    const d = a.date || new Date(a.start_time).toISOString().split('T')[0];
+    actsByDate[d] = (actsByDate[d] || []).concat(a);
+  });
+
+  let html = '<div class="calendar-grid">';
+
+  // En-têtes jours semaine
+  const dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+  dayNames.forEach(d => {
+    html += `<div class="calendar-header">${d}</div>`;
+  });
+
+  // Cellules jour
+  let d = new Date(startDate);
+  while (d <= endDate) {
+    const dayOfWeek = (d.getDay() + 6) % 7; // 0=Lun ... 6=Dim
+    const dateStr = d.toISOString().split('T')[0];
+    const dayActs = actsByDate[dateStr] || [];
+    const isInRange = d >= minDate && d <= maxDate;
+    const isToday = dateStr === new Date(TODAY).toISOString().split('T')[0];
+
+    const cellClass = isInRange ? 'calendar-day-active' : 'calendar-day-muted';
+    const todayClass = isToday ? ' calendar-day-today' : '';
+
+    const dots = dayActs.map(a => `<div class="calendar-dot" style="background:${TYPE_COLOR[a.type] || '#888'}" title="${a.name}"></div>`).join('');
+
+    html += `<div class="calendar-day ${cellClass}${todayClass}" onclick="${dayActs.length > 0 ? `showDayActivities('${dateStr}')` : ''}">
+      <div class="calendar-day-num">${d.getDate()}</div>
+      ${dots ? `<div class="calendar-dots">${dots}</div>` : ''}
+    </div>`;
+
+    d.setDate(d.getDate() + 1);
+  }
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function showDayActivities(dateStr) {
+  const allActs = getActivitiesByPeriod();
+  const dayActs = allActs.filter(a => (a.date || new Date(a.start_time).toISOString().split('T')[0]) === dateStr);
+  if (!dayActs.length) return;
+
+  const date = new Date(dateStr + 'T12:00:00');
+  const dateLabel = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center';
+  modal.onclick = (e) => e.target === modal && modal.remove();
+
+  const card = document.createElement('div');
+  card.style.cssText = 'background:var(--bg);border-radius:12px;max-width:500px;max-height:80vh;overflow:auto;padding:20px;box-shadow:0 4px 20px rgba(0,0,0,0.3)';
+
+  card.innerHTML = `<div style="font-size:14px;font-weight:700;margin-bottom:16px">${dateLabel}</div>` +
+    dayActs.map(a => {
+      ACT_MAP[a.id] = a;
+      const label = a.type_label || TYPE_LABEL[a.type] || a.type;
+      const dist = a.distance_km > 0 ? `${a.distance_km} km` : fmt_dur(a.duration_min);
+      return `<div style="padding:12px;background:var(--surface2);border-radius:8px;margin-bottom:8px;cursor:pointer" onclick="openDetail(${a.id}); modal.remove()">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+          <span style="font-size:18px">${a.icon || '⚡'}</span>
+          <div>
+            <div style="font-weight:600;color:${TYPE_COLOR[a.type]||'var(--text)'}">${label}</div>
+            <div style="font-size:12px;color:var(--muted)">${a.name}</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--text2)">${dist}${a.calories ? ` · ${Math.round(a.calories)} kcal` : ''}${a.training_load > 0 ? ` · ⚡${Math.round(a.training_load)}` : ''}</div>
+      </div>`;
+    }).join('') +
+    `<button onclick="this.closest('div').parentElement.remove()" style="width:100%;margin-top:12px;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--muted);font-size:12px">Fermer</button>`;
+
+  modal.appendChild(card);
+  document.body.appendChild(modal);
 }
