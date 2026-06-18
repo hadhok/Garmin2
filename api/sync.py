@@ -1,6 +1,8 @@
 from http.server import BaseHTTPRequestHandler
-import json, os
+import json, os, sys
 from datetime import datetime, timedelta
+
+sys.path.insert(0, os.path.dirname(__file__))
 
 # ── Mapping typeKey Garmin → code interne (copie de sync.py racine) ──────────
 TYPE_MAP = {
