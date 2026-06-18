@@ -1053,7 +1053,7 @@ function generateMorningSummary() {
 
   const hrv      = today.hrv_overnight_avg;
   const rhr      = today.resting_hr;
-  const bb       = today.body_battery_end || today.body_battery_high;
+  const bb       = today.body_battery_high || today.body_battery_end;
   const sleep    = today.sleep_total_min;
   const deep     = today.sleep_deep_min;
   const readiness= today.training_readiness_score;
