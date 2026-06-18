@@ -190,6 +190,12 @@ function actChangePage(dir) {
 /* ══════════════════════════════════════════════════════════
    SPORT BREAKDOWN CARDS
    ══════════════════════════════════════════════════════════ */
+function filterBySportType(type) {
+  state.filter = type;
+  actState.page = 0;
+  renderActivities();
+}
+
 function renderSportCards(acts) {
   const el = document.getElementById('acts-sport-cards');
   if (!el) return;
@@ -221,15 +227,18 @@ function renderSportCards(acts) {
     if (s.load > 0)     lines.push(`<span>⚡${Math.round(s.load)} pts</span>`);
 
     return `
-      <div class="sport-card" style="border-top:3px solid ${color}">
-        <div class="sport-card-head">
-          <div class="sport-card-icon" style="background:${color}20;color:${color}">${icon}</div>
-          <div>
-            <div class="sport-card-label" style="color:${color}">${label}</div>
-            <div class="sport-card-count">${s.count} séance${s.count > 1 ? 's' : ''}</div>
+      <div class="sport-card" style="--sport-color:${color}" onclick="filterBySportType('${type}')">
+        <div class="sport-card-gradient"></div>
+        <div class="sport-card-content">
+          <div class="sport-card-head">
+            <div class="sport-card-icon">${icon}</div>
+            <div class="sport-card-info">
+              <div class="sport-card-label">${label}</div>
+              <div class="sport-card-count">${s.count}</div>
+            </div>
           </div>
+          <div class="sport-card-stats">${lines.join('')}</div>
         </div>
-        <div class="sport-card-stats">${lines.join('')}</div>
       </div>`;
   }).join('');
 
