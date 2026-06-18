@@ -62,11 +62,6 @@ function renderActivities() {
   if (tableEl) tableEl.style.display = actState.view === 'table' ? '' : 'none';
   if (calEl) calEl.style.display = actState.view === 'calendar' ? '' : 'none';
 
-  if (actState.view === 'calendar') {
-    renderHistoryCalendar();
-    return;
-  }
-
   const raw  = getActivitiesByPeriod();
 
   /* Search filter */
@@ -90,6 +85,12 @@ function renderActivities() {
       <div class="kpi-label">${k.label}</div>
       <div class="kpi-value" style="font-size:20px">${k.val}<span class="kpi-unit">${k.unit}</span></div>
     </div>`).join('');
+
+  /* Afficher calendrier ou table */
+  if (actState.view === 'calendar') {
+    renderHistoryCalendar();
+    return;
+  }
 
   /* Sort */
   const { col, dir } = actState.sort;
