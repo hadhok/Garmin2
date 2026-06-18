@@ -337,15 +337,23 @@ def _run_sync():
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
+        results = {}
         try:
-            msg  = _run_sync()
-            body = json.dumps({'status': 'ok', 'message': msg})
-            code = 200
+            results['garmin'] = _run_sync()
         except Exception as e:
-            body = json.dumps({'status': 'error', 'message': str(e)})
-            code = 500
+            results['garmin'] = f'error: {e}'
 
-        self.send_response(code)
+        try:
+            from renpho_sync import run_renpho_sync
+            results['renpho'] = run_renpho_sync()
+        except Exception as e:
+            results['renpho'] = f'error: {e}'
+
+        msg  = ' | '.join(f'{k}: {v}' for k, v in results.items())
+        ok   = all('error' not in str(v) for v in results.values())
+        body = json.dumps({'status': 'ok' if ok else 'partial', 'message': results.get('garmin', msg)})
+
+        self.send_response(200)
         self.send_header('Content-Type', 'application/json')
         self.end_headers()
         self.wfile.write(body.encode())
