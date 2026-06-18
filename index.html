@@ -807,19 +807,30 @@
       <div id="view-running" class="view">
 
         <!-- Slicer de période -->
-        <div class="run-slicer" id="run-slicer">
-          <div class="slicer-info">
-            <span class="slicer-date" id="slicer-from-lbl">—</span>
-            <span class="slicer-dur" id="slicer-dur-lbl"></span>
-            <span class="slicer-date" id="slicer-to-lbl">Aujourd'hui</span>
+        <!-- Period Selector: Chips + Custom inputs -->
+        <div class="period-selector">
+          <div class="period-chips">
+            <button class="period-chip active" id="period-chip-1" onclick="setRunPeriod(1)">1 m</button>
+            <button class="period-chip" id="period-chip-3" onclick="setRunPeriod(3)">3 m</button>
+            <button class="period-chip" id="period-chip-6" onclick="setRunPeriod(6)">6 m</button>
+            <button class="period-chip" id="period-chip-12" onclick="setRunPeriod(12)">1 an</button>
+            <button class="period-chip" id="period-chip-24" onclick="setRunPeriod(24)">2 ans</button>
+            <button class="period-chip" id="period-chip-all" onclick="setRunPeriodAll()">Tout</button>
+            <button class="period-chip" id="period-chip-custom" onclick="toggleCustomPeriodInputs()" title="Personnalisé">📅</button>
           </div>
-          <div class="slicer-wrap">
-            <div class="slicer-track-bg"></div>
-            <div class="slicer-track-fill" id="slicer-fill"></div>
-            <input type="range" id="slicer-from" class="slicer-input" step="1" value="0">
-            <input type="range" id="slicer-to"   class="slicer-input" step="1" value="100">
+          <div class="period-display">
+            <span id="period-display-lbl">—</span>
           </div>
-          <div class="slicer-axis" id="slicer-axis"></div>
+          <!-- Custom date inputs (hidden by default) -->
+          <div id="period-custom-panel" style="display:none;padding:10px;background:var(--surface2);border-radius:8px;margin-top:8px">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <label style="font-size:12px;color:var(--muted)">Du</label>
+              <input type="date" id="period-custom-from" style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:12px">
+              <label style="font-size:12px;color:var(--muted)">au</label>
+              <input type="date" id="period-custom-to" style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:12px">
+              <button onclick="setRunPeriodCustom(document.getElementById('period-custom-from').value, document.getElementById('period-custom-to').value)" style="padding:6px 12px;background:var(--accent);color:white;border:none;border-radius:4px;font-size:12px;cursor:pointer;font-weight:600">✓</button>
+            </div>
+          </div>
         </div>
 
         <!-- Mini-nav sections -->

@@ -1744,7 +1744,107 @@ function getRunsForGlobalPeriod() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   SLICER DE PÉRIODE — double poignée
+   SÉLECTEUR DE PÉRIODE — Chips prédéfinies + personnalisé
+   ══════════════════════════════════════════════════════════ */
+function setRunPeriod(months) {
+  const to = new Date(TODAY);
+  const from = new Date(TODAY);
+  from.setMonth(from.getMonth() - months);
+  runState.periodFrom = `${from.getFullYear()}-${String(from.getMonth()+1).padStart(2,'0')}-${String(from.getDate()).padStart(2,'0')}`;
+  runState.periodTo = null; // null = aujourd'hui
+  localStorage.setItem('run_period_preset', String(months));
+  localStorage.removeItem('run_period_custom');
+  updatePeriodDisplay();
+  markAllDirty();
+  renderRunning();
+}
+
+function setRunPeriodAll() {
+  runState.periodFrom = null;
+  runState.periodTo = null;
+  localStorage.removeItem('run_period_preset');
+  localStorage.removeItem('run_period_custom');
+  updatePeriodDisplay();
+  markAllDirty();
+  renderRunning();
+}
+
+function setRunPeriodCustom(fromStr, toStr) {
+  try {
+    if (!fromStr) return;
+    runState.periodFrom = fromStr;
+    runState.periodTo = toStr || null;
+    localStorage.setItem('run_period_custom', JSON.stringify({ from: fromStr, to: toStr }));
+    localStorage.removeItem('run_period_preset');
+    updatePeriodDisplay();
+    markAllDirty();
+    renderRunning();
+  } catch(e) { console.error('[setRunPeriodCustom]', e); }
+}
+
+function updatePeriodDisplay() {
+  const from = runState.periodFrom ? new Date(runState.periodFrom + 'T12:00:00') : null;
+  const to = runState.periodTo ? new Date(runState.periodTo + 'T12:00:00') : new Date(TODAY);
+  const fmt = d => d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+  const fromLbl = from ? fmt(from) : '–';
+  const toLbl = to.getTime() === new Date(TODAY).getTime() ? 'Auj.' : fmt(to);
+  const diff = from ? Math.round((to - from) / (30.4 * 86400000)) : 0;
+  const durLbl = diff >= 24 ? `${Math.round(diff/12)} ans` : diff >= 2 ? `${diff} mois` : `${Math.round((to-from)/86400000)} j`;
+
+  const lbl = document.getElementById('period-display-lbl');
+  if (lbl) lbl.textContent = `${fromLbl} → ${toLbl}  (${durLbl})`;
+
+  // Update active chip
+  [1,3,6,12,24].forEach(m => {
+    const btn = document.getElementById(`period-chip-${m}`);
+    if (!btn) return;
+    const expectedFrom = new Date(TODAY);
+    expectedFrom.setMonth(expectedFrom.getMonth() - m);
+    const match = from &&
+                 from.getFullYear() === expectedFrom.getFullYear() &&
+                 from.getMonth() === expectedFrom.getMonth() &&
+                 !runState.periodTo;
+    btn.classList.toggle('active', match);
+  });
+
+  const allBtn = document.getElementById('period-chip-all');
+  if (allBtn) allBtn.classList.toggle('active', !runState.periodFrom && !runState.periodTo);
+
+  const customBtn = document.getElementById('period-chip-custom');
+  if (customBtn) customBtn.classList.toggle('active', runState.periodFrom && localStorage.getItem('run_period_custom'));
+}
+
+function toggleCustomPeriodInputs() {
+  const panel = document.getElementById('period-custom-panel');
+  if (!panel) return;
+  const isHidden = panel.style.display === 'none';
+  panel.style.display = isHidden ? '' : 'none';
+  if (isHidden && runState.periodFrom) {
+    const fromInput = document.getElementById('period-custom-from');
+    const toInput = document.getElementById('period-custom-to');
+    if (fromInput) fromInput.value = runState.periodFrom;
+    if (toInput) toInput.value = runState.periodTo || '';
+  }
+}
+
+function initRunPeriod() {
+  const runs = getRuns();
+  if (!runs.length) return;
+
+  const preset = localStorage.getItem('run_period_preset');
+  const custom = JSON.parse(localStorage.getItem('run_period_custom') || 'null');
+
+  if (preset) {
+    setRunPeriod(parseInt(preset));
+  } else if (custom) {
+    setRunPeriodCustom(custom.from, custom.to);
+  } else {
+    setRunPeriod(6); // défaut 6 mois
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   SLICER DE PÉRIODE — double poignée (LEGACY, replaced by period chips)
    ══════════════════════════════════════════════════════════ */
 function initRunSlicer() {
   const runs = getRuns();
@@ -2956,10 +3056,10 @@ function renderRunning() {
     const btn = document.getElementById('btn-run-advanced');
     if (btn) btn.textContent = '− Avancé';
   }
-  // Initialiser le slicer si pas encore fait
-  if (!document.getElementById('slicer-from')?._slicerReady) {
-    const el = document.getElementById('slicer-from');
-    if (el) { el._slicerReady = true; initRunSlicer(); return; }
+  // Initialiser le sélecteur de période si pas encore fait
+  if (!window._runPeriodReady) {
+    window._runPeriodReady = true;
+    initRunPeriod();
   }
   safe(renderRunKPIs);
   safe(renderWeekPlan);
