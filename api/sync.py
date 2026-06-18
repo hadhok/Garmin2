@@ -351,9 +351,12 @@ class handler(BaseHTTPRequestHandler):
         except Exception as e:
             results['renpho'] = f'error: {e}'
 
-        msg  = ' | '.join(f'{k}: {v}' for k, v in results.items())
-        ok   = all('error' not in str(v) for v in results.values())
-        body = json.dumps({'status': 'ok' if ok else 'partial', 'message': results.get('garmin', msg)})
+        ok   = 'error' not in str(results.get('garmin', ''))
+        body = json.dumps({
+            'status':  'ok' if ok else 'error',
+            'message': results.get('garmin', ''),
+            'renpho':  results.get('renpho', ''),
+        })
 
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')

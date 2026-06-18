@@ -620,6 +620,8 @@ async function runSync() {
     if (data.status === 'ok') {
       log.textContent = data.message;
       showToast(`Synchro OK — ${data.total||''} activités`, 'ok');
+      if (data.renpho && data.renpho.includes('error'))
+        showToast('Renpho : ' + data.renpho, 'err');
       closeSyncModal();
       cacheClear();
       await Promise.all([loadData(), loadWellness()]);
