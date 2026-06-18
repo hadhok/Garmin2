@@ -1012,6 +1012,15 @@ body.loading main::before {
   transform: translateY(-3px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1), 0 0 1px var(--sport-color);
 }
+.sport-card--active {
+  border-color: var(--sport-color) !important;
+  background: linear-gradient(135deg, var(--surface3), var(--surface2)) !important;
+  box-shadow: 0 0 0 2px var(--sport-color), 0 4px 16px rgba(0,0,0,.15) !important;
+}
+.sport-card--active .sport-card-icon {
+  transform: scale(1.08);
+  background: linear-gradient(135deg, var(--sport-color)40, var(--sport-color)20) !important;
+}
 .sport-card:hover .sport-card-gradient {
   opacity: 1;
 }

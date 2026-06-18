@@ -191,9 +191,7 @@ function actChangePage(dir) {
    SPORT BREAKDOWN CARDS
    ══════════════════════════════════════════════════════════ */
 function filterBySportType(type) {
-  state.filter = type;
-  actState.page = 0;
-  renderActivities();
+  setFilter(state.filter === type ? 'all' : type);
 }
 
 function renderSportCards(acts) {
@@ -226,8 +224,9 @@ function renderSportCards(acts) {
     if (s.calories > 0) lines.push(`<span>${Math.round(s.calories).toLocaleString('fr')} kcal</span>`);
     if (s.load > 0)     lines.push(`<span>⚡${Math.round(s.load)} pts</span>`);
 
+    const isActive = state.filter === type;
     return `
-      <div class="sport-card" style="--sport-color:${color}" onclick="filterBySportType('${type}')">
+      <div class="sport-card${isActive ? ' sport-card--active' : ''}" style="--sport-color:${color}" onclick="filterBySportType('${type}')" title="${isActive ? 'Cliquer pour désactiver le filtre' : `Filtrer : ${label}`}">
         <div class="sport-card-gradient"></div>
         <div class="sport-card-content">
           <div class="sport-card-head">
