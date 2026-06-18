@@ -213,6 +213,12 @@ function renderHistoryCalendar() {
   const startDate = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
   const endDate = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0);
 
+  // Initialiser l'état de navigation du calendrier si pas présent
+  if (!window._calendarMonth) {
+    window._calendarMonth = startDate.getMonth();
+    window._calendarYear = startDate.getFullYear();
+  }
+
   // Grouper activités par date + calculer totaux
   const actsByDate = {};
   acts.forEach(a => {
@@ -220,7 +226,43 @@ function renderHistoryCalendar() {
     actsByDate[d] = (actsByDate[d] || []).concat(a);
   });
 
-  let html = '<div class="calendar-grid">';
+  // Générer les mois visibles
+  const currentDate = new Date(window._calendarYear, window._calendarMonth, 1);
+  const monthsToShow = [];
+  let d = new Date(startDate);
+  while (d <= endDate) {
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    if (!monthsToShow.some(m => m.key === key)) {
+      monthsToShow.push({ key, year: d.getFullYear(), month: d.getMonth() });
+    }
+    d.setMonth(d.getMonth() + 1);
+  }
+
+  // Header navigation
+  const MONTHS_LONG = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const monthTitle = MONTHS_LONG[window._calendarMonth];
+  const yearTitle = window._calendarYear;
+  const canGoPrev = startDate.getFullYear() < window._calendarYear || (startDate.getFullYear() === window._calendarYear && startDate.getMonth() < window._calendarMonth);
+  const canGoNext = endDate.getFullYear() > window._calendarYear || (endDate.getFullYear() === window._calendarYear && endDate.getMonth() > window._calendarMonth);
+
+  let html = `
+    <div class="calendar-header-nav">
+      <button onclick="calendarNavMonth(-1)" ${!canGoPrev ? 'disabled style="opacity:0.3;cursor:not-allowed"' : ''} class="cal-nav-btn">← Préc.</button>
+      <div class="calendar-month-title">
+        <div style="font-size:24px;font-weight:800">${monthTitle}</div>
+        <div style="font-size:14px;color:var(--muted);font-weight:600">${yearTitle}</div>
+      </div>
+      <button onclick="calendarNavMonth(1)" ${!canGoNext ? 'disabled style="opacity:0.3;cursor:not-allowed"' : ''} class="cal-nav-btn">Suiv. →</button>
+    </div>
+    <div class="calendar-grid">`;
+
+  // Calculer la plage pour le mois courant
+  const monthStart = new Date(window._calendarYear, window._calendarMonth, 1);
+  const monthEnd = new Date(window._calendarYear, window._calendarMonth + 1, 0);
+  const displayStart = new Date(monthStart);
+  displayStart.setDate(displayStart.getDate() - ((displayStart.getDay() + 6) % 7)); // Début lun
+  const displayEnd = new Date(monthEnd);
+  displayEnd.setDate(displayEnd.getDate() + (7 - ((displayEnd.getDay() + 6) % 7))); // Fin dim
 
   // En-têtes jours semaine
   const dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
@@ -228,19 +270,22 @@ function renderHistoryCalendar() {
     html += `<div class="calendar-header">${d}</div>`;
   });
 
-  // Cellules jour
-  let d = new Date(startDate);
-  while (d <= endDate) {
+  // Cellules jour pour le mois courant
+  let d = new Date(displayStart);
+  while (d <= displayEnd) {
     const dateStr = d.toISOString().split('T')[0];
     const dayActs = actsByDate[dateStr] || [];
     const isInRange = d >= minDate && d <= maxDate;
     const isToday = dateStr === new Date(TODAY).toISOString().split('T')[0];
+    const isCurrentMonth = d.getMonth() === window._calendarMonth && d.getFullYear() === window._calendarYear;
 
     const totalDur = dayActs.reduce((s, a) => s + (a.duration_min || 0), 0);
     const totalDist = dayActs.reduce((s, a) => s + (a.distance_km || 0), 0);
     const totalLoad = dayActs.reduce((s, a) => s + (a.training_load || 0), 0);
 
-    const cellClass = isInRange && dayActs.length > 0 ? 'calendar-day-active' : isInRange ? 'calendar-day-empty' : 'calendar-day-muted';
+    const cellClass = isCurrentMonth
+      ? (isInRange && dayActs.length > 0 ? 'calendar-day-active' : isInRange ? 'calendar-day-empty' : 'calendar-day-muted')
+      : 'calendar-day-other-month';
     const todayClass = isToday ? ' calendar-day-today' : '';
 
     // Afficher les activités avec icônes et couleurs
@@ -269,6 +314,19 @@ function renderHistoryCalendar() {
 
   html += '</div>';
   el.innerHTML = html;
+}
+
+function calendarNavMonth(dir) {
+  window._calendarMonth += dir;
+  // Wrap around years
+  if (window._calendarMonth > 11) {
+    window._calendarMonth = 0;
+    window._calendarYear++;
+  } else if (window._calendarMonth < 0) {
+    window._calendarMonth = 11;
+    window._calendarYear--;
+  }
+  renderActivities();
 }
 
 function showDayActivities(dateStr) {

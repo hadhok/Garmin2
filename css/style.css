@@ -977,6 +977,44 @@ body.loading main::before {
 /* ══════════════════════════════════════════════════════════
    HISTORY CALENDAR VIEW
    ══════════════════════════════════════════════════════════ */
+.calendar-header-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.calendar-month-title {
+  text-align: center;
+  flex: 1;
+}
+
+.cal-nav-btn {
+  padding: 8px 16px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.cal-nav-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(163, 230, 53, 0.3);
+}
+
+.cal-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -1044,6 +1082,14 @@ body.loading main::before {
   border-color: transparent;
   color: var(--muted);
   opacity: 0.25;
+}
+
+.calendar-day-other-month {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+  opacity: 0.15;
+  pointer-events: none;
 }
 
 .calendar-day-today {
