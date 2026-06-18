@@ -135,6 +135,26 @@ function computeTrainingPaces(vdot) {
   });
 }
 
+function renderVDOTPaces() {
+  const el = document.getElementById('vdot-paces-banner');
+  if (!el) return;
+  const runs = getRuns();
+  if (!runs.length) { el.style.display = 'none'; return; }
+  const wellnessDays = state.wellness?.days || {};
+  const vo2Points = [];
+  runs.filter(r => r.vo2max > 0).forEach(r => vo2Points.push({ date: r.date, vo2max: r.vo2max }));
+  Object.entries(wellnessDays).forEach(([date, day]) => { if (day.vo2max > 0) { const i = vo2Points.findIndex(p => p.date === date); if (i >= 0) vo2Points[i].vo2max = Math.max(vo2Points[i].vo2max, day.vo2max); else vo2Points.push({ date, vo2max: day.vo2max }); } });
+  vo2Points.sort((a, b) => b.date.localeCompare(a.date));
+  const vo2 = vo2Points[0]?.vo2max || null;
+  if (!vo2) { el.style.display = 'none'; return; }
+  el.style.display = '';
+  const zones = computeTrainingPaces(vo2);
+  el.innerHTML = zones.map(z => `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:${z.color}11;border-left:2px solid ${z.color};border-radius:4px">
+    <div style="font-weight:600;font-size:13px;color:${z.color};width:45px">${z.label.split('(')[1].replace(')', '')}</div>
+    <div style="font-size:12px;color:var(--text);opacity:0.8">${secToStr(z.slowSec)} – ${secToStr(z.fastSec)}</div>
+  </div>`).join('');
+}
+
 /* ══════════════════════════════════════════════════════════
    RENDER : Plan de la semaine
    ══════════════════════════════════════════════════════════ */
@@ -2971,6 +2991,8 @@ function renderRunning() {
   safe(renderTEDistribution);
   safe(renderCadenceTrend);
   safe(renderRacePredictor);
+  safe(renderVDOTPaces);
+  safe(renderVo2maxChart);
 }
 
 /* ══════════════════════════════════════════════════════════

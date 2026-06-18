@@ -74,6 +74,18 @@ function fmt_dur(min) {
   return h > 0 ? `${h}h${m.toString().padStart(2,'0')}` : `${m} min`;
 }
 
+/* ── UI helpers: loaders, empty states ── */
+function showLoader(id) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)"><span style="animation:spin 1s linear infinite;display:inline-block">⟳</span></div>';
+}
+
+function showEmpty(id, msg = 'Aucune donnée. Synchronise d\'abord ton appareil.') {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">${msg}</div>`;
+}
+
+/* ──────────────────────────────────────────────────────── */
 /* ══════════════════════════════════════════════════════════
    DATA LOADING
    ══════════════════════════════════════════════════════════ */
@@ -113,10 +125,19 @@ async function loadData() {
     if (labelEl) labelEl.textContent = `Synchro : ${ls}`;
     const dotEl = document.getElementById('sync-dot');
     if (dotEl) dotEl.classList.remove('syncing');
+    const retryEl = document.getElementById('sync-retry-btn');
+    if (retryEl) retryEl.style.display = 'none';
   } catch {
     const labelEl = document.getElementById('sync-label');
     if (labelEl) labelEl.textContent = 'Mode démo';
+    const retryEl = document.getElementById('sync-retry-btn');
+    if (retryEl) retryEl.style.display = '';
   }
+}
+
+function retrySyncData() {
+  cacheClear();
+  loadData();
 }
 
 async function loadWellness() {

@@ -95,6 +95,7 @@
         <span class="sync-dot" id="sync-dot"></span>
         <span id="sync-label">Chargement…</span>
       </div>
+      <button id="sync-retry-btn" onclick="retrySyncData()" style="display:none;margin-top:4px;width:100%;background:rgba(239,68,68,0.15);border:1px solid #ef4444;border-radius:var(--radius);padding:6px 10px;font-size:11px;color:#ef4444;cursor:pointer;font-weight:600">↻ Réessayer</button>
       <button onclick="switchView('profile');setTimeout(()=>document.getElementById('profile-settings')?.scrollIntoView({behavior:'smooth'}),200)" style="margin-top:8px;width:100%;background:none;border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;font-size:11px;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:6px;justify-content:center" title="Paramètres FC">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         Paramètres FC
@@ -488,6 +489,11 @@
           <div class="card recovery-card" id="recovery-card-inner"></div>
         </div>
 
+        <!-- Insights & Recommandations -->
+        <div class="section-header" style="margin-top:20px">💡 Insights &amp; Recommandations</div>
+        <div id="insights-hrv" style="display:none;margin-bottom:12px"></div>
+        <div id="insights-sleep" style="display:none;margin-bottom:12px"></div>
+
         <!-- Period selector -->
         <div class="health-period-bar">
           <button class="hpb" data-days="7"  onclick="setHealthPeriod(7)">7 jours</button>
@@ -873,6 +879,8 @@
         <!-- Pronostics + Allures -->
         <div id="rsh-pronostics" class="section-header collapsible" onclick="toggleSection(this)">Pronostics &amp; Allures <span class="chev">▾</span></div>
         <div class="section-body">
+          <!-- Zones d'entraînement VDOT (visible en permanence) -->
+          <div id="vdot-paces-banner" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:14px"></div>
           <div class="health-grid">
             <div class="card">
               <div class="section-header" style="margin:0 0 12px">Pronostics</div>

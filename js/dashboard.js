@@ -361,6 +361,10 @@ function renderDayBanner() {
   const rhr = day?.resting_hr ? Math.round(day.resting_hr) : null;
   const bb  = day?.body_battery_high ?? null;
 
+  // TSB courant (depuis running.js)
+  const tsb = typeof computeRunForm === 'function' ? (computeRunForm()[computeRunForm().length - 1]?.tsb ?? null) : null;
+  const tsbColor = tsb != null ? (tsb > 5 ? '#22c55e' : tsb >= -5 ? '#f59e0b' : '#ef4444') : null;
+
   el.style.display = '';
   el.innerHTML = `
     <div class="card" style="padding:14px 16px">
@@ -379,6 +383,7 @@ function renderDayBanner() {
           ${stat('HRV', hrv, 'ms')}
           ${stat('FC repos', rhr, 'bpm')}
           ${stat('Body Bat.', bb != null ? Math.round(bb) : null, '%')}
+          ${tsb != null ? stat('TSB', tsb.toFixed(1), '') : ''}
           ${readiness != null ? stat('Readiness', Math.round(readiness), '') : ''}
         </div>
         ${status ? `

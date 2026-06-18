@@ -62,6 +62,49 @@ function computeRecoveryScore() {
   return { score, hrv: hrv||null, rhr: rhr||null, bb: bb||null, date: dayData.date };
 }
 
+function generateSleepPerformanceInsight() {
+  const acts = getAll().filter(a => a.type === 'run' && a.training_load > 0);
+  if (acts.length < 5) return null;
+  const wellnessDays = state.wellness?.days || {};
+  const actsByDate = {};
+  acts.forEach(a => {
+    const d = a.date || new Date(a.start_time).toISOString().split('T')[0];
+    actsByDate[d] = (actsByDate[d] || []).concat(a);
+  });
+  const load7Before = {};
+  Object.entries(actsByDate).forEach(([date, dayActs]) => {
+    const d7Before = new Date(date + 'T12:00:00');
+    d7Before.setDate(d7Before.getDate() - 1);
+    const d7BeforeIso = localIso(d7Before);
+    if (wellnessDays[d7BeforeIso]?.sleep_total_min) {
+      const sleep = wellnessDays[d7BeforeIso].sleep_total_min / 60;
+      const load = dayActs.reduce((s,a) => s + (a.training_load || 0), 0);
+      load7Before[sleep] = (load7Before[sleep] || 0) + load;
+    }
+  });
+  const sleepHours = Object.keys(load7Before).map(Number).sort((a,b) => a - b);
+  if (sleepHours.length < 3) return null;
+  const bestSleep = sleepHours.reduce((best, sleep) => (load7Before[sleep] > (load7Before[best] || 0)) ? sleep : best);
+  const worstSleep = sleepHours.reduce((worst, sleep) => (load7Before[sleep] < (load7Before[worst] || Infinity)) ? sleep : worst);
+  const bestMins = Math.round(bestSleep * 60);
+  const worstMins = Math.round(worstSleep * 60);
+  return { bestSleep, worstSleep, bestMins, worstMins };
+}
+
+function generateHRVRecommendation() {
+  const todayIso = localIso(TODAY);
+  const yesterday = new Date(TODAY); yesterday.setDate(yesterday.getDate()-1);
+  const yesterdayIso = localIso(yesterday);
+  const day = state.wellness?.days[todayIso] || state.wellness?.days[yesterdayIso];
+  if (!day?.hrv_overnight_avg) return null;
+  const last30 = Object.values(state.wellness?.days || {}).sort((a,b)=>a.date.localeCompare(b.date)).slice(-30);
+  const avgHRV = last30.length ? last30.reduce((s,d)=>s+(d.hrv_overnight_avg||0),0)/last30.length : 1;
+  const hrvRatio = day.hrv_overnight_avg / (avgHRV || 1);
+  if (hrvRatio > 1.1) return { level: 'haute', text: '✓ HRV élevée — vous pouvez augmenter l\'intensité (VO2max ou seuil)', color: '#22c55e' };
+  if (hrvRatio > 0.9) return { level: 'normale', text: '→ HRV normale — endurance modérée adaptée', color: '#f59e0b' };
+  return { level: 'basse', text: '← HRV basse — privilégier la récupération (zone 2)', color: '#ef4444' };
+}
+
 function renderRecoveryCard() {
   const rec     = computeRecoveryScore();
   const section = document.getElementById('recovery-section');
@@ -569,10 +612,37 @@ function renderReadinessChart(days) {
 }
 
 /* ══════════════════════════════════════════════════════════
+   INSIGHTS & RECOMMENDATIONS
+   ══════════════════════════════════════════════════════════ */
+function renderInsights() {
+  // HRV recommendation
+  const hrvRec = generateHRVRecommendation();
+  const hrvEl = document.getElementById('insights-hrv');
+  if (hrvEl && hrvRec) {
+    hrvEl.style.display = '';
+    hrvEl.innerHTML = `<div class="card" style="padding:12px 16px;border-left:3px solid ${hrvRec.color}"><div style="color:${hrvRec.color};font-size:13px;font-weight:600">${hrvRec.text}</div></div>`;
+  } else if (hrvEl) {
+    hrvEl.style.display = 'none';
+  }
+
+  // Sleep performance insight
+  const sleepIns = generateSleepPerformanceInsight();
+  const sleepEl = document.getElementById('insights-sleep');
+  if (sleepEl && sleepIns) {
+    sleepEl.style.display = '';
+    sleepEl.innerHTML = `<div class="card" style="padding:12px 16px;border-left:3px solid #3b82f6"><div style="color:#3b82f6;font-size:13px;font-weight:600">
+      🌙 Vous performez mieux après ${sleepIns.bestMins < 300 ? 'moins de 5h' : sleepIns.bestMins < 420 ? '5-7h' : sleepIns.bestMins < 540 ? '7-9h' : '9h+'} de sommeil</div></div>`;
+  } else if (sleepEl) {
+    sleepEl.style.display = 'none';
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
    MAIN RENDER
    ══════════════════════════════════════════════════════════ */
 function renderHealth() {
   renderRecoveryCard();
+  renderInsights();
   const days = getWellnessDays();
   if (!days.length) {
     document.getElementById('kpi-health').innerHTML =
