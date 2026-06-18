@@ -55,6 +55,7 @@ body {
   min-height: 100vh;
   font-size: 14px;
   line-height: 1.5;
+  scrollbar-gutter: stable;
 }
 
 /* ── App shell ── */
@@ -2453,7 +2454,7 @@ body.loading main::before {
   display: flex;
   gap: 6px;
   overflow-x: auto;
-  padding: 8px 0 6px;
+  padding: 8px 12px 6px;
   margin: 0 0 4px;
   scrollbar-width: none;
   background: var(--bg);
