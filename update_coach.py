@@ -321,6 +321,9 @@ def analyze(activities, wellness_by_date):
     # Signaux wellness récents
     avg_stress   = _avg(well_7d[:3], 'stress_avg')
     avg_bb_end   = _avg(well_7d[:3], 'body_battery_end')
+    avg_bb_high  = _avg(well_7d[:3], 'body_battery_high')
+    # Utilise le pic (matin) plutôt que fin de journée pour l'affichage coach
+    avg_bb_display = avg_bb_high or avg_bb_end
     garmin_status = next((w['training_status'] for w in reversed(well_7d) if w.get('training_status')), None)
     hrv_status    = next((w['hrv_status']       for w in reversed(well_7d) if w.get('hrv_status')), None)
     tr_score      = next((w['training_readiness_score'] for w in reversed(well_7d)
@@ -402,7 +405,7 @@ def analyze(activities, wellness_by_date):
         # Fatigue
         fatigue_level=fatigue_level, fatigue_score=fatigue_score,
         garmin_status=garmin_status, hrv_status=hrv_status,
-        avg_bb_end=avg_bb_end, avg_stress=avg_stress,
+        avg_bb_end=avg_bb_end, avg_bb_display=avg_bb_display, avg_stress=avg_stress,
         training_readiness=tr_score,
         # Effort/récupération
         phase=phase, effort_idx=effort_idx,
@@ -467,7 +470,7 @@ def generate_coach(s):
     gs_str    = f" • Garmin : {gs}" if gs else ""
     hrv_str   = (f" • HRV {s['avg_hrv']} ms" + (f" ({s['hrv_delta']:+.0f} ms vs S-1)" if s['hrv_delta'] else "")) if s['avg_hrv'] else ""
     sleep_str = f" • Sommeil {s['avg_sleep_h']}h/nuit" if s['avg_sleep_h'] else ""
-    bb_str    = f" • Body Battery fin de journée : {round(s['avg_bb_end'])}%" if s['avg_bb_end'] else ""
+    bb_str    = f" • Body Battery : {round(s['avg_bb_display'])}%" if s.get('avg_bb_display') else ""
     tr_str    = f" • Readiness : {s['training_readiness']}/100" if s['training_readiness'] else ""
     ei_str    = f"Effort pondéré 7j : {ei:.1f}× (1.0 = charge de base, >2 = intense). "
     tsb_str   = f"TSB {tsb:+.0f} pts (CTL {ctl} / ATL {atl})."
@@ -668,7 +671,7 @@ def main():
             "atl":             stats['atl'],
             "tsb":             stats['tsb'],
             "effort_idx":      stats['effort_idx'],
-            "body_battery":    stats['avg_bb_end'],
+            "body_battery":    stats.get('avg_bb_display') or stats['avg_bb_end'],
             "training_readiness": stats['training_readiness'],
             "niveau":          stats['athlete_level'],
             "total_activites": stats['total_acts'],
