@@ -231,45 +231,53 @@ def prescribe(s):
     """
     fl  = s['fatigue_level']
     tr  = s['training_readiness']   # 0-100 ou None
-    bb  = s['avg_bb_end']           # body battery fin de journée
+    bb  = s.get('bb_now') or s['avg_bb_end']  # body battery actuelle
     yesterday_te = s.get('yesterday_te')
     yesterday_type = s.get('yesterday_type')
 
-    # Score de fraîcheur 0-100
+    # Score de fraîcheur 0-100 basé sur bb actuelle en priorité
     freshness = 50
     if tr:
         freshness = tr
     elif bb:
         freshness = bb
-    # Ajuste selon fatigue globale
-    if fl == 'fatigue':  freshness = min(freshness, 35)
-    if fl == 'peak':     freshness = max(freshness, 65)
+    # Ajuste selon fatigue globale et TSB
+    tsb = s.get('tsb', 0)
+    if fl == 'tired' or tsb < -15: freshness = min(freshness, 40)
+    if fl == 'peak'  or tsb > 5:   freshness = max(freshness, 65)
 
     # Séance d'hier était-elle intense ?
     hard_yesterday = yesterday_te in ('Seuil', 'Surcharge', 'Tempo')
     recovery_yesterday = yesterday_te in ('Récupération', 'Base')
 
-    # Prescription
+    # Contexte Body Battery pour le conseil
+    bb_ctx = f'Body Battery à {round(bb)}% — ' if bb else ''
+
+    # Prescription selon fraîcheur réelle
     if freshness <= 30 or fl == 'fatigue':
         ptype  = 'Récupération active'
-        detail = '20-30 min de marche, mobilité ou yoga. Pas de cardio. Objectif : ne pas aggraver la fatigue.'
+        detail = f'{bb_ctx}réserves très basses. 20-30 min de marche, mobilité ou yoga. Pas de cardio.'
         intensity = 'Z1 uniquement — FC < 120 bpm'
-    elif freshness <= 50 or hard_yesterday:
+    elif freshness <= 45 or hard_yesterday:
         ptype  = 'Séance légère — Zone 2'
-        detail = '45-60 min à allure conversationnelle. Course lente, vélo ou natation à faible intensité.'
+        detail = f'{bb_ctx}suffisant pour une sortie douce. 45-60 min à allure conversationnelle.'
         intensity = 'Z2 — 60-70% FCmax'
+    elif freshness <= 60:
+        ptype  = 'Séance modérée — Tempo'
+        detail = f'{bb_ctx}bonne base pour travailler. 50 min : 10 min Z2 + 25 min tempo + 15 min cool-down.'
+        intensity = 'Z3 progressif vers Z4'
     elif freshness >= 70 and not hard_yesterday:
         if s.get('z45', 0) < 10:
             ptype  = 'Séance de qualité — Fractionné'
-            detail = '45 min : 15 min échauffement Z2 + 6×3 min à 90-95% FCmax (récup 90s) + 10 min cool-down.'
+            detail = f'{bb_ctx}tu es frais, exploite-le ! 45 min : 15 min Z2 + 6×3 min à 90-95% FCmax (récup 90s) + 10 min cool-down.'
             intensity = 'Z4-Z5 — 88-95% FCmax'
         else:
             ptype  = 'Séance longue — Endurance fondamentale'
-            detail = '60-90 min à allure modérée. Maintient le volume sans accumuler de fatigue neuro-musculaire.'
+            detail = f'{bb_ctx}bonne forme, mise sur le volume. 60-90 min à allure modérée.'
             intensity = 'Z2 — 65-75% FCmax'
     else:
         ptype  = 'Séance modérée — Tempo'
-        detail = '50 min : 10 min Z2 + 25 min tempo (75-80% FCmax) + 15 min retour au calme.'
+        detail = f'{bb_ctx}forme correcte. 50 min : 10 min Z2 + 25 min tempo + 15 min retour au calme.'
         intensity = 'Z3 progressif vers Z4'
 
     # Ajustement poids/masse grasse
@@ -322,8 +330,13 @@ def analyze(activities, wellness_by_date):
     avg_stress   = _avg(well_7d[:3], 'stress_avg')
     avg_bb_end   = _avg(well_7d[:3], 'body_battery_end')
     avg_bb_high  = _avg(well_7d[:3], 'body_battery_high')
-    # Utilise le pic (matin) plutôt que fin de journée pour l'affichage coach
-    avg_bb_display = avg_bb_high or avg_bb_end
+
+    # Body Battery actuelle = valeur la plus récente disponible aujourd'hui
+    today_well = wellness_by_date.get(today.isoformat(), {})
+    bb_now = (today_well.get('body_battery_end')
+              or today_well.get('body_battery_high')
+              or avg_bb_end)
+
     garmin_status = next((w['training_status'] for w in reversed(well_7d) if w.get('training_status')), None)
     hrv_status    = next((w['hrv_status']       for w in reversed(well_7d) if w.get('hrv_status')), None)
     tr_score      = next((w['training_readiness_score'] for w in reversed(well_7d)
@@ -405,7 +418,7 @@ def analyze(activities, wellness_by_date):
         # Fatigue
         fatigue_level=fatigue_level, fatigue_score=fatigue_score,
         garmin_status=garmin_status, hrv_status=hrv_status,
-        avg_bb_end=avg_bb_end, avg_bb_display=avg_bb_display, avg_stress=avg_stress,
+        avg_bb_end=avg_bb_end, bb_now=bb_now, avg_stress=avg_stress,
         training_readiness=tr_score,
         # Effort/récupération
         phase=phase, effort_idx=effort_idx,
@@ -470,7 +483,7 @@ def generate_coach(s):
     gs_str    = f" • Garmin : {gs}" if gs else ""
     hrv_str   = (f" • HRV {s['avg_hrv']} ms" + (f" ({s['hrv_delta']:+.0f} ms vs S-1)" if s['hrv_delta'] else "")) if s['avg_hrv'] else ""
     sleep_str = f" • Sommeil {s['avg_sleep_h']}h/nuit" if s['avg_sleep_h'] else ""
-    bb_str    = f" • Body Battery : {round(s['avg_bb_display'])}%" if s.get('avg_bb_display') else ""
+    bb_str    = f" • Body Battery : {round(s['bb_now'])}%" if s.get('bb_now') else ""
     tr_str    = f" • Readiness : {s['training_readiness']}/100" if s['training_readiness'] else ""
     ei_str    = f"Effort pondéré 7j : {ei:.1f}× (1.0 = charge de base, >2 = intense). "
     tsb_str   = f"TSB {tsb:+.0f} pts (CTL {ctl} / ATL {atl})."
@@ -671,7 +684,7 @@ def main():
             "atl":             stats['atl'],
             "tsb":             stats['tsb'],
             "effort_idx":      stats['effort_idx'],
-            "body_battery":    stats.get('avg_bb_display') or stats['avg_bb_end'],
+            "body_battery":    stats.get('bb_now') or stats['avg_bb_end'],
             "training_readiness": stats['training_readiness'],
             "niveau":          stats['athlete_level'],
             "total_activites": stats['total_acts'],
