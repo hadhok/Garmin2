@@ -227,18 +227,6 @@ function renderHistoryCalendar() {
     actsByDate[d] = (actsByDate[d] || []).concat(a);
   });
 
-  // Générer les mois visibles
-  const currentDate = new Date(window._calendarYear, window._calendarMonth, 1);
-  const monthsToShow = [];
-  let d = new Date(startDate);
-  while (d <= endDate) {
-    const key = `${d.getFullYear()}-${d.getMonth()}`;
-    if (!monthsToShow.some(m => m.key === key)) {
-      monthsToShow.push({ key, year: d.getFullYear(), month: d.getMonth() });
-    }
-    d.setMonth(d.getMonth() + 1);
-  }
-
   // Header navigation
   const MONTHS_LONG = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
   const monthTitle = MONTHS_LONG[window._calendarMonth];
