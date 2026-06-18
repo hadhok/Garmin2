@@ -2460,11 +2460,24 @@ body.loading main::before {
   margin: 0 0 4px;
   width: 100%;
   min-width: 0;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
   background: var(--bg);
   border-bottom: 1px solid var(--border);
 }
-.run-mini-nav::-webkit-scrollbar { display: none; }
+.run-mini-nav::-webkit-scrollbar {
+  height: 6px;
+}
+.run-mini-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+.run-mini-nav::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+.run-mini-nav::-webkit-scrollbar-thumb:hover {
+  background: var(--border2);
+}
 .run-mini-nav button {
   flex-shrink: 0;
   padding: 4px 12px;
