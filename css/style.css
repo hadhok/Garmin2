@@ -2454,8 +2454,11 @@ body.loading main::before {
   display: flex;
   gap: 6px;
   overflow-x: auto;
+  overflow-y: hidden;
   padding: 8px 12px 6px;
   margin: 0 0 4px;
+  width: 100%;
+  min-width: 0;
   scrollbar-width: none;
   background: var(--bg);
   border-bottom: 1px solid var(--border);
