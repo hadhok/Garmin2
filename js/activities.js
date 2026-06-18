@@ -215,7 +215,7 @@ function renderHistoryCalendar() {
   const endDate = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0);
 
   // Initialiser l'état de navigation du calendrier si pas présent
-  if (!window._calendarMonth) {
+  if (window._calendarMonth === undefined) {
     window._calendarMonth = startDate.getMonth();
     window._calendarYear = startDate.getFullYear();
   }
