@@ -213,7 +213,7 @@ function renderHistoryCalendar() {
   const startDate = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
   const endDate = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0);
 
-  // Grouper activités par date
+  // Grouper activités par date + calculer totaux
   const actsByDate = {};
   acts.forEach(a => {
     const d = a.date || new Date(a.start_time).toISOString().split('T')[0];
@@ -231,20 +231,37 @@ function renderHistoryCalendar() {
   // Cellules jour
   let d = new Date(startDate);
   while (d <= endDate) {
-    const dayOfWeek = (d.getDay() + 6) % 7; // 0=Lun ... 6=Dim
     const dateStr = d.toISOString().split('T')[0];
     const dayActs = actsByDate[dateStr] || [];
     const isInRange = d >= minDate && d <= maxDate;
     const isToday = dateStr === new Date(TODAY).toISOString().split('T')[0];
 
-    const cellClass = isInRange ? 'calendar-day-active' : 'calendar-day-muted';
+    const totalDur = dayActs.reduce((s, a) => s + (a.duration_min || 0), 0);
+    const totalDist = dayActs.reduce((s, a) => s + (a.distance_km || 0), 0);
+    const totalLoad = dayActs.reduce((s, a) => s + (a.training_load || 0), 0);
+
+    const cellClass = isInRange && dayActs.length > 0 ? 'calendar-day-active' : isInRange ? 'calendar-day-empty' : 'calendar-day-muted';
     const todayClass = isToday ? ' calendar-day-today' : '';
 
-    const dots = dayActs.map(a => `<div class="calendar-dot" style="background:${TYPE_COLOR[a.type] || '#888'}" title="${a.name}"></div>`).join('');
+    // Afficher les activités avec icônes et couleurs
+    const actIcons = dayActs.slice(0, 3).map(a => `<div class="cal-act-icon" style="background:${TYPE_COLOR[a.type]||'#888'};color:white;font-size:11px" title="${a.name}">${a.icon || '⚡'}</div>`).join('');
+    const moreCount = dayActs.length > 3 ? dayActs.length - 3 : 0;
 
-    html += `<div class="calendar-day ${cellClass}${todayClass}" onclick="${dayActs.length > 0 ? `showDayActivities('${dateStr}')` : ''}">
+    const durStr = totalDur > 0 ? `${Math.round(totalDur/60)}h` : '';
+    const distStr = totalDist > 0 ? `${totalDist.toFixed(0)}km` : '';
+    const loadStr = totalLoad > 0 ? `⚡${Math.round(totalLoad)}` : '';
+    const stats = [durStr, distStr, loadStr].filter(Boolean).join(' · ');
+
+    const cursor = dayActs.length > 0 ? 'cursor:pointer' : '';
+
+    html += `<div class="calendar-day ${cellClass}${todayClass}" style="${cursor}" onclick="${dayActs.length > 0 ? `showDayActivities('${dateStr}')` : ''}">
       <div class="calendar-day-num">${d.getDate()}</div>
-      ${dots ? `<div class="calendar-dots">${dots}</div>` : ''}
+      ${dayActs.length > 0 ? `
+        <div class="calendar-day-acts">
+          <div class="cal-act-icons">${actIcons}${moreCount > 0 ? `<div class="cal-more">+${moreCount}</div>` : ''}</div>
+          <div class="calendar-day-stats">${stats}</div>
+        </div>
+      ` : ''}
     </div>`;
 
     d.setDate(d.getDate() + 1);
@@ -262,30 +279,74 @@ function showDayActivities(dateStr) {
   const date = new Date(dateStr + 'T12:00:00');
   const dateLabel = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
+  // Calculer totaux
+  const totalDur = dayActs.reduce((s, a) => s + (a.duration_min || 0), 0);
+  const totalDist = dayActs.reduce((s, a) => s + (a.distance_km || 0), 0);
+  const totalCal = dayActs.reduce((s, a) => s + (a.calories || 0), 0);
+  const totalLoad = dayActs.reduce((s, a) => s + (a.training_load || 0), 0);
+
   const modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;animation:fadeIn .2s';
   modal.onclick = (e) => e.target === modal && modal.remove();
 
   const card = document.createElement('div');
-  card.style.cssText = 'background:var(--bg);border-radius:12px;max-width:500px;max-height:80vh;overflow:auto;padding:20px;box-shadow:0 4px 20px rgba(0,0,0,0.3)';
+  card.style.cssText = 'background:var(--bg);border-radius:16px;max-width:520px;width:100%;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,0.4);animation:slideUp .3s';
 
-  card.innerHTML = `<div style="font-size:14px;font-weight:700;margin-bottom:16px">${dateLabel}</div>` +
-    dayActs.map(a => {
-      ACT_MAP[a.id] = a;
-      const label = a.type_label || TYPE_LABEL[a.type] || a.type;
-      const dist = a.distance_km > 0 ? `${a.distance_km} km` : fmt_dur(a.duration_min);
-      return `<div style="padding:12px;background:var(--surface2);border-radius:8px;margin-bottom:8px;cursor:pointer" onclick="openDetail(${a.id}); modal.remove()">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-          <span style="font-size:18px">${a.icon || '⚡'}</span>
-          <div>
-            <div style="font-weight:600;color:${TYPE_COLOR[a.type]||'var(--text)'}">${label}</div>
-            <div style="font-size:12px;color:var(--muted)">${a.name}</div>
+  // Header avec date et stats
+  const headerHtml = `
+    <div style="background:linear-gradient(135deg, var(--accent) 0%, rgba(163,230,53,0.8) 100%);padding:20px;color:white">
+      <div style="font-size:16px;font-weight:700;margin-bottom:12px">${dateLabel}</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;font-size:12px">
+        <div style="opacity:0.95"><div style="font-weight:700;font-size:18px">${Math.round(totalDur/60)}<span style="font-size:11px">h</span></div><div style="opacity:0.8">Durée</div></div>
+        <div style="opacity:0.95"><div style="font-weight:700;font-size:18px">${totalDist.toFixed(1)}<span style="font-size:11px">km</span></div><div style="opacity:0.8">Distance</div></div>
+        <div style="opacity:0.95"><div style="font-weight:700;font-size:18px">${Math.round(totalCal)}<span style="font-size:11px">kcal</span></div><div style="opacity:0.8">Calories</div></div>
+        <div style="opacity:0.95"><div style="font-weight:700;font-size:18px">${Math.round(totalLoad)}</div><div style="opacity:0.8">⚡ Charge</div></div>
+      </div>
+    </div>
+  `;
+
+  // Liste activités
+  const activitiesHtml = dayActs.map(a => {
+    ACT_MAP[a.id] = a;
+    const label = a.type_label || TYPE_LABEL[a.type] || a.type;
+    const dist = a.distance_km > 0 ? `${a.distance_km.toFixed(1)} km` : '–';
+    const dur = fmt_dur(a.duration_min);
+    const color = TYPE_COLOR[a.type] || '#888';
+    return `
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:all .15s;display:flex;gap:12px"
+           onclick="openDetail(${a.id}); modal.remove()"
+           onmouseover="this.style.background='var(--surface2)'"
+           onmouseout="this.style.background='transparent'">
+        <div style="width:48px;height:48px;background:${color}20;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:${color};font-size:24px;border:2px solid ${color}33">
+          ${a.icon || '⚡'}
+        </div>
+        <div style="flex:1">
+          <div style="font-weight:700;color:${color};font-size:13px;margin-bottom:2px">${label}</div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">${a.name}</div>
+          <div style="display:flex;gap:12px;font-size:11px;color:var(--text2);flex-wrap:wrap">
+            <span>⏱️ ${dur}</span>
+            <span>📍 ${dist}</span>
+            ${a.calories ? `<span>🔥 ${Math.round(a.calories)} kcal</span>` : ''}
+            ${a.training_load > 0 ? `<span>⚡ ${Math.round(a.training_load)} pts</span>` : ''}
+            ${a.hr_avg ? `<span>❤️ ${a.hr_avg} bpm</span>` : ''}
           </div>
         </div>
-        <div style="font-size:12px;color:var(--text2)">${dist}${a.calories ? ` · ${Math.round(a.calories)} kcal` : ''}${a.training_load > 0 ? ` · ⚡${Math.round(a.training_load)}` : ''}</div>
-      </div>`;
-    }).join('') +
-    `<button onclick="this.closest('div').parentElement.remove()" style="width:100%;margin-top:12px;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--muted);font-size:12px">Fermer</button>`;
+        <div style="color:var(--accent);font-size:16px;align-self:center">→</div>
+      </div>
+    `;
+  }).join('');
+
+  // Footer
+  const footerHtml = `
+    <div style="padding:12px;border-top:1px solid var(--border);background:var(--surface2)">
+      <button onclick="this.closest('[style*=fixed]').remove()"
+              style="width:100%;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;cursor:pointer;color:var(--text);font-size:13px;font-weight:600;transition:all .15s"
+              onmouseover="this.style.background='var(--surface3)'"
+              onmouseout="this.style.background='var(--surface)'">Fermer</button>
+    </div>
+  `;
+
+  card.innerHTML = headerHtml + `<div style="overflow-y:auto;flex:1">${activitiesHtml}</div>` + footerHtml;
 
   modal.appendChild(card);
   document.body.appendChild(modal);
