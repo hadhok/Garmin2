@@ -12,6 +12,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -31,10 +32,19 @@ jobs:
           GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
         run: python3 sync_now.py --coach
 
-      - name: Commit and push coach.json
+      - name: Commit and push coach.json to main
         run: |
           git config user.name "Coach Bot"
           git config user.email "coach@garmin2.local"
           git add coach.json
           git commit -m "coach: analyse du $(date +'%d/%m/%Y %H:%M')" || echo "Pas de changement"
-          git push
+          git push origin main
+
+      - name: Propagate coach.json to deploy branch
+        run: |
+          git fetch origin claude/trusting-cerf-3w90mm
+          git checkout claude/trusting-cerf-3w90mm
+          git checkout main -- coach.json
+          git add coach.json
+          git commit -m "coach: sync depuis main $(date +'%d/%m/%Y %H:%M')" || echo "Déjà à jour"
+          git push origin claude/trusting-cerf-3w90mm
