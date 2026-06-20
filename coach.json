@@ -1,38 +1,38 @@
 {
-  "updated_at": "2026-06-17",
+  "updated_at": "2026-06-20",
   "coach": "Claude",
   "stats_snapshot": {
-    "phase": "maintien",
+    "phase": "vigilance",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 45.6,
-    "atl": 58.0,
-    "tsb": -12.4,
-    "effort_idx": 0.94,
-    "body_battery": 19.3,
+    "ctl": 51.3,
+    "atl": 82.0,
+    "tsb": -30.7,
+    "effort_idx": 0.97,
+    "body_battery": 18.0,
     "training_readiness": null,
     "niveau": "Sportif",
-    "total_activites": 240,
-    "total_km": 590
+    "total_activites": 243,
+    "total_km": 596
   },
   "items": [
     {
       "type": "warning",
-      "icon": "🟢",
-      "title": "En maintien — charge stable",
-      "text": "Effort pondéré 7j : 0.9× (1.0 = charge de base, >2 = intense). TSB -12 pts (CTL 45.6 / ATL 58.0). • HRV 40.0 ms (-2 ms vs S-1) • Sommeil 8.1h/nuit • Body Battery fin de journée : 19%"
+      "icon": "🟡",
+      "title": "Sous tension — vigilance requise",
+      "text": "Effort pondéré 7j : 1.0× (1.0 = charge de base, >2 = intense). TSB -31 pts (CTL 51.3 / ATL 82.0). • HRV 38.1 ms (-4 ms vs S-1) • Sommeil 8.0h/nuit • Body Battery fin de journée : 18%"
     },
     {
-      "type": "tip",
+      "type": "warning",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "✅ Structure d'entraînement pyramidale sur 14 séances analysées\n🏃 Course : allure en progression (+1.2 min/km plus rapide)"
+      "text": "✅ Structure d'entraînement pyramidale sur 15 séances analysées\n📈 Charge semaine +60% au-dessus de la moyenne — risque de surcharge\n🏃 Course : allure en régression (0.3 min/km plus lent — peut indiquer fatigue)"
     },
     {
       "type": "goal",
       "icon": "📋",
       "title": "Prescription : Récupération active",
-      "text": "Hier : Unknown (pilates). 20-30 min de marche, mobilité ou yoga. Pas de cardio. Objectif : ne pas aggraver la fatigue. — Z1 uniquement — FC < 120 bpm"
+      "text": "Hier : Lactate Threshold (hockey). 20-30 min de marche, mobilité ou yoga. Pas de cardio. Objectif : ne pas aggraver la fatigue. — Z1 uniquement — FC < 120 bpm"
     }
   ]
 }
