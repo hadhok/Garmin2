@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-21",
+  "updated_at": "2026-06-21T20:00:26",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "maintien",
@@ -9,7 +9,7 @@
     "atl": 70.3,
     "tsb": -20.2,
     "effort_idx": 0.97,
-    "body_battery": 21.7,
+    "body_battery": 46,
     "training_readiness": null,
     "niveau": "Sportif",
     "total_activites": 243,
@@ -18,9 +18,9 @@
   "items": [
     {
       "type": "warning",
-      "icon": "🟢",
-      "title": "En maintien — charge stable",
-      "text": "Effort pondéré 7j : 1.0× (1.0 = charge de base, >2 = intense). TSB -20 pts (CTL 50.1 / ATL 70.3). • HRV 38.9 ms (-2 ms vs S-1) • Sommeil 8.0h/nuit • Body Battery fin de journée : 22%"
+      "icon": "🟡",
+      "title": "Sous tension",
+      "text": "Effort pondéré 7j : 1.0× (1.0 = charge de base, >2 = intense). TSB -20 pts (CTL 50.1 / ATL 70.3). • HRV 38.4 ms (-3 ms vs S-1) • Sommeil 7.9h/nuit • Body Battery : 46%"
     },
     {
       "type": "warning",
@@ -31,8 +31,8 @@
     {
       "type": "goal",
       "icon": "📋",
-      "title": "Prescription : Récupération active",
-      "text": "20-30 min de marche, mobilité ou yoga. Pas de cardio. Objectif : ne pas aggraver la fatigue. — Z1 uniquement — FC < 120 bpm"
+      "title": "Prescription : Séance légère — Zone 2",
+      "text": "[Body Battery 46% · TSB -20] Fatigue accumulée malgré une BB correcte. 45-60 min à allure conversationnelle. — Z2 — 60-70% FCmax"
     }
   ]
 }
