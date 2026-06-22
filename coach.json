@@ -1,38 +1,38 @@
 {
-  "updated_at": "2026-06-22T09:09:50",
+  "updated_at": "2026-06-21",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "maintien",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 48.9,
-    "atl": 60.2,
-    "tsb": -11.3,
+    "ctl": 50.1,
+    "atl": 70.3,
+    "tsb": -20.2,
     "effort_idx": 0.97,
-    "body_battery": 87,
+    "body_battery": 21.7,
     "training_readiness": null,
     "niveau": "Sportif",
     "total_activites": 243,
-    "total_km": 596
+    "total_km": 597
   },
   "items": [
     {
       "type": "warning",
       "icon": "🟡",
       "title": "Sous tension",
-      "text": "Effort pondéré 7j : 1.0× (1.0 = charge de base, >2 = intense). TSB -11 pts (CTL 48.9 / ATL 60.2). • HRV 39.1 ms (-1 ms vs S-1) • Sommeil 7.8h/nuit • Body Battery : 87%"
+      "text": "Effort pondéré 7j : 0.97× (1.0 = charge de base, >2 = intense). TSB -20 pts (CTL 50.1 / ATL 70.3). • HRV 38.4 ms (-3.0 ms vs S-1) • Sommeil 7.9h/nuit • Body Battery fin de journée : 22%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "📊 manque de Zone 1-2 (49% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (26%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n🏃 Course : allure en régression (0.6 min/km plus lent — peut indiquer fatigue)"
+      "text": "✅ Structure d'entraînement pyramidale sur 14 séances analysées\n🏃 Course : allure en progression (+0.63 min/km plus rapide)\n📊 Zones 14j : Z1-2=64%  Z3=18%  Z4-5=17%"
     },
     {
       "type": "goal",
       "icon": "📋",
-      "title": "Prescription : Séance longue — Endurance fondamentale",
-      "text": "[Body Battery 87% · TSB -11] Bonne forme, mise sur le volume. 60-90 min à allure modérée. — Z2 — 65-75% FCmax"
+      "title": "Prescription : Séance modérée — Tempo",
+      "text": "TSB -20 — charge élevée mais ATL haute. Séance courte à intensité modérée. Objectif : maintenir la forme sans aggraver la fatigue. — Z2-Z3 — FC 130-155 bpm"
     }
   ]
 }
