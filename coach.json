@@ -1,38 +1,38 @@
 {
-  "updated_at": "2026-06-17",
+  "updated_at": "2026-06-21",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "maintien",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 45.6,
-    "atl": 58.0,
-    "tsb": -12.4,
-    "effort_idx": 0.94,
-    "body_battery": 19.3,
+    "ctl": 50.1,
+    "atl": 70.3,
+    "tsb": -20.2,
+    "effort_idx": 0.97,
+    "body_battery": 21.7,
     "training_readiness": null,
     "niveau": "Sportif",
-    "total_activites": 240,
-    "total_km": 590
+    "total_activites": 243,
+    "total_km": 597
   },
   "items": [
     {
       "type": "warning",
-      "icon": "🟢",
-      "title": "En maintien — charge stable",
-      "text": "Effort pondéré 7j : 0.9× (1.0 = charge de base, >2 = intense). TSB -12 pts (CTL 45.6 / ATL 58.0). • HRV 40.0 ms (-2 ms vs S-1) • Sommeil 8.1h/nuit • Body Battery fin de journée : 19%"
+      "icon": "🟡",
+      "title": "Sous tension",
+      "text": "Effort pondéré 7j : 0.97× (1.0 = charge de base, >2 = intense). TSB -20 pts (CTL 50.1 / ATL 70.3). • HRV 38.4 ms (-3.0 ms vs S-1) • Sommeil 7.9h/nuit • Body Battery fin de journée : 22%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "✅ Structure d'entraînement pyramidale sur 14 séances analysées\n🏃 Course : allure en progression (+1.2 min/km plus rapide)"
+      "text": "✅ Structure d'entraînement pyramidale sur 14 séances analysées\n🏃 Course : allure en progression (+0.63 min/km plus rapide)\n📊 Zones 14j : Z1-2=64%  Z3=18%  Z4-5=17%"
     },
     {
       "type": "goal",
       "icon": "📋",
-      "title": "Prescription : Récupération active",
-      "text": "Hier : Unknown (pilates). 20-30 min de marche, mobilité ou yoga. Pas de cardio. Objectif : ne pas aggraver la fatigue. — Z1 uniquement — FC < 120 bpm"
+      "title": "Prescription : Séance modérée — Tempo",
+      "text": "TSB -20 — charge élevée mais ATL haute. Séance courte à intensité modérée. Objectif : maintenir la forme sans aggraver la fatigue. — Z2-Z3 — FC 130-155 bpm"
     }
   ]
 }
