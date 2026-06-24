@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-06-23T12:09:06",
+  "updated_at": "2026-06-24T11:45:56",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "maintien",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 47.8,
-    "atl": 51.6,
-    "tsb": -3.9,
-    "effort_idx": 0.97,
-    "body_battery": 18.3,
+    "ctl": 46.6,
+    "atl": 44.3,
+    "tsb": 2.4,
+    "effort_idx": 0.98,
+    "body_battery": 15.7,
     "training_readiness": null,
     "niveau": "Sportif",
     "total_activites": 243,
@@ -20,19 +20,19 @@
       "type": "warning",
       "icon": "🟡",
       "title": "Sous tension",
-      "text": "Effort pondéré 7j : 1.0× (1.0 = charge de base, >2 = intense). TSB -4 pts (CTL 47.8 / ATL 51.6). • HRV 38.3 ms (-2 ms vs S-1) • Sommeil 7.9h/nuit • Body Battery : 18%"
+      "text": "Effort pondéré 7j : 1.0× (1.0 = charge de base, >2 = intense). TSB +2 pts (CTL 46.6 / ATL 44.3). • HRV 37.8 ms (-2 ms vs S-1) • Sommeil 7.9h/nuit • Body Battery : 16%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "📊 manque de Zone 1-2 (49% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (26%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n🏃 Course : allure en régression (0.6 min/km plus lent — peut indiquer fatigue)"
+      "text": "📊 manque de Zone 1-2 (48% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (27%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n🏃 Course : allure en régression (0.6 min/km plus lent — peut indiquer fatigue)"
     },
     {
       "type": "goal",
       "icon": "📋",
       "title": "Prescription : Récupération active",
-      "text": "[Body Battery 18% · TSB -4] Réserves très basses. 20-30 min marche, mobilité ou yoga uniquement. — Z1 — FC < 120 bpm"
+      "text": "[Body Battery 16% · TSB +2] Réserves très basses. 20-30 min marche, mobilité ou yoga uniquement. — Z1 — FC < 120 bpm"
     }
   ]
 }
