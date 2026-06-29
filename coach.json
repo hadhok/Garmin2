@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-06-28T20:00:27",
+  "updated_at": "2026-06-29T09:09:39",
   "coach": "Claude",
   "stats_snapshot": {
-    "phase": "maintien",
+    "phase": "pic_de_forme",
     "fatigue_level": "peak",
     "garmin_status": null,
-    "ctl": 42.3,
-    "atl": 23.9,
-    "tsb": 18.4,
+    "ctl": 41.3,
+    "atl": 20.5,
+    "tsb": 20.8,
     "effort_idx": 0.0,
-    "body_battery": 60.0,
+    "body_battery": 87.0,
     "training_readiness": null,
     "niveau": "Sportif",
     "total_activites": 243,
@@ -18,21 +18,21 @@
   "items": [
     {
       "type": "focus",
-      "icon": "🟢",
-      "title": "En maintien",
-      "text": "Effort pondéré 7j : 0.0× (1.0 = charge de base, >2 = intense). TSB +18 pts (CTL 42.3 / ATL 23.9). • HRV 39.5 ms (+1 ms vs S-1) • Sommeil 7.2h/nuit • Body Battery : 60%"
+      "icon": "🚀",
+      "title": "Pic de forme",
+      "text": "Effort pondéré 7j : 0.0× (1.0 = charge de base, >2 = intense). TSB +21 pts (CTL 41.3 / ATL 20.5). • HRV 44.0 ms (+6 ms vs S-1) • Sommeil 6.6h/nuit • Body Battery : 87%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "💤 Sommeil limite (7.2h) — vise 7h30 minimum\n📊 manque de Zone 1-2 (48% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (30%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📉 Semaine très creuse (0 pts vs 375 moy.)\n🏃 Course : allure en régression (0.6 min/km plus lent — peut indiquer fatigue)"
+      "text": "💤 Sommeil limite (6.6h) — vise 7h30 minimum\n📊 manque de Zone 1-2 (48% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (30%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📉 Semaine très creuse (0 pts vs 283 moy.)\n🏃 Course : allure en régression (0.6 min/km plus lent — peut indiquer fatigue)"
     },
     {
       "type": "goal",
       "icon": "📋",
       "title": "Prescription : Séance longue — Endurance fondamentale",
-      "text": "[Body Battery 60% · TSB +18] Bonne forme, mise sur le volume. 60-90 min à allure modérée. — Z2 — 65-75% FCmax"
+      "text": "[Body Battery 87% · TSB +21] Bonne forme, mise sur le volume. 60-90 min à allure modérée. — Z2 — 65-75% FCmax"
     }
   ]
 }
