@@ -29,8 +29,13 @@ async function testRunalyzeAPI() {
       }
     });
 
-    if (!athleteResp.ok) throw new Error(`Athlete: ${athleteResp.status} ${athleteResp.statusText}`);
-    const athlete = await athleteResp.json();
+    let athlete = null;
+    if (athleteResp.ok) {
+      athlete = await athleteResp.json();
+    } else {
+      const errText = await athleteResp.text();
+      throw new Error(`Athlete: ${athleteResp.status} ${athleteResp.statusText}\n${errText}`);
+    }
 
     // Test 2: Activities
     const activitiesResp = await fetch('https://runalyze.com/api/v2/activities?limit=10', {
@@ -51,7 +56,7 @@ async function testRunalyzeAPI() {
     // Afficher les données
     dataEl.innerHTML = `<pre>${JSON.stringify(runalyzeData, null, 2)}</pre>`;
 
-    statusEl.textContent = `✓ Connecté ! Athlète: ${athlete.firstname || 'N/A'} ${athlete.lastname || 'N/A'}`;
+    statusEl.textContent = `✓ Connecté ! Athlète: ${athlete.firstname || athlete.name || 'N/A'} ${athlete.lastname || ''}`;
     statusEl.style.background = 'rgba(34,197,94,0.12)';
     statusEl.style.color = '#16a34a';
 
@@ -59,8 +64,11 @@ async function testRunalyzeAPI() {
 
   } catch (err) {
     console.error('Runalyze API error:', err);
-    dataEl.innerHTML = `<div style="color:#ef4444">❌ Erreur: ${err.message}</div>`;
-    statusEl.textContent = `❌ Erreur: ${err.message}`;
+    const errMsg = err.message.includes('404')
+      ? 'Endpoint non trouvé (404). Vérifiez le format du token et l\'URL API.'
+      : err.message;
+    dataEl.innerHTML = `<div style="color:#ef4444;white-space:pre-wrap">❌ Erreur: ${errMsg}</div>`;
+    statusEl.textContent = `❌ Erreur: ${err.message.split('\n')[0]}`;
     statusEl.style.background = 'rgba(239,68,68,0.12)';
     statusEl.style.color = '#dc2626';
   }
