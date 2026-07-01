@@ -89,6 +89,155 @@ function computeRunForm() {
 }
 
 /* ══════════════════════════════════════════════════════════
+   CALCULATIONS — 9 métriques (VO2, Marathon Shape, ATL, CTL, TSB, A:C, Rest days, Monotony, Training Strain)
+   ══════════════════════════════════════════════════════════ */
+function computeCalculations() {
+  const runs = getRuns();
+  const form = computeRunForm();
+  const lastForm = form?.[form.length - 1];
+
+  if (!runs.length || !lastForm) return null;
+
+  // Effective VO2max — moyenne des VO2max estimés par run
+  const effectiveVO2max = (() => {
+    const vo2Values = runs.map(r => r.vo2max).filter(v => v > 0);
+    return vo2Values.length ? (vo2Values.reduce((s, v) => s + v, 0) / vo2Values.length).toFixed(1) : '–';
+  })();
+
+  // Marathon Shape — volume (km/sem × 2/3) + long runs (× 1/3) sur 6m
+  const marathonShape = (() => {
+    const sixMonthAgo = new Date(TODAY);
+    sixMonthAgo.setMonth(sixMonthAgo.getMonth() - 6);
+    const runsLast6m = runs.filter(r => new Date(r.start_time) >= sixMonthAgo);
+    if (!runsLast6m.length) return '–';
+
+    const weeks = Math.max(1, Math.ceil((TODAY - sixMonthAgo) / 604800000));
+    const totalKm = runsLast6m.reduce((s, r) => s + (r.distance_km || 0), 0);
+    const weeklyKmAvg = totalKm / weeks;
+
+    const longRuns = runsLast6m
+      .sort((a, b) => (b.distance_km || 0) - (a.distance_km || 0))
+      .slice(0, Math.ceil(weeks * 0.2))
+      .reduce((s, r) => s + (r.distance_km || 0), 0) / Math.max(1, Math.ceil(weeks * 0.2));
+
+    const targetMarathonKm = 42.195;
+    const shape = (weeklyKmAvg * 0.667 + longRuns * 0.333) / targetMarathonKm * 100;
+    return Math.min(200, shape).toFixed(0);
+  })();
+
+  // Fatigue (ATL) et Fitness (CTL) — en % du max historique
+  const atlCurrent = lastForm.atl || 0;
+  const ctlCurrent = lastForm.ctl || 0;
+  const allForm = computeFormeCurve(getRuns(), 365);
+  const maxAtl = Math.max(...allForm.map(f => f.atl), 1);
+  const maxCtl = Math.max(...allForm.map(f => f.ctl), 1);
+  const atlPct = (atlCurrent / maxAtl * 100).toFixed(0);
+  const ctlPct = (ctlCurrent / maxCtl * 100).toFixed(0);
+
+  // Stress Balance (TSB)
+  const tsbValue = (ctlCurrent - atlCurrent).toFixed(1);
+
+  // Workload Ratio (A:C)
+  const acRatio = ctlCurrent > 0 ? (atlCurrent / ctlCurrent).toFixed(2) : '–';
+
+  // Rest days — jours pour atteindre TSB = 0 (ATL décroît de 1/7 par jour)
+  const restDays = (() => {
+    if (atlCurrent <= ctlCurrent) return '0';
+    if (ctlCurrent === 0) return '–';
+    const ln67 = Math.log(6/7);
+    const days = Math.log(ctlCurrent / atlCurrent) / ln67;
+    return Math.max(0, Math.ceil(days)).toString();
+  })();
+
+  // Monotony — variation du TRIMP sur 7 jours
+  const monotony = (() => {
+    const last7days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(TODAY);
+      d.setDate(d.getDate() - i);
+      const iso = localIso(d);
+      const dayRuns = runs.filter(r => {
+        const rDate = new Date(r.start_time).toISOString().split('T')[0];
+        return rDate === iso;
+      });
+      const trimp = dayRuns.reduce((s, r) => s + (computeTRIMP(r) || 0), 0);
+      last7days.push(trimp);
+    }
+
+    const avg = last7days.reduce((s, v) => s + v, 0) / 7;
+    if (avg === 0) return '–';
+    const variance = last7days.reduce((s, v) => s + (v - avg) ** 2, 0) / 7;
+    const stdDev = Math.sqrt(variance);
+    const mono = avg / (stdDev + avg);
+    return (mono * 100).toFixed(0);
+  })();
+
+  // Training Strain — sum(TRIMP) * Monotony / 0.5 sur 7 jours
+  const trainingStrain = (() => {
+    if (monotony === '–') return '–';
+    const last7days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(TODAY);
+      d.setDate(d.getDate() - i);
+      const iso = localIso(d);
+      const dayRuns = runs.filter(r => {
+        const rDate = new Date(r.start_time).toISOString().split('T')[0];
+        return rDate === iso;
+      });
+      const trimp = dayRuns.reduce((s, r) => s + (computeTRIMP(r) || 0), 0);
+      last7days.push(trimp);
+    }
+    const totalTrimp = last7days.reduce((s, v) => s + v, 0);
+    const strain = totalTrimp * (parseInt(monotony) / 100) / 0.5;
+    return strain.toFixed(0);
+  })();
+
+  return {
+    effectiveVO2max,
+    marathonShape,
+    atl: atlPct,
+    ctl: ctlPct,
+    tsb: tsbValue,
+    acRatio,
+    restDays,
+    monotony,
+    trainingStrain
+  };
+}
+
+function renderCalculations() {
+  const target = document.getElementById('run-calculations');
+  if (!target) return;
+
+  const calc = computeCalculations();
+  if (!calc) {
+    target.innerHTML = '<div class="empty" style="grid-column:1/-1">Données insuffisantes</div>';
+    return;
+  }
+
+  const metrics = [
+    { key: 'effectiveVO2max', label: 'Effective VO2max', unit: 'ml/kg/min', value: calc.effectiveVO2max },
+    { key: 'marathonShape', label: 'Marathon Shape', unit: '%', value: calc.marathonShape },
+    { key: 'atl', label: 'Fatigue (ATL)', unit: '%', value: calc.atl },
+    { key: 'ctl', label: 'Fitness (CTL)', unit: '%', value: calc.ctl },
+    { key: 'tsb', label: 'Stress Balance (TSB)', unit: '', value: calc.tsb },
+    { key: 'acRatio', label: 'Workload Ratio (A:C)', unit: '', value: calc.acRatio },
+    { key: 'restDays', label: 'Rest days', unit: 'jours', value: calc.restDays },
+    { key: 'monotony', label: 'Monotony', unit: '%', value: calc.monotony },
+    { key: 'trainingStrain', label: 'Training strain', unit: '', value: calc.trainingStrain }
+  ];
+
+  target.innerHTML = metrics.map(m => `
+    <div style="padding:12px;background:var(--card-bg);border-radius:var(--radius);border:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">${m.label}</div>
+      <div style="font-size:20px;font-weight:600;color:var(--text)">
+        ${m.value}<span style="font-size:12px;color:var(--muted);margin-left:4px">${m.unit}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ══════════════════════════════════════════════════════════
    JACK DANIELS — VDOT → pronostics & allures
    ══════════════════════════════════════════════════════════ */
 function vdotToVelocity(vdot, pctVO2) {
@@ -435,7 +584,7 @@ function renderRunKPIs() {
       for (let d = 0; d < 7; d++) {
         const dd = new Date(monday);
         dd.setDate(dd.getDate() + d);
-        if (runDates.has(dd'${ISO:=$(dateToISO($d))')) { found = true; break; }
+        if (runDates.has(localIso(dd))) { found = true; break; }
       }
       if (!found) break;
       streak++;
@@ -1354,7 +1503,7 @@ function renderFormeDiagram() {
 
   for (let i = DAYS - 1; i >= 0; i--) {
     const d = new Date(TODAY); d.setDate(d.getDate() - i);
-    const iso = d'${ISO:=$(dateToISO($d))';
+    const iso = localIso(d);
     const load = loadMap[iso] || 0;
     ctl = ctl + (load - ctl) / 42;
     atl = atl + (load - atl) / 7;
@@ -1551,7 +1700,7 @@ function generateWeekPlan() {
   let ctl=0, atl=0;
   for (let i=179; i>=0; i--) {
     const d = new Date(TODAY); d.setDate(d.getDate()-i);
-    const iso = d'${ISO:=$(dateToISO($d))';
+    const iso = localIso(d);
     const l = allLoad[iso]||0;
     ctl = ctl + (l-ctl)/42;
     atl = atl + (l-atl)/7;
@@ -1878,7 +2027,7 @@ function renderRunStatsTable() {
   start.setDate(1);
   const cur = new Date(start);
   while (cur <= end) {
-    const key = cur'${ISO:=$(dateToISO($d))'.slice(0,7);
+    const key = localIso(cur).slice(0,7);
     months.push(key);
     cur.setMonth(cur.getMonth() + 1);
   }
@@ -2095,7 +2244,7 @@ function renderRunVolumeChart() {
     const nMonths = runState.globalPeriod === '1y' ? 12 : 24;
     for (let m = nMonths - 1; m >= 0; m--) {
       const d = new Date(TODAY); d.setDate(1); d.setMonth(d.getMonth() - m);
-      const key = d'${ISO:=$(dateToISO($d))'.slice(0,7);
+      const key = localIso(d).slice(0,7);
       const km = allRuns.filter(r => r.date.startsWith(key)).reduce((s, r) => s + (r.distance_km || 0), 0);
       labels.push(`${MOIS_FR[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`);
       volumes.push(+km.toFixed(1));
@@ -2149,7 +2298,7 @@ function renderRunPaceTrend() {
     const d = new Date(TODAY);
     d.setDate(1);
     d.setMonth(d.getMonth() - m);
-    const key = d'${ISO:=$(dateToISO($d))'.slice(0,7);
+    const key = localIso(d).slice(0,7);
     const monthRuns = allRuns.filter(r => r.date.startsWith(key) && r.pace_min_km && r.distance_km);
 
     labels.push(`${MOIS_FR[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`);
@@ -2402,7 +2551,7 @@ function renderRunElevationCharts() {
   const months = [];
   for (let m = 11; m >= 0; m--) {
     const d = new Date(TODAY); d.setDate(1); d.setMonth(d.getMonth() - m);
-    months.push(d'${ISO:=$(dateToISO($d))'.slice(0,7));
+    months.push(localIso(d).slice(0,7));
   }
   const elevByMonth = {};
   allRuns.forEach(r => {
@@ -2940,6 +3089,7 @@ function renderRunning() {
     if (el) { el._slicerReady = true; initRunSlicer(); return; }
   }
   safe(renderRunKPIs);
+  safe(renderCalculations);
   safe(renderWeekPlan);
   safe(renderRunPR);
   safe(renderRunFormChart);
