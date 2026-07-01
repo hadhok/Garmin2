@@ -1013,8 +1013,10 @@ const MOCK_ACTIVITIES = [
 function saveHRSettings() {
   const hrMax  = parseInt(document.getElementById('set-hr-max')?.value);
   const hrRest = parseInt(document.getElementById('set-hr-rest')?.value);
+  const vo2Correction = parseFloat(document.getElementById('set-vo2-correction')?.value);
   if (hrMax  >= 140 && hrMax  <= 220) localStorage.setItem('hr_max',  hrMax);
   if (hrRest >= 30  && hrRest <= 90)  localStorage.setItem('hr_rest', hrRest);
+  if (vo2Correction >= 0.8 && vo2Correction <= 1.5) localStorage.setItem('vo2_correction', vo2Correction.toFixed(2));
   if (typeof applyHRSettings === 'function') applyHRSettings();
   const msg = document.getElementById('settings-saved');
   if (msg) { msg.style.display = 'block'; setTimeout(() => msg.style.display = 'none', 3000); }
@@ -1024,8 +1026,10 @@ function saveHRSettings() {
 function initSettingsInputs() {
   const maxEl  = document.getElementById('set-hr-max');
   const restEl = document.getElementById('set-hr-rest');
+  const vo2El  = document.getElementById('set-vo2-correction');
   if (maxEl)  maxEl.value  = localStorage.getItem('hr_max')  || '177';
   if (restEl) restEl.value = localStorage.getItem('hr_rest') || '62';
+  if (vo2El)  vo2El.value  = localStorage.getItem('vo2_correction') || '1.00';
 }
 
 /* ══════════════════════════════════════════════════════════

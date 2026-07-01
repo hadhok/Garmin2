@@ -98,10 +98,13 @@ function computeCalculations() {
 
     if (!runs.length || !lastForm) return null;
 
-  // Effective VO2max — moyenne des VO2max estimés par run
+  // Effective VO2max — moyenne des VO2max estimés par run × facteur de correction personnel
   const effectiveVO2max = (() => {
     const vo2Values = runs.map(r => r.vo2max).filter(v => v > 0);
-    return vo2Values.length ? (vo2Values.reduce((s, v) => s + v, 0) / vo2Values.length).toFixed(1) : '–';
+    if (!vo2Values.length) return '–';
+    const correction = parseFloat(localStorage.getItem('vo2_correction') || '1.00');
+    const avg = vo2Values.reduce((s, v) => s + v, 0) / vo2Values.length;
+    return (avg * correction).toFixed(1);
   })();
 
   // Marathon Shape — volume (km/sem × 2/3) + long runs (× 1/3) sur 6m

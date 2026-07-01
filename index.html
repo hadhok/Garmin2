@@ -779,7 +779,7 @@
         <!-- Paramètres -->
         <div id="profile-settings" class="section-header" style="margin-top:24px">Paramètres</div>
         <div class="card" style="max-width:480px">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
             <div>
               <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">FC Max (bpm)</label>
               <input id="set-hr-max" type="number" min="140" max="220" class="settings-input" value="">
@@ -787,6 +787,10 @@
             <div>
               <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">FC Repos (bpm)</label>
               <input id="set-hr-rest" type="number" min="30" max="90" class="settings-input" value="">
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Correction VO2max</label>
+              <input id="set-vo2-correction" type="number" min="0.8" max="1.5" step="0.01" class="settings-input" value="">
             </div>
           </div>
           <button class="btn btn-primary" onclick="saveHRSettings()" style="font-size:13px">Enregistrer</button>
