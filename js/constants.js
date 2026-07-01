@@ -1,8 +1,5 @@
 /* CONSTANTS.JS — Centralized application constants */
 
-// Mois en français
-const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-
 // Jours en français
 const DAYS_FR = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
 
