@@ -8,7 +8,6 @@ const actState = {
   sort:   { col: 'date', dir: 'desc' },
   page:   0,
 };
-const ACT_PAGE_SIZE = 50;
 
 function sortActBy(col) {
   if (actState.sort.col === col) {

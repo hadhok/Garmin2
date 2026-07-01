@@ -20,26 +20,6 @@ const state = {
 const TODAY = new Date();
 
 /* ── Type colors ── */
-const TYPE_COLOR = {
-  run:       '#22c55e',
-  swim:      '#3b82f6',
-  hiit:      '#f97316',
-  rowing:    '#06b6d4',
-  jump_rope: '#a855f7',
-  strength:  '#ef4444',
-  cardio:    '#f43f5e',
-  hockey:    '#64748b',
-  tennis:    '#84cc16',
-  padel:     '#10b981',
-  bike:      '#f59e0b',
-  walk:      '#06b6d4',
-  pilates:   '#e879f9',
-  yoga:      '#7c3aed',
-  hike:      '#84cc16',
-  ski:       '#93c5fd',
-  sup:       '#0ea5e9',
-  other:     '#64748b',
-};
 
 const TYPE_LABEL = {
   run:'Course', swim:'Natation', hiit:'HIIT', rowing:'Rameur',

@@ -4,7 +4,6 @@
 
 let HR_REST  = parseInt(localStorage.getItem('hr_rest')  || '62');
 let HR_MAX   = parseInt(localStorage.getItem('hr_max')   || '177');
-const MIN_DIST = 3;
 
 function applyHRSettings() {
   HR_REST = parseInt(localStorage.getItem('hr_rest')  || '62');

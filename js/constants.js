@@ -23,17 +23,24 @@ const TYPE_LABEL = {
 
 // Type colors
 const TYPE_COLOR = {
-  'run':       '#ef4444',
-  'bike':      '#f59e0b',
-  'swim':      '#3b82f6',
-  'strength':  '#8b5cf6',
-  'hiit':      '#ec4899',
-  'cardio':    '#f97316',
-  'rowing':    '#06b6d4',
-  'jump_rope': '#14b8a6',
-  'hike':      '#84cc16',
-  'walk':      '#6b7280',
-  'other':     '#9ca3af',
+  run:       '#22c55e',
+  swim:      '#3b82f6',
+  hiit:      '#f97316',
+  rowing:    '#06b6d4',
+  jump_rope: '#a855f7',
+  strength:  '#ef4444',
+  cardio:    '#f43f5e',
+  hockey:    '#64748b',
+  tennis:    '#84cc16',
+  padel:     '#10b981',
+  bike:      '#f59e0b',
+  walk:      '#06b6d4',
+  pilates:   '#e879f9',
+  yoga:      '#7c3aed',
+  hike:      '#84cc16',
+  ski:       '#93c5fd',
+  sup:       '#0ea5e9',
+  other:     '#64748b',
 };
 
 // HR Zone colors
