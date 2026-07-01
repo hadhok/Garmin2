@@ -88,6 +88,11 @@
         <span class="nav-label">Science</span>
         <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
+      <button class="nav-item" data-view="runalyze" onclick="switchView('runalyze')">
+        <span class="nav-icon">🔗</span>
+        <span class="nav-label">Runalyze</span>
+        <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
     </div>
 
     <div class="sidebar-footer">
@@ -656,6 +661,43 @@
         </div>
 
       </div><!-- /view-recovery -->
+
+      <!-- ════════════════════════════════════════════════
+           VIEW : RUNALYZE SYNC
+      ════════════════════════════════════════════════ -->
+      <div id="view-runalyze" class="view">
+        <div style="padding:16px">
+          <div class="section-header">🔗 Synchronisation Runalyze</div>
+
+          <div class="card" style="margin-bottom:16px">
+            <div class="section-header" style="margin:0 0 12px;font-size:14px">Configuration</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+              <div>
+                <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:6px">Token API Runalyze</label>
+                <input id="rz-token" type="password" class="settings-input" placeholder="bdc0f649..." value="">
+              </div>
+              <div>
+                <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:6px">&nbsp;</label>
+                <button class="btn btn-primary" onclick="testRunalyzeAPI()" style="width:100%;font-size:13px">🔍 Tester API</button>
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="saveRunalyzeToken()" style="font-size:13px;width:100%">Enregistrer Token</button>
+            <div id="rz-status" style="display:none;font-size:12px;margin-top:8px;padding:8px;border-radius:4px;background:rgba(34,197,94,0.12);color:#16a34a"></div>
+          </div>
+
+          <div class="card">
+            <div class="section-header" style="margin:0 0 12px;font-size:14px">Données Runalyze</div>
+            <div id="rz-data" style="font-size:12px;color:var(--muted);padding:12px;background:var(--card-bg-alt);border-radius:4px;max-height:600px;overflow-y:auto;font-family:monospace">
+              <div style="color:var(--muted);text-align:center;padding:20px">En attente de synchronisation...</div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:12px">
+            <div class="section-header" style="margin:0 0 12px;font-size:14px">Sélection des données</div>
+            <div id="rz-selector" style="display:grid;gap:8px"></div>
+          </div>
+        </div>
+      </div><!-- /view-runalyze -->
 
       <!-- ════════════════════════════════════════════════
            VIEW : PROFIL
@@ -1292,6 +1334,7 @@
 <script src="/js/poc.js"></script>
 <script src="/js/renpho.js"></script>
 <script src="/js/help.js"></script>
+<script src="/js/runalyze.js"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js', { scope: '/' }));
