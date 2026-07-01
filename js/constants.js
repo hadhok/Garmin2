@@ -46,15 +46,6 @@ const TYPE_COLOR = {
 // HR Zone colors
 const HR_ZONES_COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444', '#991b1b'];
 
-// HR Zone boundaries (percentage of FCmax)
-const HR_ZONES = [
-  { name: 'Z1', min:   0, max:  50, color: '#22c55e' },
-  { name: 'Z2', min:  50, max:  70, color: '#3b82f6' },
-  { name: 'Z3', min:  70, max:  85, color: '#f59e0b' },
-  { name: 'Z4', min:  85, max:  95, color: '#ef4444' },
-  { name: 'Z5', min:  95, max: 100, color: '#991b1b' },
-];
-
 // MIN_DIST for running activities (km)
 const MIN_DIST = 3;
 

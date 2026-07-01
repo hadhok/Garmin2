@@ -21,17 +21,8 @@ const TODAY = new Date();
 
 /* ── Type colors ── */
 
-const TYPE_LABEL = {
-  run:'Course', swim:'Natation', hiit:'HIIT', rowing:'Rameur',
-  jump_rope:'Jump Rope', strength:'Muscu', cardio:'Cardio',
-  hockey:'Hockey', tennis:'Tennis', padel:'Padel', bike:'Vélo',
-  walk:'Marche', pilates:'Pilates', yoga:'Yoga', hike:'Rando',
-  ski:'Ski', sup:'SUP', other:'Autre',
-};
-
 const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 const MONTHS_LONG = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-const DAYS_FR = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
 
 /* ── Chart.js defaults ── */
 Chart.defaults.color        = '#6b7280';
@@ -57,8 +48,6 @@ function fmt_dur(min) {
 /* ══════════════════════════════════════════════════════════
    DATA LOADING
    ══════════════════════════════════════════════════════════ */
-const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
-
 function cacheGet(key) {
   try {
     const raw = localStorage.getItem(key);
