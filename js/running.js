@@ -92,11 +92,12 @@ function computeRunForm() {
    CALCULATIONS — 9 métriques (VO2, Marathon Shape, ATL, CTL, TSB, A:C, Rest days, Monotony, Training Strain)
    ══════════════════════════════════════════════════════════ */
 function computeCalculations() {
-  const runs = getRuns();
-  const form = computeRunForm();
-  const lastForm = form?.[form.length - 1];
+  try {
+    const runs = getRuns();
+    const form = computeRunForm();
+    const lastForm = form?.[form.length - 1];
 
-  if (!runs.length || !lastForm) return null;
+    if (!runs.length || !lastForm) return null;
 
   // Effective VO2max — moyenne des VO2max estimés par run
   const effectiveVO2max = (() => {
@@ -128,9 +129,11 @@ function computeCalculations() {
   // Fatigue (ATL) et Fitness (CTL) — en % du max historique
   const atlCurrent = lastForm.atl || 0;
   const ctlCurrent = lastForm.ctl || 0;
-  const allForm = computeFormeCurve(getRuns(), 365);
-  const maxAtl = Math.max(...allForm.map(f => f.atl), 1);
-  const maxCtl = Math.max(...allForm.map(f => f.ctl), 1);
+  const allForm = computeFormeCurve(getRuns(), 365) || [];
+  const atlValues = allForm.map(f => f.atl).filter(v => v > 0);
+  const ctlValues = allForm.map(f => f.ctl).filter(v => v > 0);
+  const maxAtl = atlValues.length ? Math.max(...atlValues) : 1;
+  const maxCtl = ctlValues.length ? Math.max(...ctlValues) : 1;
   const atlPct = (atlCurrent / maxAtl * 100).toFixed(0);
   const ctlPct = (ctlCurrent / maxCtl * 100).toFixed(0);
 
@@ -192,28 +195,33 @@ function computeCalculations() {
     return strain.toFixed(0);
   })();
 
-  return {
-    effectiveVO2max,
-    marathonShape,
-    atl: atlPct,
-    ctl: ctlPct,
-    tsb: tsbValue,
-    acRatio,
-    restDays,
-    monotony,
-    trainingStrain
-  };
+    return {
+      effectiveVO2max,
+      marathonShape,
+      atl: atlPct,
+      ctl: ctlPct,
+      tsb: tsbValue,
+      acRatio,
+      restDays,
+      monotony,
+      trainingStrain
+    };
+  } catch (e) {
+    console.error('[computeCalculations]', e);
+    return null;
+  }
 }
 
 function renderCalculations() {
-  const target = document.getElementById('run-calculations');
-  if (!target) return;
+  try {
+    const target = document.getElementById('run-calculations');
+    if (!target) return;
 
-  const calc = computeCalculations();
-  if (!calc) {
-    target.innerHTML = '<div class="empty" style="grid-column:1/-1">Données insuffisantes</div>';
-    return;
-  }
+    const calc = computeCalculations();
+    if (!calc) {
+      target.innerHTML = '<div style="grid-column:1/-1;padding:12px;color:var(--muted);text-align:center">Pas assez de données</div>';
+      return;
+    }
 
   const metrics = [
     { key: 'effectiveVO2max', label: 'Effective VO2max', unit: 'ml/kg/min', value: calc.effectiveVO2max },
@@ -227,14 +235,19 @@ function renderCalculations() {
     { key: 'trainingStrain', label: 'Training strain', unit: '', value: calc.trainingStrain }
   ];
 
-  target.innerHTML = metrics.map(m => `
-    <div style="padding:12px;background:var(--card-bg);border-radius:var(--radius);border:1px solid var(--border)">
-      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">${m.label}</div>
-      <div style="font-size:20px;font-weight:600;color:var(--text)">
-        ${m.value}<span style="font-size:12px;color:var(--muted);margin-left:4px">${m.unit}</span>
+    target.innerHTML = metrics.map(m => `
+      <div style="padding:12px;background:var(--card-bg);border-radius:var(--radius);border:1px solid var(--border)">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">${m.label}</div>
+        <div style="font-size:20px;font-weight:600;color:var(--text)">
+          ${m.value}<span style="font-size:12px;color:var(--muted);margin-left:4px">${m.unit}</span>
+        </div>
       </div>
-    </div>
-  `).join('');
+    `).join('');
+  } catch (e) {
+    console.error('[renderCalculations]', e);
+    const target = document.getElementById('run-calculations');
+    if (target) target.innerHTML = '<div style="grid-column:1/-1;padding:12px;color:#ef4444">Erreur lors du calcul</div>';
+  }
 }
 
 /* ══════════════════════════════════════════════════════════
