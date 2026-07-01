@@ -793,6 +793,7 @@ function switchView(view, swipeDir) {
     recovery: 'Récupération',
     history:  'Historique',
     profile:  'Profil',
+    runalyze: 'Runalyze',
     poc:      '🔬 Science',
     /* legacy aliases */
     dashboard: 'Dashboard', activities: 'Activités', health: 'Santé',
@@ -954,7 +955,7 @@ function _renderKey() {
 }
 
 function markAllDirty() {
-  ['today','training','recovery','history','profile','running','poc','help'].forEach(v => _viewDirty.add(v));
+  ['today','training','recovery','history','profile','runalyze','running','poc','help'].forEach(v => _viewDirty.add(v));
   _lastRenderKey = '';
 }
 
@@ -977,6 +978,7 @@ function renderAll() {
     return;
   }
   if (state.view === 'history')  { renderActivities(); return; }
+  if (state.view === 'runalyze') { if (typeof onSwitchToRunalyze === 'function') onSwitchToRunalyze(); return; }
   /* Aliases legacy */
   if (state.view === 'health')     { renderHealth();     return; }
   if (state.view === 'profile')    { renderProfile();    return; }
