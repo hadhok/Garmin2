@@ -20,8 +20,8 @@ async function testRunalyzeAPI() {
   statusEl.style.color = '#1e40af';
 
   try {
-    // Test 1: Athlete
-    const athleteResp = await fetch('https://runalyze.com/api/v2/athlete', {
+    // Test 1: User/Athlete
+    const athleteResp = await fetch('https://runalyze.com/api/v1/user', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -34,11 +34,11 @@ async function testRunalyzeAPI() {
       athlete = await athleteResp.json();
     } else {
       const errText = await athleteResp.text();
-      throw new Error(`Athlete: ${athleteResp.status} ${athleteResp.statusText}\n${errText}`);
+      throw new Error(`User: ${athleteResp.status} ${athleteResp.statusText}\n${errText}`);
     }
 
     // Test 2: Activities
-    const activitiesResp = await fetch('https://runalyze.com/api/v2/activities?limit=10', {
+    const activitiesResp = await fetch('https://runalyze.com/api/v1/activities?limit=10', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
