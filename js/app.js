@@ -137,6 +137,13 @@ function _renderCoachItems(sectionId, dateId, itemsId, data) {
     // Snapshot pills
     const snap   = data.stats_snapshot || {};
     const snapEl = document.getElementById(itemsId.replace('coach-items', 'coach-snap'));
+    // Sanitize HTML content to prevent XSS
+    const escape = (str) => {
+      const div = document.createElement('div');
+      div.textContent = str || '';
+      return div.innerHTML;
+    };
+
     if (snapEl) {
       const PHASE = { progression:'En progression 📈', recovery:'Récupération 🔄', peak:'Pic de forme 🔥', base:'Construction 💪', maintenance:'Maintien ⚖️' };
       const FATIGUE_LBL   = { fresh:'Frais', normal:'Normal', tired:'Fatigué', very_tired:'Très fatigué' };
@@ -159,12 +166,6 @@ function _renderCoachItems(sectionId, dateId, itemsId, data) {
       snapEl.style.display = pills.length ? 'flex' : 'none';
     }
 
-    // Sanitize HTML content to prevent XSS
-    const escape = (str) => {
-      const div = document.createElement('div');
-      div.textContent = str || '';
-      return div.innerHTML;
-    };
     itemsEl.innerHTML = data.items.map(item => {
       const safeTitle = escape(item.title || '');
       const safeText = escape(item.text || '').replace(/\n/g, '<br>');
