@@ -160,8 +160,8 @@ function computeCalculations() {
       d.setDate(d.getDate() - i);
       const iso = localIso(d);
       const dayRuns = runs.filter(r => {
-        const rDate = new Date(r.start_time).toISOString().split('T')[0];
-        return rDate === iso;
+        const rDate = new Date(r.start_time);
+        return localIso(rDate) === iso;
       });
       const trimp = dayRuns.reduce((s, r) => s + (computeTRIMP(r) || 0), 0);
       last7days.push(trimp);
@@ -184,8 +184,8 @@ function computeCalculations() {
       d.setDate(d.getDate() - i);
       const iso = localIso(d);
       const dayRuns = runs.filter(r => {
-        const rDate = new Date(r.start_time).toISOString().split('T')[0];
-        return rDate === iso;
+        const rDate = new Date(r.start_time);
+        return localIso(rDate) === iso;
       });
       const trimp = dayRuns.reduce((s, r) => s + (computeTRIMP(r) || 0), 0);
       last7days.push(trimp);
