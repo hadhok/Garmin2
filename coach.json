@@ -1,38 +1,38 @@
 {
-  "updated_at": "2026-07-01T12:09:46",
+  "updated_at": "2026-07-02T11:34:31",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "maintien",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 47.3,
-    "atl": 56.5,
-    "tsb": -9.2,
-    "effort_idx": 1.66,
-    "body_battery": 35,
+    "ctl": 47.9,
+    "atl": 59.0,
+    "tsb": -11.1,
+    "effort_idx": 1.68,
+    "body_battery": 47,
     "training_readiness": null,
     "niveau": "Sportif",
-    "total_activites": 247,
-    "total_km": 607
+    "total_activites": 249,
+    "total_km": 610
   },
   "items": [
     {
       "type": "warning",
       "icon": "🟡",
       "title": "Sous tension",
-      "text": "Effort pondéré 7j : 1.7× (1.0 = charge de base, >2 = intense). TSB -9 pts (CTL 47.3 / ATL 56.5). • HRV 40.1 ms (+2 ms vs S-1) • Sommeil 7.2h/nuit • Body Battery : 35%"
+      "text": "Effort pondéré 7j : 1.7× (1.0 = charge de base, >2 = intense). TSB -11 pts (CTL 47.9 / ATL 59.0). • HRV 40.1 ms (+2 ms vs S-1) • Sommeil 7.4h/nuit • Body Battery : 47%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "💤 Sommeil limite (7.2h) — vise 7h30 minimum\n📊 manque de Zone 1-2 (38% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (33%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n🏃 Course : allure en progression (+0.3 min/km plus rapide)"
+      "text": "💤 Sommeil limite (7.4h) — vise 7h30 minimum\n📊 manque de Zone 1-2 (47% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (23%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n🏃 Course : allure en régression (0.2 min/km plus lent — peut indiquer fatigue)"
     },
     {
       "type": "goal",
       "icon": "📋",
       "title": "Prescription : Séance légère — Zone 2",
-      "text": "Hier : Récupération (pilates). [Body Battery 35% · TSB -9] Fatigue accumulée malgré une BB correcte. 45-60 min à allure conversationnelle. — Z2 — 60-70% FCmax"
+      "text": "Hier : Aerobic Base (run). [Body Battery 47% · TSB -11] Fatigue accumulée malgré une BB correcte. 45-60 min à allure conversationnelle. — Z2 — 60-70% FCmax"
     }
   ]
 }
