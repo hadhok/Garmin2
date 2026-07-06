@@ -117,11 +117,7 @@ function renderActivities() {
     return;
   }
 
-  const escape = (str) => {
-    const div = document.createElement('div');
-    div.textContent = str || '';
-    return div.innerHTML;
-  };
+  const escape = escapeHTML; /* sanit.js */
   tbody.innerHTML = page.map(a => {
     ACT_MAP[a.id] = a;
     const dateStr  = a.date ? new Date(a.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}) : '–';

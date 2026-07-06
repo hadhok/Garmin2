@@ -150,11 +150,7 @@ function _renderCoachItems(sectionId, dateId, itemsId, data) {
     const snap   = data.stats_snapshot || {};
     const snapEl = document.getElementById(itemsId.replace('coach-items', 'coach-snap'));
     // Sanitize HTML content to prevent XSS
-    const escape = (str) => {
-      const div = document.createElement('div');
-      div.textContent = str || '';
-      return div.innerHTML;
-    };
+    const escape = escapeHTML; /* sanit.js */
 
     if (snapEl) {
       const PHASE = { progression:'En progression 📈', recovery:'Récupération 🔄', peak:'Pic de forme 🔥', base:'Construction 💪', maintenance:'Maintien ⚖️' };
@@ -697,7 +693,7 @@ function exportWeekPDF() {
     return `<tr>
       <td>${d}</td>
       <td>${a.icon || ''} ${a.type_label || a.type || ''}</td>
-      <td>${a.name || ''}</td>
+      <td>${escapeHTML(a.name || '')}</td>
       <td>${dist}</td>
       <td>${fmt_dur(a.duration_min)}</td>
       <td>${a.calories ? Math.round(a.calories) + ' kcal' : '–'}</td>
@@ -818,14 +814,15 @@ function switchView(view, swipeDir) {
 }
 
 function switchSubTab(tab) {
-  state.tab = tab;
-  state.offset = 0;
-  document.querySelectorAll('.subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-  /* Gérer le sous-onglet course : switche vers running */
+  /* Sous-onglet course : switche vers la vue running SANS toucher
+     state.tab, sinon le retour sur Entraînement calcule sur l'année */
   if (tab === 'course') {
     switchView('running');
     return;
   }
+  state.tab = tab;
+  state.offset = 0;
+  document.querySelectorAll('.subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   renderAll();
 }
 
@@ -902,7 +899,7 @@ function renderTodayHero() {
         return `<div class="today-act-row" onclick="openDetail(${a.id})">
           <div class="today-act-icon act-icon ${a.type||'other'}">${a.icon||'⚡'}</div>
           <div class="today-act-info">
-            <div class="today-act-name">${a.name || a.type_label || a.type}</div>
+            <div class="today-act-name">${escapeHTML(a.name || a.type_label || a.type)}</div>
             <div class="today-act-sub">${a.type_label || ''}</div>
           </div>
           <div class="today-act-stat">${stat}</div>
@@ -944,7 +941,8 @@ function renderToday() {
 
 function renderTraining() {
   /* Semaine/mois/année : utilise state.tab courant */
-  if (state.tab === 'day') state.tab = 'week'; // default
+  if (!['week','month','year'].includes(state.tab)) state.tab = 'week'; // default
+  document.querySelectorAll('.subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === state.tab));
   const periodLbl = document.getElementById('period-label');
   if (periodLbl) periodLbl.textContent = formatPeriodLabel();
   const trainingPeriodLbl = document.getElementById('period-label-training');

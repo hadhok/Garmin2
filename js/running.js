@@ -179,47 +179,35 @@ function computeCalculations() {
     return Math.max(0, Math.ceil(days)).toString();
   })();
 
-  // Monotony — variation du TRIMP sur 7 jours
-  const monotony = (() => {
-    const last7days = [];
+  // TRIMP quotidien des 7 derniers jours (partagé Monotony / Training Strain)
+  const last7days = (() => {
+    const out = [];
     for (let i = 0; i < 7; i++) {
       const d = new Date(TODAY);
       d.setDate(d.getDate() - i);
       const iso = localIso(d);
-      const dayRuns = runs.filter(r => {
-        const rDate = new Date(r.start_time);
-        return localIso(rDate) === iso;
-      });
-      const trimp = dayRuns.reduce((s, r) => s + (computeTRIMP(r) || 0), 0);
-      last7days.push(trimp);
+      const trimp = runs
+        .filter(r => localIso(new Date(r.start_time)) === iso)
+        .reduce((s, r) => s + (computeTRIMP(r) || 0), 0);
+      out.push(trimp);
     }
+    return out;
+  })();
 
+  // Monotony — avg(TRIMP) / (stddev + avg) sur 7 jours (Foster)
+  const monotony = (() => {
     const avg = last7days.reduce((s, v) => s + v, 0) / 7;
     if (avg === 0) return '–';
     const variance = last7days.reduce((s, v) => s + (v - avg) ** 2, 0) / 7;
     const stdDev = Math.sqrt(variance);
-    const mono = avg / (stdDev + avg);
-    return (mono * 100).toFixed(0);
+    return (avg / (stdDev + avg) * 100).toFixed(0);
   })();
 
-  // Training Strain — sum(TRIMP) * Monotony / 0.5 sur 7 jours
+  // Training Strain — sum(TRIMP) × Monotony / 0.5 sur 7 jours
   const trainingStrain = (() => {
     if (monotony === '–') return '–';
-    const last7days = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(TODAY);
-      d.setDate(d.getDate() - i);
-      const iso = localIso(d);
-      const dayRuns = runs.filter(r => {
-        const rDate = new Date(r.start_time);
-        return localIso(rDate) === iso;
-      });
-      const trimp = dayRuns.reduce((s, r) => s + (computeTRIMP(r) || 0), 0);
-      last7days.push(trimp);
-    }
     const totalTrimp = last7days.reduce((s, v) => s + v, 0);
-    const strain = totalTrimp * (parseInt(monotony) / 100) / 0.5;
-    return strain.toFixed(0);
+    return (totalTrimp * (parseInt(monotony) / 100) / 0.5).toFixed(0);
   })();
 
     return {
@@ -262,22 +250,46 @@ function renderCalculations() {
   const calTag = (factor) => (factor && Math.abs(factor - 1) > 0.005)
     ? `<div style="font-size:10px;color:#6366f1;margin-top:3px">cal. ×${factor.toFixed(2)}</div>` : '';
 
+  /* Code couleur selon les seuils usuels (Foster / Gabbett / TSB) */
+  const num = (v) => (v === '–' || v == null) ? null : parseFloat(v);
+  const tsbColor = (() => {
+    const v = num(calc.tsb); if (v == null) return null;
+    return v < -20 ? '#dc2626' : v < -5 ? '#d97706' : v > 15 ? '#3b82f6' : '#22c55e';
+  })();
+  const acColor = (() => {
+    const v = num(calc.acRatio); if (v == null) return null;
+    return v > 1.5 ? '#dc2626' : v > 1.3 ? '#d97706' : v < 0.8 ? '#3b82f6' : '#22c55e';
+  })();
+  const monoColor = (() => {
+    const v = num(calc.monotony); if (v == null) return null;
+    return v > 200 ? '#dc2626' : v > 150 ? '#d97706' : '#22c55e';
+  })();
+
   const metrics = [
-    { key: 'effectiveVO2max', label: 'Effective VO2max', unit: 'ml/kg/min', value: calc.effectiveVO2max, cal: calTag(f.vo2) },
-    { key: 'marathonShape', label: 'Marathon Shape', unit: '%', value: calc.marathonShape, cal: calTag(f.shape) },
-    { key: 'atl', label: 'Fatigue (ATL)', unit: '%', value: calc.atl, cal: calTag(f.atl) },
-    { key: 'ctl', label: 'Fitness (CTL)', unit: '%', value: calc.ctl, cal: calTag(f.ctl) },
-    { key: 'tsb', label: 'Stress Balance (TSB)', unit: '', value: calc.tsb },
-    { key: 'acRatio', label: 'Workload Ratio (A:C)', unit: '', value: calc.acRatio },
-    { key: 'restDays', label: 'Rest days', unit: 'jours', value: calc.restDays },
-    { key: 'monotony', label: 'Monotony', unit: '%', value: calc.monotony },
-    { key: 'trainingStrain', label: 'Training strain', unit: '', value: calc.trainingStrain }
+    { label: 'Effective VO2max', unit: 'ml/kg/min', value: calc.effectiveVO2max, cal: calTag(f.vo2),
+      tip: 'Moyenne des VO2max estimés sur les runs des 30 derniers jours, × facteur de calibration.' },
+    { label: 'Marathon Shape', unit: '%', value: calc.marathonShape, cal: calTag(f.shape),
+      tip: 'Préparation marathon : volume hebdomadaire (2/3) + sorties longues (1/3) sur 6 mois.' },
+    { label: 'Fatigue (ATL)', unit: '%', value: calc.atl, cal: calTag(f.atl),
+      tip: 'Charge aiguë : moyenne exponentielle du TRIMP sur 7 jours, en % du max historique.' },
+    { label: 'Fitness (CTL)', unit: '%', value: calc.ctl, cal: calTag(f.ctl),
+      tip: 'Charge chronique : moyenne exponentielle du TRIMP sur 42 jours, en % du max historique.' },
+    { label: 'Stress Balance (TSB)', unit: '', value: calc.tsb, color: tsbColor,
+      tip: 'CTL − ATL. Négatif = fatigue, positif = fraîcheur. Optimal course : +5 à +15.' },
+    { label: 'Workload Ratio (A:C)', unit: '', value: calc.acRatio, color: acColor,
+      tip: 'Charge aiguë ÷ chronique. Zone sûre 0.8–1.3, risque de blessure au-delà de 1.5 (Gabbett).' },
+    { label: 'Rest days', unit: 'jours', value: calc.restDays,
+      tip: 'Jours de repos nécessaires pour revenir à TSB = 0 (décroissance naturelle de l\'ATL).' },
+    { label: 'Monotony', unit: '%', value: calc.monotony, color: monoColor,
+      tip: 'Uniformité de la charge sur 7 jours (Foster). > 150 % : risque accru — varier les séances.' },
+    { label: 'Training strain', unit: '', value: calc.trainingStrain,
+      tip: 'Contrainte globale : somme du TRIMP 7 jours × monotonie (Foster).' }
   ];
 
     target.innerHTML = metrics.map(m => `
-      <div style="padding:12px;background:var(--card-bg);border-radius:var(--radius);border:1px solid var(--border)">
+      <div title="${m.tip}" style="padding:12px;background:var(--card-bg);border-radius:var(--radius);border:1px solid var(--border);cursor:help">
         <div style="font-size:11px;color:var(--muted);margin-bottom:6px">${m.label}</div>
-        <div style="font-size:20px;font-weight:600;color:var(--text)">
+        <div style="font-size:20px;font-weight:600;color:${m.color || 'var(--text)'}">
           ${m.value}<span style="font-size:12px;color:var(--muted);margin-left:4px">${m.unit}</span>
         </div>
         ${m.cal || ''}
@@ -1231,7 +1243,7 @@ function renderRunTRIMP() {
   const trimpMap = buildTRIMPMap(allActs);
   const loads7 = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(TODAY); d.setDate(d.getDate() - i);
-    return trimpMap[dateToISO(d)] || 0;
+    return trimpMap[localIso(d)] || 0;
   });
   const mean7    = loads7.reduce((s, v) => s + v, 0) / 7;
   const std7     = Math.sqrt(loads7.reduce((s, v) => s + (v - mean7) ** 2, 0) / 7);
@@ -3404,7 +3416,7 @@ function updateRunCompare() {
     <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">
       <div style="flex:1;min-width:140px;padding:10px 12px;border-radius:8px;background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.2)">
         <div style="font-size:10px;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">A</div>
-        <div style="font-size:13px;font-weight:600">${a.name || 'Course'}</div>
+        <div style="font-size:13px;font-weight:600">${escapeHTML(a.name || 'Course')}</div>
         <div style="font-size:11px;color:var(--muted)">${dateA}</div>
       </div>
       <div style="flex:1;min-width:140px;padding:10px 12px;border-radius:8px;background:rgba(249,115,22,0.07);border:1px solid rgba(249,115,22,0.2)">

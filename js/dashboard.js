@@ -14,7 +14,7 @@ function _actCard(a) {
       <div class="act-icon ${a.type || 'other'}">${a.icon || '⚡'}</div>
       <span class="act-card-date">${dateStr}</span>
     </div>
-    <div class="act-card-name">${a.name || a.type_label || ''}</div>
+    <div class="act-card-name">${escapeHTML(a.name || a.type_label || '')}</div>
     <div class="act-card-main">${main}</div>
     <div class="act-card-sub">${sub}</div>
   </div>`;
@@ -45,7 +45,7 @@ function renderYearActivityList(containerId, acts) {
     return `<div class="activity-item" onclick="openDetail('${id}')">
       <div class="act-icon ${a.type || 'other'}">${a.icon || '⚡'}</div>
       <div>
-        <div class="act-name">${a.name}</div>
+        <div class="act-name">${escapeHTML(a.name)}</div>
         <div class="act-date">${dateStr}</div>
       </div>
       <div class="act-stats">
@@ -73,7 +73,7 @@ function renderTopActivities(containerId, acts, limit = 6) {
         <div class="act-icon ${a.type || 'other'}">${a.icon || '⚡'}</div>
         <span class="act-card-date">${dateStr}</span>
       </div>
-      <div class="act-card-name">${a.name || a.type_label || ''}</div>
+      <div class="act-card-name">${escapeHTML(a.name || a.type_label || '')}</div>
       <div class="act-card-main" style="color:var(--accent)">${load}<span style="font-size:11px;font-weight:400;color:var(--muted)"> pts</span></div>
       <div class="act-card-sub">${dist}${a.te_label ? ' · ' + a.te_label : ''}</div>
     </div>`;
@@ -94,7 +94,7 @@ function renderWeekCells(acts) {
     const dots = dayActs.map(a => `<div class="day-dot" style="background:${TYPE_COLOR[a.type]||'#888'}"></div>`).join('');
     const miniActs = allDay.slice(0,3).map(a => {
       ACT_MAP[a.id] = a;
-      return `<div class="day-mini-act" style="color:${TYPE_COLOR[a.type]||'var(--muted)'}" onclick="event.stopPropagation();openDetail(${a.id})" title="${a.name}">${a.icon||'⚡'} ${fmt_dur(a.duration_min)}</div>`;
+      return `<div class="day-mini-act" style="color:${TYPE_COLOR[a.type]||'var(--muted)'}" onclick="event.stopPropagation();openDetail(${a.id})" title="${escapeHTML(a.name)}">${a.icon||'⚡'} ${fmt_dur(a.duration_min)}</div>`;
     }).join('');
     return `<div class="day-cell ${dayActs.length ? 'has-act' : ''} ${isToday ? 'today' : ''}">
       <div class="day-name">${day}</div>
