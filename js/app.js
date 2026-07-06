@@ -36,11 +36,40 @@ const TODAY = new Date();
 const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 const MONTHS_LONG = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 
+/* ── Thème clair / sombre ── */
+function isDarkTheme() {
+  const t = document.documentElement.dataset.theme;
+  if (t === 'dark')  return true;
+  if (t === 'light') return false;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+function applyChartTheme() {
+  Chart.defaults.color       = isDarkTheme() ? '#94a3b8' : '#6b7280';
+  Chart.defaults.borderColor = isDarkTheme() ? '#2a2f3a' : '#e5e7eb';
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = isDarkTheme() ? '☀️' : '🌙';
+}
+
+function toggleTheme() {
+  const next = isDarkTheme() ? 'light' : 'dark';
+  localStorage.setItem('theme', next);
+  document.documentElement.dataset.theme = next;
+  applyChartTheme();
+  markAllDirty();
+  renderAll();
+}
+
+/* Applique le thème sauvegardé le plus tôt possible (avant les renders) */
+(() => {
+  const saved = localStorage.getItem('theme');
+  if (saved === 'dark' || saved === 'light') document.documentElement.dataset.theme = saved;
+})();
+
 /* ── Chart.js defaults ── */
-Chart.defaults.color        = '#6b7280';
-Chart.defaults.borderColor  = '#e5e7eb';
 Chart.defaults.font.family  = "Inter, system-ui, -apple-system, sans-serif";
 Chart.defaults.font.size    = 11;
+applyChartTheme();
 
 const CHARTS = {};
 function mkChart(id, cfg) {
@@ -824,6 +853,29 @@ function switchSubTab(tab) {
   state.offset = 0;
   document.querySelectorAll('.subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   renderAll();
+}
+
+/* ── Menu "Plus" (bottom nav mobile) ── */
+function toggleMoreMenu(e) {
+  if (e) e.stopPropagation();
+  const menu = document.getElementById('more-menu');
+  if (!menu) return;
+  const open = menu.classList.toggle('open');
+  if (open) {
+    const close = (ev) => {
+      if (!menu.contains(ev.target)) { menu.classList.remove('open'); document.removeEventListener('click', close); }
+    };
+    setTimeout(() => document.addEventListener('click', close), 0);
+  }
+}
+
+function switchViewFromMore(view) {
+  const menu = document.getElementById('more-menu');
+  if (menu) menu.classList.remove('open');
+  switchView(view);
+  /* Highlight du bouton "Plus" quand une vue du menu est active */
+  const moreBtn = document.querySelector('.bottom-nav-item[data-view="__more"]');
+  if (moreBtn) moreBtn.classList.add('active');
 }
 
 function movePeriod(dir) { state.offset += dir; renderAll(); }

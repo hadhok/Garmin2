@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Garmin Dashboard</title>
+  <script>/* Anti-flash : applique le thème sauvegardé avant le premier paint */
+    (function(){var t=localStorage.getItem('theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;})();</script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -123,6 +125,7 @@
         <span class="topbar-title" id="topbar-title">Dashboard</span>
       </div>
       <div class="topbar-right">
+        <button class="btn btn-ghost" id="theme-toggle" onclick="toggleTheme()" aria-label="Basculer le thème clair/sombre" title="Thème clair/sombre" style="font-size:15px;padding:6px 10px">🌙</button>
         <button class="btn btn-ghost btn-sync-mobile" onclick="openSyncModal()" style="font-size:12px;padding:6px 12px">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
           Sync
@@ -389,6 +392,7 @@
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
               <input class="acts-search" id="acts-search" type="text" placeholder="Rechercher…" oninput="renderActivities()">
             </div>
+            <button class="btn btn-ghost" onclick="exportActivitiesCSV()" title="Exporter la liste filtrée en CSV" style="font-size:12px;padding:6px 12px">⬇ CSV</button>
           </div>
         </div>
 
@@ -1302,19 +1306,31 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
     Récupération
   </button>
-  <button class="bottom-nav-item" data-view="history" onclick="switchView('history')">
+  <button class="bottom-nav-item" data-view="__more" onclick="toggleMoreMenu(event)" aria-label="Plus d'options">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+    Plus
+  </button>
+</nav>
+
+<!-- Menu "Plus" (mobile) -->
+<div class="more-menu" id="more-menu">
+  <button class="more-menu-item" data-view="history" onclick="switchViewFromMore('history')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
     Historique
   </button>
-  <button class="bottom-nav-item" data-view="profile" onclick="switchView('profile')">
+  <button class="more-menu-item" data-view="profile" onclick="switchViewFromMore('profile')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     Profil
   </button>
-  <button class="bottom-nav-item" data-view="poc" onclick="switchView('poc')">
+  <button class="more-menu-item" data-view="poc" onclick="switchViewFromMore('poc')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
     Science
   </button>
-</nav>
+  <button class="more-menu-item" data-view="runalyze" onclick="switchViewFromMore('runalyze')">
+    <span style="font-size:16px;line-height:1">🎯</span>
+    Runalyze
+  </button>
+</div>
 
 <!-- Scripts -->
 <script src="/js/constants.js"></script>
