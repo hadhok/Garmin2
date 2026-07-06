@@ -1,6 +1,7 @@
 from http.server import BaseHTTPRequestHandler
 import json, os, sys
 from datetime import datetime, timedelta
+from _auth import check_auth
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -339,6 +340,7 @@ def _run_sync():
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
+        if not check_auth(self): return
         results = {}
         try:
             results['garmin'] = _run_sync()

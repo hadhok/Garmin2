@@ -1,11 +1,13 @@
 from http.server import BaseHTTPRequestHandler
 import json, os, sys
+from _auth import check_auth
 
 sys.path.insert(0, os.path.dirname(__file__))
 
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
+        if not check_auth(self): return
         try:
             from supabase import create_client
             sb   = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])

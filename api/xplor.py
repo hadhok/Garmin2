@@ -1,4 +1,8 @@
 """
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__))
+from _auth import check_auth
 Xplor Active (Deciplus) — synchronisation via API REST directe.
 
 Variables d'environnement requises :
@@ -306,6 +310,7 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
+        if not check_auth(self): return
         try:
             sb       = self._sb()
             sessions = _get_sessions(sb)
@@ -319,6 +324,7 @@ class handler(BaseHTTPRequestHandler):
             self._reply(500, {'error': str(e)})
 
     def do_POST(self):
+        if not check_auth(self): return
         try:
             length = int(self.headers.get('Content-Length', 0))
             body   = json.loads(self.rfile.read(length)) if length else {}

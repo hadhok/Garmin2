@@ -1,4 +1,5 @@
 """
+from _auth import check_auth
 activity_details.py — Données détaillées d'activité (time-series)
 
 GET  /api/activity_details?id={activity_id}   → retourne les samples stockés
@@ -212,6 +213,7 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
+        if not check_auth(self): return
         qs = parse_qs(urlparse(self.path).query)
         activity_id = qs.get('id', [None])[0]
         if not activity_id:
@@ -228,6 +230,7 @@ class handler(BaseHTTPRequestHandler):
             self._reply(500, {'error': str(e)})
 
     def do_POST(self):
+        if not check_auth(self): return
         try:
             length = int(self.headers.get('Content-Length', 0))
             body   = json.loads(self.rfile.read(length)) if length else {}

@@ -2,6 +2,9 @@ from http.server import BaseHTTPRequestHandler
 import json, os, sys
 from datetime import datetime, timedelta
 
+sys.path.insert(0, os.path.dirname(__file__))
+from _auth import check_auth
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 
@@ -55,6 +58,7 @@ def run_coach_update():
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
+        if not check_auth(self): return
         try:
             msg = run_coach_update()
             self._respond(200, {'status': 'ok', 'message': msg})

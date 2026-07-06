@@ -827,6 +827,11 @@
               <input id="set-vo2-correction" type="number" min="0.8" max="1.5" step="0.01" class="settings-input" value="">
             </div>
           </div>
+          <div style="margin-bottom:16px">
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Clé API (sécurité)</label>
+            <input id="set-api-key" type="password" class="settings-input" placeholder="Optionnel — doit correspondre à APP_API_KEY sur Vercel" autocomplete="off" style="width:100%">
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">Protège tes données de santé : définis APP_API_KEY dans les variables d'environnement Vercel puis saisis la même clé ici.</div>
+          </div>
           <button class="btn btn-primary" onclick="saveHRSettings()" style="font-size:13px">Enregistrer</button>
           <div id="settings-saved" style="display:none;font-size:12px;color:#22c55e;margin-top:8px">✓ Paramètres enregistrés — les calculs sont mis à jour.</div>
         </div>
