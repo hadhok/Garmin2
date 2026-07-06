@@ -664,6 +664,23 @@
           </div>
         </div>
 
+        <!-- Corrélations bien-être → performance -->
+        <div class="section-header collapsible" onclick="toggleSection(this)" style="margin-top:8px">Corrélations bien-être → performance <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="health-grid">
+            <div class="card">
+              <div class="section-header" style="margin:0 0 4px">😴 Sommeil → Efficience du run</div>
+              <div id="corr-sleep-txt" style="font-size:11px;color:var(--muted);margin-bottom:8px"></div>
+              <div class="chart-wrap" style="height:200px"><canvas id="chart-corr-sleep"></canvas></div>
+            </div>
+            <div class="card">
+              <div class="section-header" style="margin:0 0 4px">⚡ Charge de la veille → HRV</div>
+              <div id="corr-load-txt" style="font-size:11px;color:var(--muted);margin-bottom:8px"></div>
+              <div class="chart-wrap" style="height:200px"><canvas id="chart-corr-load"></canvas></div>
+            </div>
+          </div>
+        </div>
+
       </div><!-- /view-recovery -->
 
       <!-- ════════════════════════════════════════════════
@@ -834,6 +851,11 @@
             </div>
           </div>
           <div style="margin-bottom:16px">
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Notifications</label>
+            <button id="notif-toggle-btn" class="btn btn-primary" onclick="toggleNotifications()" style="font-size:13px">🔕 Activer les notifications</button>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">Conseil du matin (à l'ouverture de l'app) et alertes nouveaux records.</div>
+          </div>
+          <div style="margin-bottom:16px">
             <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Clé API (sécurité)</label>
             <input id="set-api-key" type="password" class="settings-input" placeholder="Optionnel — doit correspondre à APP_API_KEY sur Vercel" autocomplete="off" style="width:100%">
             <div style="font-size:11px;color:var(--muted);margin-top:4px">Protège tes données de santé : définis APP_API_KEY dans les variables d'environnement Vercel puis saisis la même clé ici.</div>
@@ -879,6 +901,9 @@
 
         <!-- KPI bar -->
         <div class="kpi-grid" id="run-kpis"></div>
+
+        <!-- Objectif de course -->
+        <div id="run-goal" style="margin:16px 0"></div>
 
         <!-- Calculations -->
         <div id="rsh-calculations" class="section-header collapsible" onclick="toggleSection(this)">Calculations <span style="font-size:10px;font-weight:400;color:var(--muted);text-transform:none">(course uniquement · calibrable dans l'onglet Runalyze)</span> <span class="chev">▾</span></div>
@@ -1349,6 +1374,8 @@
 <script src="/js/renpho.js"></script>
 <script src="/js/help.js"></script>
 <script src="/js/runalyze.js"></script>
+<script src="/js/goal.js"></script>
+<script src="/js/insights.js"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js', { scope: '/' }));

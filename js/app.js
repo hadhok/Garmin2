@@ -707,6 +707,8 @@ async function runSync() {
       if (typeof loadBodyMetrics === 'function') await loadBodyMetrics();
       markAllDirty();
       renderAll();
+      /* Détection de nouveaux records sur les activités fraîchement synchronisées */
+      if (typeof checkNewPRs === 'function') { try { checkNewPRs(); } catch(e) {} }
       // Mise à jour du coach en arrière-plan
       fetch('/api/update-coach', { method: 'POST' })
         .then(r => r.json())
@@ -1073,6 +1075,7 @@ function renderAll() {
     if (typeof renderPocHRV       === 'function') { try { renderPocHRV();       } catch(e) { console.warn('[recovery] poc hrv', e); } }
     if (typeof renderRHRTrend     === 'function') try { renderRHRTrend();     } catch(e) {}
     if (typeof renderBodyMetrics  === 'function') try { renderBodyMetrics();  } catch(e) {}
+    if (typeof renderCorrelations === 'function') try { renderCorrelations(); } catch(e) { console.warn('[recovery] correlations', e); }
     return;
   }
   if (state.view === 'history')  { renderActivities(); return; }
@@ -1155,6 +1158,7 @@ function initSettingsInputs() {
   }
   if (vo2El)  vo2El.value  = localStorage.getItem('vo2_correction') || '1.00';
   if (keyEl)  keyEl.value  = localStorage.getItem('app_api_key') || '';
+  if (typeof updateNotifButton === 'function') updateNotifButton();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1355,6 +1359,11 @@ async function init() {
 
   markAllDirty();
   renderAll();
+
+  /* Records battus depuis la dernière visite (sync cron entre-temps) */
+  if (typeof checkNewPRs === 'function') { try { checkNewPRs(); } catch(e) {} }
+  /* Conseil du matin (notification locale, 1×/jour) */
+  if (typeof maybeMorningNotification === 'function') { try { maybeMorningNotification(); } catch(e) {} }
 }
 
 /* PWA laissée ouverte pendant la nuit : TODAY et tous les calculs

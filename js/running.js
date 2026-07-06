@@ -3155,6 +3155,7 @@ function renderRunning() {
     if (el) { el._slicerReady = true; initRunSlicer(); return; }
   }
   safe(renderRunKPIs);
+  if (typeof renderRunGoal === 'function') safe(renderRunGoal);
   safe(renderCalculations);
   safe(renderWeekPlan);
   safe(renderRunPR);

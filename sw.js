@@ -1,4 +1,4 @@
-const CACHE = 'garmin-v11';
+const CACHE = 'garmin-v12';
 const ASSETS = [
   '/',
   '/index.html',
@@ -17,6 +17,8 @@ const ASSETS = [
   '/js/renpho.js',
   '/js/help.js',
   '/js/runalyze.js',
+  '/js/goal.js',
+  '/js/insights.js',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/manifest.json',
@@ -76,4 +78,27 @@ self.addEventListener('fetch', e => {
       });
     })
   );
+});
+
+/* ── Notifications : clic → focus/ouvre l'app ── */
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+      const open = clients.find(c => 'focus' in c);
+      if (open) return open.focus();
+      return self.clients.openWindow('/');
+    })
+  );
+});
+
+/* Push serveur (si configuré un jour) : affiche le payload */
+self.addEventListener('push', e => {
+  let data = {};
+  try { data = e.data ? e.data.json() : {}; } catch { data = { title: 'Garmin Dashboard', body: e.data?.text() || '' }; }
+  e.waitUntil(self.registration.showNotification(data.title || 'Garmin Dashboard', {
+    body: data.body || '',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+  }));
 });
