@@ -90,6 +90,20 @@ function computeRunForm() {
 /* ══════════════════════════════════════════════════════════
    CALCULATIONS — 9 métriques (VO2, Marathon Shape, ATL, CTL, TSB, A:C, Rest days, Monotony, Training Strain)
    ══════════════════════════════════════════════════════════ */
+/* Facteurs de calibration Runalyze (saisis dans l'onglet Runalyze) */
+function getCalibrationFactors() {
+  const f = (key) => {
+    const v = parseFloat(localStorage.getItem(key) || '1.00');
+    return (v >= 0.5 && v <= 2.0) ? v : 1.0;
+  };
+  return {
+    vo2:   f('vo2_correction'),
+    shape: f('rz_factor_shape'),
+    ctl:   f('rz_factor_ctl'),
+    atl:   f('rz_factor_atl'),
+  };
+}
+
 function computeCalculations() {
   try {
     const runs = getRuns();
@@ -98,21 +112,30 @@ function computeCalculations() {
 
     if (!runs.length || !lastForm) return null;
 
-  // Effective VO2max — moyenne des VO2max estimés par run × facteur de correction personnel
-  const effectiveVO2max = (() => {
-    const vo2Values = runs.map(r => r.vo2max).filter(v => v > 0);
-    if (!vo2Values.length) return '–';
-    const correction = parseFloat(localStorage.getItem('vo2_correction') || '1.00');
-    const avg = vo2Values.reduce((s, v) => s + v, 0) / vo2Values.length;
-    return (avg * correction).toFixed(1);
+  const factors = getCalibrationFactors();
+
+  // Effective VO2max — fenêtre glissante 30 jours (comme Runalyze),
+  // fallback : 5 derniers runs avec VO2max si aucun run récent
+  const vo2Raw = (() => {
+    const cutoff = new Date(TODAY);
+    cutoff.setDate(cutoff.getDate() - 30);
+    let pool = runs.filter(r => r.vo2max > 0 && new Date(r.start_time) >= cutoff);
+    if (!pool.length) {
+      pool = runs.filter(r => r.vo2max > 0)
+        .sort((a, b) => String(b.start_time).localeCompare(String(a.start_time)))
+        .slice(0, 5);
+    }
+    if (!pool.length) return null;
+    return pool.reduce((s, r) => s + r.vo2max, 0) / pool.length;
   })();
+  const effectiveVO2max = vo2Raw != null ? (vo2Raw * factors.vo2).toFixed(1) : '–';
 
   // Marathon Shape — volume (km/sem × 2/3) + long runs (× 1/3) sur 6m
-  const marathonShape = (() => {
+  const shapeRaw = (() => {
     const sixMonthAgo = new Date(TODAY);
     sixMonthAgo.setMonth(sixMonthAgo.getMonth() - 6);
     const runsLast6m = runs.filter(r => new Date(r.start_time) >= sixMonthAgo);
-    if (!runsLast6m.length) return '–';
+    if (!runsLast6m.length) return null;
 
     const weeks = Math.max(1, Math.ceil((TODAY - sixMonthAgo) / 604800000));
     const totalKm = runsLast6m.reduce((s, r) => s + (r.distance_km || 0), 0);
@@ -124,9 +147,9 @@ function computeCalculations() {
       .reduce((s, r) => s + (r.distance_km || 0), 0) / Math.max(1, Math.ceil(weeks * 0.2));
 
     const targetMarathonKm = 42.195;
-    const shape = (weeklyKmAvg * 0.667 + longRuns * 0.333) / targetMarathonKm * 100;
-    return Math.min(200, shape).toFixed(0);
+    return (weeklyKmAvg * 0.667 + longRuns * 0.333) / targetMarathonKm * 100;
   })();
+  const marathonShape = shapeRaw != null ? Math.min(200, shapeRaw * factors.shape).toFixed(0) : '–';
 
   // Fatigue (ATL) et Fitness (CTL) — en % du max historique
   const atlCurrent = lastForm.atl || 0;
@@ -136,8 +159,10 @@ function computeCalculations() {
   const ctlValues = allForm.map(f => f.ctl).filter(v => v > 0);
   const maxAtl = atlValues.length ? Math.max(...atlValues) : 1;
   const maxCtl = ctlValues.length ? Math.max(...ctlValues) : 1;
-  const atlPct = (atlCurrent / maxAtl * 100).toFixed(0);
-  const ctlPct = (ctlCurrent / maxCtl * 100).toFixed(0);
+  const atlRawPct = atlCurrent / maxAtl * 100;
+  const ctlRawPct = ctlCurrent / maxCtl * 100;
+  const atlPct = (atlRawPct * factors.atl).toFixed(0);
+  const ctlPct = (ctlRawPct * factors.ctl).toFixed(0);
 
   // Stress Balance (TSB)
   const tsbValue = (ctlCurrent - atlCurrent).toFixed(1);
@@ -206,7 +231,15 @@ function computeCalculations() {
       acRatio,
       restDays,
       monotony,
-      trainingStrain
+      trainingStrain,
+      /* valeurs brutes (avant calibration) — utilisées par l'onglet Runalyze */
+      raw: {
+        vo2:   vo2Raw,
+        shape: shapeRaw != null ? Math.min(200, shapeRaw) : null,
+        atl:   atlRawPct,
+        ctl:   ctlRawPct,
+      },
+      factors
     };
   } catch (e) {
     console.error('[computeCalculations]', e);
@@ -225,11 +258,15 @@ function renderCalculations() {
       return;
     }
 
+  const f = calc.factors || {};
+  const calTag = (factor) => (factor && Math.abs(factor - 1) > 0.005)
+    ? `<div style="font-size:10px;color:#6366f1;margin-top:3px">cal. ×${factor.toFixed(2)}</div>` : '';
+
   const metrics = [
-    { key: 'effectiveVO2max', label: 'Effective VO2max', unit: 'ml/kg/min', value: calc.effectiveVO2max },
-    { key: 'marathonShape', label: 'Marathon Shape', unit: '%', value: calc.marathonShape },
-    { key: 'atl', label: 'Fatigue (ATL)', unit: '%', value: calc.atl },
-    { key: 'ctl', label: 'Fitness (CTL)', unit: '%', value: calc.ctl },
+    { key: 'effectiveVO2max', label: 'Effective VO2max', unit: 'ml/kg/min', value: calc.effectiveVO2max, cal: calTag(f.vo2) },
+    { key: 'marathonShape', label: 'Marathon Shape', unit: '%', value: calc.marathonShape, cal: calTag(f.shape) },
+    { key: 'atl', label: 'Fatigue (ATL)', unit: '%', value: calc.atl, cal: calTag(f.atl) },
+    { key: 'ctl', label: 'Fitness (CTL)', unit: '%', value: calc.ctl, cal: calTag(f.ctl) },
     { key: 'tsb', label: 'Stress Balance (TSB)', unit: '', value: calc.tsb },
     { key: 'acRatio', label: 'Workload Ratio (A:C)', unit: '', value: calc.acRatio },
     { key: 'restDays', label: 'Rest days', unit: 'jours', value: calc.restDays },
@@ -243,6 +280,7 @@ function renderCalculations() {
         <div style="font-size:20px;font-weight:600;color:var(--text)">
           ${m.value}<span style="font-size:12px;color:var(--muted);margin-left:4px">${m.unit}</span>
         </div>
+        ${m.cal || ''}
       </div>
     `).join('');
   } catch (e) {

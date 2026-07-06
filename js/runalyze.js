@@ -1,127 +1,137 @@
 /* ══════════════════════════════════════════════════════════
-   RUNALYZE API INTEGRATION
+   RUNALYZE — CALIBRATION MANUELLE (option A)
+   L'API personnelle gratuite de Runalyze est en écriture seule
+   (uniquement des POST d'upload) : impossible de lire VO2max,
+   CTL, ATL ou Marathon Shape. On calibre donc les calculs
+   locaux sur les valeurs affichées par runalyze.com.
+   Facteur = valeur Runalyze ÷ valeur brute locale, appliqué
+   dans computeCalculations() (js/running.js).
    ══════════════════════════════════════════════════════════ */
 
-let runalyzeData = null;
+const RZ_METRICS = [
+  { key: 'vo2',   store: 'vo2_correction',  label: 'VO2max effectif', unit: 'ml/kg/min', digits: 1, step: '0.1' },
+  { key: 'shape', store: 'rz_factor_shape', label: 'Marathon Shape',  unit: '%',         digits: 0, step: '1'   },
+  { key: 'ctl',   store: 'rz_factor_ctl',   label: 'Fitness (CTL)',   unit: '%',         digits: 0, step: '1'   },
+  { key: 'atl',   store: 'rz_factor_atl',   label: 'Fatigue (ATL)',   unit: '%',         digits: 0, step: '1'   },
+];
 
-async function testRunalyzeAPI() {
-  const token = document.getElementById('rz-token')?.value;
-  if (!token) {
-    alert('Veuillez entrer votre token API Runalyze');
+function renderRunalyzeCalibration() {
+  const el = document.getElementById('rz-calibration');
+  if (!el) return;
+
+  const calc = (typeof computeCalculations === 'function') ? computeCalculations() : null;
+  if (!calc || !calc.raw) {
+    el.innerHTML = '<div style="padding:16px;color:var(--muted);text-align:center">Pas assez de données de course pour calibrer.</div>';
     return;
   }
 
+  const rows = RZ_METRICS.map(m => {
+    const raw    = calc.raw[m.key];
+    const factor = calc.factors?.[m.key] ?? 1.0;
+    const rawStr = raw != null ? raw.toFixed(m.digits) : '–';
+    const calStr = raw != null ? (raw * factor).toFixed(m.digits) : '–';
+    const refVal = localStorage.getItem(`rz_ref_${m.key}`) || '';
+    const factorStr = Math.abs(factor - 1) > 0.005
+      ? `<span style="color:#6366f1;font-weight:600">×${factor.toFixed(2)}</span>`
+      : `<span style="color:var(--muted)">×1.00</span>`;
+    return `
+      <tr>
+        <td style="padding:10px 8px;font-weight:600;font-size:13px">${m.label}<span style="font-size:10px;color:var(--muted);display:block">${m.unit}</span></td>
+        <td style="padding:10px 8px;text-align:center;font-size:14px">${rawStr}</td>
+        <td style="padding:10px 8px;text-align:center">
+          <input type="number" id="rz-ref-${m.key}" value="${refVal}" step="${m.step}" min="0"
+                 placeholder="–" inputmode="decimal"
+                 style="width:80px;padding:6px;text-align:center;border:1px solid var(--border);border-radius:6px;background:var(--card-bg);color:var(--text);font-size:14px">
+        </td>
+        <td style="padding:10px 8px;text-align:center;font-size:13px">${factorStr}</td>
+        <td style="padding:10px 8px;text-align:center;font-size:14px;font-weight:700;color:var(--text)">${calStr}</td>
+      </tr>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border)">
+            <th style="padding:8px;text-align:left;font-size:10px;text-transform:uppercase;color:var(--muted)">Métrique</th>
+            <th style="padding:8px;text-align:center;font-size:10px;text-transform:uppercase;color:var(--muted)">Calcul local</th>
+            <th style="padding:8px;text-align:center;font-size:10px;text-transform:uppercase;color:var(--muted)">Valeur Runalyze</th>
+            <th style="padding:8px;text-align:center;font-size:10px;text-transform:uppercase;color:var(--muted)">Facteur</th>
+            <th style="padding:8px;text-align:center;font-size:10px;text-transform:uppercase;color:var(--muted)">Valeur calibrée</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.6">
+      TSB, Workload Ratio et Rest days sont dérivés de CTL/ATL et suivent automatiquement leur calibration.
+    </div>`;
+}
+
+function saveRunalyzeCalibration() {
+  const calc = (typeof computeCalculations === 'function') ? computeCalculations() : null;
+  if (!calc || !calc.raw) return;
+
+  let applied = 0;
+  RZ_METRICS.forEach(m => {
+    const input = document.getElementById(`rz-ref-${m.key}`);
+    const refVal = parseFloat(input?.value);
+    const raw = calc.raw[m.key];
+
+    if (!input || !input.value.trim()) {
+      /* champ vidé → réinitialiser cette métrique */
+      if (m.store === 'vo2_correction') localStorage.setItem('vo2_correction', '1.00');
+      else localStorage.removeItem(m.store);
+      localStorage.removeItem(`rz_ref_${m.key}`);
+      return;
+    }
+    if (isNaN(refVal) || refVal <= 0 || raw == null || raw <= 0) return;
+
+    const factor = Math.min(2.0, Math.max(0.5, refVal / raw));
+    localStorage.setItem(m.store, factor.toFixed(3));
+    localStorage.setItem(`rz_ref_${m.key}`, String(refVal));
+    applied++;
+  });
+
   const statusEl = document.getElementById('rz-status');
-  const dataEl = document.getElementById('rz-data');
+  if (statusEl) {
+    statusEl.textContent = applied
+      ? `✓ Calibration enregistrée (${applied} métrique${applied > 1 ? 's' : ''})`
+      : 'Aucune valeur valide saisie';
+    statusEl.style.display = 'block';
+    statusEl.style.background = applied ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)';
+    statusEl.style.color = applied ? '#16a34a' : '#dc2626';
+    setTimeout(() => statusEl.style.display = 'none', 3000);
+  }
 
-  statusEl.style.display = 'block';
-  statusEl.textContent = '⏳ Connexion à Runalyze...';
-  statusEl.style.background = 'rgba(59,130,246,0.12)';
-  statusEl.style.color = '#1e40af';
+  /* Resynchroniser l'input du profil (même clé vo2_correction) */
+  if (typeof initSettingsInputs === 'function') initSettingsInputs();
 
-  try {
-    // Test 1: User/Athlete
-    const athleteResp = await fetch('https://runalyze.com/api/v1/user', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json'
-      }
-    });
+  renderRunalyzeCalibration();
+  if (typeof markAllDirty === 'function') markAllDirty();
+}
 
-    let athlete = null;
-    if (athleteResp.ok) {
-      athlete = await athleteResp.json();
-    } else {
-      const errText = await athleteResp.text();
-      throw new Error(`User: ${athleteResp.status} ${athleteResp.statusText}\n${errText}`);
-    }
+function resetRunalyzeCalibration() {
+  RZ_METRICS.forEach(m => {
+    if (m.store === 'vo2_correction') localStorage.setItem('vo2_correction', '1.00');
+    else localStorage.removeItem(m.store);
+    localStorage.removeItem(`rz_ref_${m.key}`);
+  });
+  if (typeof initSettingsInputs === 'function') initSettingsInputs();
+  renderRunalyzeCalibration();
+  if (typeof markAllDirty === 'function') markAllDirty();
 
-    // Test 2: Activities
-    const activitiesResp = await fetch('https://runalyze.com/api/v1/activities?limit=10', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json'
-      }
-    });
-
-    let activities = [];
-    if (activitiesResp.ok) {
-      activities = await activitiesResp.json();
-    }
-
-    runalyzeData = { athlete, activities };
-
-    // Afficher les données
-    dataEl.innerHTML = `<pre>${JSON.stringify(runalyzeData, null, 2)}</pre>`;
-
-    statusEl.textContent = `✓ Connecté ! Athlète: ${athlete.firstname || athlete.name || 'N/A'} ${athlete.lastname || ''}`;
+  const statusEl = document.getElementById('rz-status');
+  if (statusEl) {
+    statusEl.textContent = '✓ Calibration réinitialisée';
+    statusEl.style.display = 'block';
     statusEl.style.background = 'rgba(34,197,94,0.12)';
     statusEl.style.color = '#16a34a';
-
-    renderRunalyzeSelector();
-
-  } catch (err) {
-    console.error('Runalyze API error:', err);
-    const errMsg = err.message.includes('404')
-      ? 'Endpoint non trouvé (404). Vérifiez le format du token et l\'URL API.'
-      : err.message;
-    dataEl.innerHTML = `<div style="color:#ef4444;white-space:pre-wrap">❌ Erreur: ${errMsg}</div>`;
-    statusEl.textContent = `❌ Erreur: ${err.message.split('\n')[0]}`;
-    statusEl.style.background = 'rgba(239,68,68,0.12)';
-    statusEl.style.color = '#dc2626';
+    setTimeout(() => statusEl.style.display = 'none', 3000);
   }
 }
 
-function renderRunalyzeSelector() {
-  if (!runalyzeData) return;
-
-  const selector = document.getElementById('rz-selector');
-  const athlete = runalyzeData.athlete || {};
-
-  const options = [
-    { key: 'use_vo2max', label: 'VO2max effectif', value: athlete.maximalOxygenUptake || 'N/A' },
-    { key: 'use_ctl', label: 'Fitness (CTL)', value: athlete.ctl || 'N/A' },
-    { key: 'use_atl', label: 'Fatigue (ATL)', value: athlete.atl || 'N/A' },
-    { key: 'use_tsb', label: 'Stress Balance (TSB)', value: athlete.tsb || 'N/A' },
-  ];
-
-  selector.innerHTML = options.map(opt => `
-    <label style="display:flex;align-items:center;gap:8px;padding:8px;cursor:pointer;border:1px solid var(--border);border-radius:4px">
-      <input type="checkbox" id="rz-${opt.key}" checked style="cursor:pointer">
-      <span style="flex:1">
-        <strong>${opt.label}</strong>
-        <span style="font-size:11px;color:var(--muted);display:block">${opt.value}</span>
-      </span>
-    </label>
-  `).join('');
-}
-
-async function saveRunalyzeToken() {
-  const token = document.getElementById('rz-token')?.value;
-  if (!token) {
-    alert('Veuillez entrer votre token');
-    return;
-  }
-
-  // TODO: Sauvegarder dans Supabase
-  localStorage.setItem('runalyze_token', token);
-
-  const statusEl = document.getElementById('rz-status');
-  statusEl.textContent = '✓ Token enregistré';
-  statusEl.style.display = 'block';
-  statusEl.style.background = 'rgba(34,197,94,0.12)';
-  statusEl.style.color = '#16a34a';
-  setTimeout(() => statusEl.style.display = 'none', 3000);
-}
-
-function initRunalyzeInputs() {
-  const tokenEl = document.getElementById('rz-token');
-  if (tokenEl) tokenEl.value = localStorage.getItem('runalyze_token') || '';
-}
-
-// Appel au switch vers runalyze
+/* Appelé par le routage de vue (app.js) */
 function onSwitchToRunalyze() {
-  initRunalyzeInputs();
+  renderRunalyzeCalibration();
 }

@@ -663,38 +663,30 @@
       </div><!-- /view-recovery -->
 
       <!-- ════════════════════════════════════════════════
-           VIEW : RUNALYZE SYNC
+           VIEW : RUNALYZE — CALIBRATION
       ════════════════════════════════════════════════ -->
       <div id="view-runalyze" class="view">
         <div style="padding:16px">
-          <div class="section-header">🔗 Synchronisation Runalyze</div>
+          <div class="section-header">🎯 Calibration Runalyze</div>
 
           <div class="card" style="margin-bottom:16px">
-            <div class="section-header" style="margin:0 0 12px;font-size:14px">Configuration</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-              <div>
-                <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:6px">Token API Runalyze</label>
-                <input id="rz-token" type="password" class="settings-input" placeholder="bdc0f649..." value="">
-              </div>
-              <div>
-                <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:6px">&nbsp;</label>
-                <button class="btn btn-primary" onclick="testRunalyzeAPI()" style="width:100%;font-size:13px">🔍 Tester API</button>
-              </div>
+            <div style="font-size:12px;color:var(--muted);line-height:1.7">
+              L'API gratuite de Runalyze ne permet pas de lire les métriques calculées (écriture seule).
+              Les valeurs sont donc <strong>calculées localement</strong> puis calibrées sur celles de runalyze.com :
+              ouvre ton tableau de bord Runalyze, recopie les valeurs affichées ci-dessous, et enregistre.
+              Le facteur de correction (valeur Runalyze ÷ calcul local) est appliqué automatiquement
+              dans la section Calculations de l'onglet Course.
             </div>
-            <button class="btn btn-primary" onclick="saveRunalyzeToken()" style="font-size:13px;width:100%">Enregistrer Token</button>
-            <div id="rz-status" style="display:none;font-size:12px;margin-top:8px;padding:8px;border-radius:4px;background:rgba(34,197,94,0.12);color:#16a34a"></div>
           </div>
 
           <div class="card">
-            <div class="section-header" style="margin:0 0 12px;font-size:14px">Données Runalyze</div>
-            <div id="rz-data" style="font-size:12px;color:var(--muted);padding:12px;background:var(--card-bg-alt);border-radius:4px;max-height:600px;overflow-y:auto;font-family:monospace">
-              <div style="color:var(--muted);text-align:center;padding:20px">En attente de synchronisation...</div>
+            <div class="section-header" style="margin:0 0 12px;font-size:14px">Métriques</div>
+            <div id="rz-calibration"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
+              <button class="btn btn-primary" onclick="saveRunalyzeCalibration()" style="font-size:13px">💾 Enregistrer la calibration</button>
+              <button class="btn" onclick="resetRunalyzeCalibration()" style="font-size:13px">↺ Réinitialiser</button>
             </div>
-          </div>
-
-          <div class="card" style="margin-top:12px">
-            <div class="section-header" style="margin:0 0 12px;font-size:14px">Sélection des données</div>
-            <div id="rz-selector" style="display:grid;gap:8px"></div>
+            <div id="rz-status" style="display:none;font-size:12px;margin-top:8px;padding:8px;border-radius:4px;background:rgba(34,197,94,0.12);color:#16a34a"></div>
           </div>
         </div>
       </div><!-- /view-runalyze -->
