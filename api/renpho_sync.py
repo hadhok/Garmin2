@@ -194,7 +194,11 @@ def _normalize(m: dict, profile: dict | None = None) -> dict | None:
         ts_int = int(ts)
         if ts_int > 1_000_000_000_000:
             ts_int //= 1000
-        dt   = datetime.fromtimestamp(ts_int, tz=timezone.utc)
+        # Date civile locale, pas UTC : une pesée du 6 juillet à 00h30
+        # heure de Paris était datée du 5 juillet (UTC = Paris − 2h l'été)
+        from zoneinfo import ZoneInfo
+        tz   = ZoneInfo(os.environ.get('APP_TZ', 'Europe/Paris'))
+        dt   = datetime.fromtimestamp(ts_int, tz=tz)
         date = dt.strftime('%Y-%m-%d')
     except Exception:
         return None

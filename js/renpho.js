@@ -20,7 +20,16 @@ function getBodyMetrics() {
 
 /* ══════════════════════════════════════════════════════════
    RENDER : Composition corporelle Renpho
+   Poids/date : source Garmin prioritaire si plus récente
+   (Garmin reçoit la balance en continu, la table Renpho ne
+   bouge qu'à la synchro) — composition détaillée : Renpho.
    ══════════════════════════════════════════════════════════ */
+function getGarminWeightDays() {
+  return Object.values(state.wellness?.days || {})
+    .filter(d => d.date && d.weight_kg)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
 function renderBodyMetrics() {
   const el = document.getElementById('renpho-body-metrics');
   if (!el) return;
@@ -38,6 +47,16 @@ function renderBodyMetrics() {
 
   const last = metrics[metrics.length - 1];
   const prev = metrics.length >= 2 ? metrics[metrics.length - 2] : null;
+
+  /* Garmin plus frais que Renpho ? → date + poids affichés = Garmin */
+  const gDays = getGarminWeightDays();
+  const gLast = gDays.length ? gDays[gDays.length - 1] : null;
+  const useGarmin = gLast && gLast.date > last.date;
+  const headerDate   = useGarmin ? gLast.date : last.date;
+  const headerWeight = useGarmin ? gLast.weight_kg : last.weight_kg;
+  const compoNote = useGarmin
+    ? `<div style="font-size:10px;color:var(--muted2);margin-top:2px">Composition détaillée du ${new Date(last.date + 'T12:00:00').toLocaleDateString('fr-FR', {day:'numeric', month:'long'})} (Renpho)</div>`
+    : '';
 
   // Flèche de tendance
   function delta(key) {
@@ -82,10 +101,11 @@ function renderBodyMetrics() {
   el.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
       <div>
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Dernière mesure</div>
-        <div style="font-size:12px;color:var(--text)">${new Date(last.date + 'T12:00:00').toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'})}</div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Dernière mesure${useGarmin ? ' <span style="font-weight:400;text-transform:none">(Garmin)</span>' : ''}</div>
+        <div style="font-size:12px;color:var(--text)">${new Date(headerDate + 'T12:00:00').toLocaleDateString('fr-FR', {day:'numeric', month:'long', year:'numeric'})}</div>
+        ${compoNote}
       </div>
-      <div style="font-size:30px;font-weight:800;color:var(--text)">${last.weight_kg != null ? last.weight_kg.toFixed(1) + ' kg' : '–'}${delta('weight_kg')}</div>
+      <div style="font-size:30px;font-weight:800;color:var(--text)">${headerWeight != null ? headerWeight.toFixed(1) + ' kg' : '–'}${delta('weight_kg')}</div>
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
@@ -118,8 +138,14 @@ function renderBodyMetrics() {
     <canvas id="chart-body-weight" style="max-height:160px"></canvas>`;
 
   // Graphique évolution poids + masse grasse
+  // Fusion Renpho + Garmin par date (Renpho prioritaire : porte la masse grasse)
+  const byDate = {};
+  gDays.forEach(d => { byDate[d.date] = { date: d.date, weight_kg: d.weight_kg, body_fat_pct: null }; });
+  metrics.forEach(m => { byDate[m.date] = m; });
+  const merged = Object.values(byDate).sort((a, b) => a.date.localeCompare(b.date));
+
   const LIMIT = 60;
-  const slice = metrics.slice(-LIMIT);
+  const slice = merged.slice(-LIMIT);
   const labels  = slice.map(m => new Date(m.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
   const weights = slice.map(m => m.weight_kg);
   const fats    = slice.map(m => m.body_fat_pct);

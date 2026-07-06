@@ -335,13 +335,42 @@ function getPrevFiltered() {
 }
 
 /* ══════════════════════════════════════════════════════════
+   FC REPOS / FC MAX — auto-détection depuis les données Garmin
+   Priorité : override manuel (Profil) → donnée Garmin → défaut
+   ══════════════════════════════════════════════════════════ */
+function getHRRest() {
+  const manual = parseInt(localStorage.getItem('hr_rest'));
+  if (manual >= 30 && manual <= 90) return manual;
+  /* Auto : dernière FC repos remontée par Garmin */
+  const days = Object.values(state.wellness?.days || {})
+    .filter(d => d.date && d.resting_hr >= 30 && d.resting_hr <= 90)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  if (days.length) return Math.round(days[0].resting_hr);
+  return 62;
+}
+
+function getHRMax() {
+  const manual = parseInt(localStorage.getItem('hr_max'));
+  if (manual >= 140 && manual <= 220) return manual;
+  /* Auto : FC max observée sur les activités des 12 derniers mois */
+  const cutoff = new Date(TODAY);
+  cutoff.setFullYear(cutoff.getFullYear() - 1);
+  let max = 0;
+  getAll().forEach(a => {
+    if (a.hr_max > max && new Date(a.start_time || a.date) >= cutoff) max = a.hr_max;
+  });
+  if (max >= 140 && max <= 220) return Math.round(max);
+  return 177;
+}
+
+/* ══════════════════════════════════════════════════════════
    TRIMP — global (toutes activités avec FC)
    Banister (1991) : durée × ratio_FC × 0.64 × exp(1.92 × ratio_FC)
    ══════════════════════════════════════════════════════════ */
 function computeTRIMP(act) {
   if (!act.hr_avg || !act.duration_min) return 0;
-  const HR_REST = parseInt(localStorage.getItem('hr_rest') || '62');
-  const HR_MAX  = parseInt(localStorage.getItem('hr_max')  || '177');
+  const HR_REST = getHRRest();
+  const HR_MAX  = getHRMax();
   if (HR_MAX <= HR_REST + 20) return 0; // paramètres incohérents — silently bail
   const ratio = (act.hr_avg - HR_REST) / (HR_MAX - HR_REST);
   if (ratio <= 0 || ratio > 1.5) return 0;
@@ -1082,20 +1111,30 @@ const MOCK_ACTIVITIES = [
    PARAMÈTRES HR
    ══════════════════════════════════════════════════════════ */
 function saveHRSettings() {
-  const hrMax  = parseInt(document.getElementById('set-hr-max')?.value);
-  const hrRest = parseInt(document.getElementById('set-hr-rest')?.value);
+  const maxRaw  = document.getElementById('set-hr-max')?.value ?? '';
+  const restRaw = document.getElementById('set-hr-rest')?.value ?? '';
+  const hrMax  = parseInt(maxRaw);
+  const hrRest = parseInt(restRaw);
   const vo2Correction = parseFloat(document.getElementById('set-vo2-correction')?.value);
   const apiKey = document.getElementById('set-api-key')?.value;
-  if (hrMax  >= 140 && hrMax  <= 220) localStorage.setItem('hr_max',  hrMax);
-  if (hrRest >= 30  && hrRest <= 90)  localStorage.setItem('hr_rest', hrRest);
+
+  /* Champ vide = retour à l'auto-détection Garmin */
+  if (!maxRaw.trim())  localStorage.removeItem('hr_max');
+  else if (hrMax >= 140 && hrMax <= 220) localStorage.setItem('hr_max', hrMax);
+
+  if (!restRaw.trim()) localStorage.removeItem('hr_rest');
+  else if (hrRest >= 30 && hrRest <= 90) localStorage.setItem('hr_rest', hrRest);
+
   if (vo2Correction >= 0.8 && vo2Correction <= 1.5) localStorage.setItem('vo2_correction', vo2Correction.toFixed(2));
   if (apiKey != null) {
     if (apiKey.trim()) localStorage.setItem('app_api_key', apiKey.trim());
     else localStorage.removeItem('app_api_key');
   }
   if (typeof applyHRSettings === 'function') applyHRSettings();
+  initSettingsInputs();
   const msg = document.getElementById('settings-saved');
   if (msg) { msg.style.display = 'block'; setTimeout(() => msg.style.display = 'none', 3000); }
+  markAllDirty();
   renderAll();
 }
 
@@ -1104,8 +1143,16 @@ function initSettingsInputs() {
   const restEl = document.getElementById('set-hr-rest');
   const vo2El  = document.getElementById('set-vo2-correction');
   const keyEl  = document.getElementById('set-api-key');
-  if (maxEl)  maxEl.value  = localStorage.getItem('hr_max')  || '177';
-  if (restEl) restEl.value = localStorage.getItem('hr_rest') || '62';
+  /* Valeur affichée = override manuel uniquement ; sinon champ vide
+     avec la valeur auto Garmin en placeholder */
+  if (maxEl) {
+    maxEl.value = localStorage.getItem('hr_max') || '';
+    maxEl.placeholder = `auto : ${getHRMax()} (Garmin)`;
+  }
+  if (restEl) {
+    restEl.value = localStorage.getItem('hr_rest') || '';
+    restEl.placeholder = `auto : ${getHRRest()} (Garmin)`;
+  }
   if (vo2El)  vo2El.value  = localStorage.getItem('vo2_correction') || '1.00';
   if (keyEl)  keyEl.value  = localStorage.getItem('app_api_key') || '';
 }
@@ -1293,6 +1340,9 @@ async function init() {
   if (syncDot) syncDot.classList.add('syncing');
 
   await Promise.all([loadData(), loadWellness(), loadCoach()]);
+
+  /* FC repos / FC max : recalcule les valeurs auto depuis les données Garmin */
+  if (typeof applyHRSettings === 'function') applyHRSettings();
 
   // Load Xplor after other data so week plan projection includes gym sessions
   if (typeof loadXplorSessions === 'function') await loadXplorSessions();

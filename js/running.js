@@ -2,12 +2,13 @@
    RUNNING ANALYSIS
    ══════════════════════════════════════════════════════════ */
 
+/* Priorité : override manuel → auto Garmin (getHRRest/getHRMax, app.js) → défaut */
 let HR_REST  = parseInt(localStorage.getItem('hr_rest')  || '62');
 let HR_MAX   = parseInt(localStorage.getItem('hr_max')   || '177');
 
 function applyHRSettings() {
-  HR_REST = parseInt(localStorage.getItem('hr_rest')  || '62');
-  HR_MAX  = parseInt(localStorage.getItem('hr_max')   || '177');
+  HR_REST = (typeof getHRRest === 'function') ? getHRRest() : parseInt(localStorage.getItem('hr_rest') || '62');
+  HR_MAX  = (typeof getHRMax  === 'function') ? getHRMax()  : parseInt(localStorage.getItem('hr_max')  || '177');
 }
 
 // Zones FC en % HRmax (Z1=49-58, Z2=58-69, Z3=69-80, Z4=80-90, Z5=90-100)
