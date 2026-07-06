@@ -45,8 +45,12 @@ function isDarkTheme() {
 }
 
 function applyChartTheme() {
-  Chart.defaults.color       = isDarkTheme() ? '#94a3b8' : '#6b7280';
-  Chart.defaults.borderColor = isDarkTheme() ? '#2a2f3a' : '#e5e7eb';
+  /* Chart peut manquer si le CDN n'a pas chargé (offline 1re visite) —
+     l'app doit rester utilisable sans graphiques */
+  if (typeof Chart !== 'undefined') {
+    Chart.defaults.color       = isDarkTheme() ? '#94a3b8' : '#6b7280';
+    Chart.defaults.borderColor = isDarkTheme() ? '#2a2f3a' : '#e5e7eb';
+  }
   const btn = document.getElementById('theme-toggle');
   if (btn) btn.textContent = isDarkTheme() ? '☀️' : '🌙';
 }
@@ -67,12 +71,15 @@ function toggleTheme() {
 })();
 
 /* ── Chart.js defaults ── */
-Chart.defaults.font.family  = "Inter, system-ui, -apple-system, sans-serif";
-Chart.defaults.font.size    = 11;
+if (typeof Chart !== 'undefined') {
+  Chart.defaults.font.family = "Inter, system-ui, -apple-system, sans-serif";
+  Chart.defaults.font.size   = 11;
+}
 applyChartTheme();
 
 const CHARTS = {};
 function mkChart(id, cfg) {
+  if (typeof Chart === 'undefined') return; // CDN non chargé
   if (CHARTS[id]) { CHARTS[id].destroy(); }
   const el = document.getElementById(id);
   if (!el) return;
