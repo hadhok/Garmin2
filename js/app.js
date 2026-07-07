@@ -7,12 +7,30 @@ const ACT_MAP = {};
 
 /* ── Auth API : injecte X-App-Key sur tous les appels /api/*
    (clé saisie dans Profil → Paramètres, doit correspondre à
-   la variable d'env APP_API_KEY sur Vercel) ── */
+   la variable d'env APP_API_KEY sur Vercel) ──
+   Un 401 signifie : APP_API_KEY est défini côté serveur mais
+   la clé envoyée par le client est absente ou ne correspond pas.
+   Signalé une seule fois (throttlé) plutôt que noyé dans chaque
+   message d'erreur générique des différents appelants. */
+let _lastAuthWarning = 0;
+function _warnUnauthorized() {
+  const now = Date.now();
+  if (now - _lastAuthWarning < 10000) return; // évite le spam si plusieurs fetch échouent en rafale
+  _lastAuthWarning = now;
+  if (typeof showToast === 'function') {
+    showToast('Clé API invalide ou manquante — vérifie Profil → Paramètres', 'err');
+  }
+}
+
 const _origFetch = window.fetch.bind(window);
 window.fetch = (url, opts = {}) => {
   if (typeof url === 'string' && url.startsWith('/api/')) {
     const key = localStorage.getItem('app_api_key');
     if (key) opts = { ...opts, headers: { ...(opts.headers || {}), 'X-App-Key': key } };
+    return _origFetch(url, opts).then(r => {
+      if (r.status === 401) _warnUnauthorized();
+      return r;
+    });
   }
   return _origFetch(url, opts);
 };
@@ -140,6 +158,7 @@ async function loadData() {
       try {
         const r = await fetch('/api/activities', { signal: controller.signal });
         clearTimeout(timeout);
+        if (r.status === 401) { const e = new Error('unauthorized'); e.isAuthError = true; throw e; }
         if (!r.ok) throw new Error('not found');
         state.data = await r.json();
         cacheSet('cache_activities', state.data);
@@ -153,14 +172,18 @@ async function loadData() {
     if (labelEl) labelEl.textContent = `Synchro : ${ls}`;
     const dotEl = document.getElementById('sync-dot');
     if (dotEl) dotEl.classList.remove('syncing');
-  } catch {
+  } catch (e) {
     /* API injoignable : préférer les dernières données connues
        (même périmées) plutôt que basculer silencieusement sur
        les activités de démo, qui donnent l'impression d'avoir
-       perdu ses données. */
+       perdu ses données. Cas 401 = clé API distinct d'une vraie
+       coupure réseau, on ne veut pas dire "hors ligne" à tort. */
     const stale = cacheGetStale('cache_activities');
     const labelEl = document.getElementById('sync-label');
-    if (stale?.data) {
+    if (e?.isAuthError) {
+      if (labelEl) labelEl.textContent = '🔒 Clé API invalide — Profil → Paramètres';
+      if (stale?.data) state.data = stale.data; // affiche quand même les dernières données connues
+    } else if (stale?.data) {
       state.data = stale.data;
       const ageMin = Math.round((Date.now() - stale.ts) / 60000);
       if (labelEl) labelEl.textContent = `⚠ Hors ligne — données du cache (${ageMin} min)`;
@@ -726,6 +749,11 @@ async function runSync() {
 
   try {
     const r = await fetch('/api/sync', { method:'POST', headers:{'Content-Type':'application/json'} });
+    if (r.status === 401) {
+      log.textContent = '🔒 Clé API invalide ou manquante. Vérifie Profil → Paramètres (doit correspondre à APP_API_KEY sur Vercel).';
+      showToast('Clé API invalide', 'err');
+      return;
+    }
     const data = await r.json();
     if (data.status === 'ok') {
       log.textContent = data.message;
