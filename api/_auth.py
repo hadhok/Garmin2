@@ -14,10 +14,13 @@ import os
 
 def check_auth(handler):
     """Retourne True si autorisé, sinon répond 401 et retourne False."""
-    key = os.environ.get('APP_API_KEY', '')
+    # .strip() : tolère un espace/retour à la ligne collé par erreur dans la
+    # variable d'env Vercel ou dans le champ Profil → Paramètres — un piège
+    # de copier-coller très courant, sans impact sur la sécurité de la clé.
+    key = os.environ.get('APP_API_KEY', '').strip()
     if not key:
         return True
-    provided = handler.headers.get('X-App-Key', '')
+    provided = handler.headers.get('X-App-Key', '').strip()
     if provided and hmac.compare_digest(provided, key):
         return True
     handler.send_response(401)
