@@ -831,6 +831,16 @@
         <div class="section-header" style="margin-top:24px">Trophées</div>
         <div class="badges-grid" id="profile-badges"></div>
 
+        <!-- Export rapport complet -->
+        <div class="section-header" style="margin-top:24px">Export rapport</div>
+        <div class="card" style="max-width:480px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6">
+            Génère un fichier JSON avec toutes tes données (activités, bien-être, composition corporelle, calculs de forme, records, objectif de course). À partager avec Claude pour une analyse ou un rapport détaillé. Rien n'est envoyé automatiquement — le fichier est simplement téléchargé sur ton appareil.
+          </div>
+          <button id="export-report-btn" class="btn btn-primary" onclick="exportFullReport()" style="font-size:13px;width:100%">📄 Exporter le rapport complet</button>
+          <div id="export-report-status" style="display:none;font-size:12px;margin-top:8px"></div>
+        </div>
+
         <!-- Paramètres -->
         <div id="profile-settings" class="section-header" style="margin-top:24px">Paramètres</div>
         <div class="card" style="max-width:480px">
@@ -1376,6 +1386,7 @@
 <script src="/js/runalyze.js"></script>
 <script src="/js/goal.js"></script>
 <script src="/js/insights.js"></script>
+<script src="/js/report.js"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js', { scope: '/' }));

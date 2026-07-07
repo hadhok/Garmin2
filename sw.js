@@ -1,4 +1,4 @@
-const CACHE = 'garmin-v12';
+const CACHE = 'garmin-v13';
 const ASSETS = [
   '/',
   '/index.html',
@@ -19,6 +19,7 @@ const ASSETS = [
   '/js/runalyze.js',
   '/js/goal.js',
   '/js/insights.js',
+  '/js/report.js',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/manifest.json',
