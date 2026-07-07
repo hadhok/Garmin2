@@ -22,11 +22,27 @@ function _warnUnauthorized() {
   }
 }
 
+/* Un header HTTP ne peut contenir que des caractères ISO-8859-1 (Latin-1).
+   Une clé collée avec un tiret typographique, des guillemets courbes ou un
+   accent fait planter fetch() de façon synchrone ("String contains non
+   ISO-8859-1 code point") pour TOUT appel /api/*, pas seulement celui visé —
+   toute l'app perd l'accès aux données. On valide donc la clé avant de
+   l'utiliser, ici et à la sauvegarde (saveHRSettings). */
+function isValidApiKey(key) {
+  return /^[\x20-\x7E]*$/.test(key); // ASCII imprimable uniquement
+}
+
 const _origFetch = window.fetch.bind(window);
 window.fetch = (url, opts = {}) => {
   if (typeof url === 'string' && url.startsWith('/api/')) {
     const key = localStorage.getItem('app_api_key');
-    if (key) opts = { ...opts, headers: { ...(opts.headers || {}), 'X-App-Key': key } };
+    if (key && isValidApiKey(key)) {
+      opts = { ...opts, headers: { ...(opts.headers || {}), 'X-App-Key': key } };
+    } else if (key) {
+      // Clé invalide déjà stockée (ancienne saisie) : on l'ignore plutôt
+      // que de laisser fetch() planter sur CHAQUE appel de l'app.
+      console.warn('Clé API ignorée : contient des caractères non-ASCII. Ressaisis-la dans Profil → Paramètres.');
+    }
     return _origFetch(url, opts).then(r => {
       if (r.status === 401) _warnUnauthorized();
       return r;
@@ -1201,8 +1217,16 @@ function saveHRSettings() {
 
   if (vo2Correction >= 0.8 && vo2Correction <= 1.5) localStorage.setItem('vo2_correction', vo2Correction.toFixed(2));
   if (apiKey != null) {
-    if (apiKey.trim()) localStorage.setItem('app_api_key', apiKey.trim());
-    else localStorage.removeItem('app_api_key');
+    const trimmed = apiKey.trim();
+    if (!trimmed) {
+      localStorage.removeItem('app_api_key');
+    } else if (!isValidApiKey(trimmed)) {
+      /* Un caractère non-ASCII (tiret typographique, guillemet courbe, accent…)
+         ferait planter TOUS les appels API — on refuse de l'enregistrer. */
+      showToast('Clé API invalide : utilise uniquement lettres, chiffres et symboles ASCII simples', 'err');
+    } else {
+      localStorage.setItem('app_api_key', trimmed);
+    }
   }
   if (typeof applyHRSettings === 'function') applyHRSettings();
   initSettingsInputs();
@@ -1228,7 +1252,19 @@ function initSettingsInputs() {
     restEl.placeholder = `auto : ${getHRRest()} (Garmin)`;
   }
   if (vo2El)  vo2El.value  = localStorage.getItem('vo2_correction') || '1.00';
-  if (keyEl)  keyEl.value  = localStorage.getItem('app_api_key') || '';
+  if (keyEl) {
+    const storedKey = localStorage.getItem('app_api_key') || '';
+    /* Purge une clé invalide enregistrée avant le correctif — sinon elle
+       reste bloquée silencieusement en mémoire (fetch() l'ignore mais
+       plus rien n'indique qu'il faut la ressaisir). */
+    if (storedKey && !isValidApiKey(storedKey)) {
+      localStorage.removeItem('app_api_key');
+      showToast('Clé API précédente invalide (caractères non-ASCII) — merci de la ressaisir', 'err');
+      keyEl.value = '';
+    } else {
+      keyEl.value = storedKey;
+    }
+  }
   if (typeof updateNotifButton === 'function') updateNotifButton();
 }
 
