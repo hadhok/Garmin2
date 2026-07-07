@@ -4,6 +4,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 from _auth import check_auth
+from _db import fetch_all_rows
 
 
 def _sb():
@@ -17,16 +18,17 @@ class handler(BaseHTTPRequestHandler):
         try:
             sb = _sb()
 
-            result = sb.table('activities').select('*').order('start_time', desc=True).execute()
-            meta   = sb.table('sync_meta').select('last_sync, total_activities').eq('id', 1).limit(1).execute()
+            activities = fetch_all_rows(lambda a, b:
+                sb.table('activities').select('*').order('start_time', desc=True).range(a, b))
+            meta = sb.table('sync_meta').select('last_sync, total_activities').eq('id', 1).limit(1).execute()
 
             last_sync = meta.data[0]['last_sync'] if meta.data else None
-            total     = meta.data[0]['total_activities'] if meta.data else len(result.data)
+            total     = meta.data[0]['total_activities'] if meta.data else len(activities)
 
             body = json.dumps({
                 'total':      total,
                 'last_sync':  last_sync,
-                'activities': result.data,
+                'activities': activities,
             })
             code = 200
         except Exception as e:
