@@ -96,13 +96,28 @@ function fmt_dur(min) {
 /* ══════════════════════════════════════════════════════════
    DATA LOADING
    ══════════════════════════════════════════════════════════ */
+/* Cache "frais" : respecte le TTL, ne renvoie rien au-delà.
+   Ne supprime JAMAIS l'entrée expirée — cacheGetStale() doit
+   pouvoir s'en servir de filet de sécurité si le réseau est down. */
 function cacheGet(key) {
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return null;
     const { ts, data } = JSON.parse(raw);
-    if (Date.now() - ts > CACHE_TTL_MS) { localStorage.removeItem(key); return null; }
+    if (Date.now() - ts > CACHE_TTL_MS) return null;
     return data;
+  } catch { return null; }
+}
+
+/* Dernière donnée connue, même expirée — utilisé uniquement en
+   dernier recours quand l'API est injoignable (mieux qu'un
+   retour brutal aux données de démo). */
+function cacheGetStale(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const { ts, data } = JSON.parse(raw);
+    return { data, ts };
   } catch { return null; }
 }
 
@@ -139,8 +154,19 @@ async function loadData() {
     const dotEl = document.getElementById('sync-dot');
     if (dotEl) dotEl.classList.remove('syncing');
   } catch {
+    /* API injoignable : préférer les dernières données connues
+       (même périmées) plutôt que basculer silencieusement sur
+       les activités de démo, qui donnent l'impression d'avoir
+       perdu ses données. */
+    const stale = cacheGetStale('cache_activities');
     const labelEl = document.getElementById('sync-label');
-    if (labelEl) labelEl.textContent = 'Mode démo';
+    if (stale?.data) {
+      state.data = stale.data;
+      const ageMin = Math.round((Date.now() - stale.ts) / 60000);
+      if (labelEl) labelEl.textContent = `⚠ Hors ligne — données du cache (${ageMin} min)`;
+    } else if (labelEl) {
+      labelEl.textContent = 'Mode démo';
+    }
   }
 }
 
@@ -154,11 +180,16 @@ async function loadWellness() {
       const r = await fetch('/api/wellness', { signal: controller.signal });
       clearTimeout(timeout);
       if (r.ok) { state.wellness = await r.json(); cacheSet('cache_wellness', state.wellness); }
+      else throw new Error('not found');
     } catch (e) {
       clearTimeout(timeout);
       throw e;
     }
-  } catch {}
+  } catch {
+    /* API injoignable : garder le dernier wellness connu plutôt que rien */
+    const stale = cacheGetStale('cache_wellness');
+    if (stale?.data) state.wellness = stale.data;
+  }
 }
 
 function _renderCoachItems(sectionId, dateId, itemsId, data) {
@@ -715,12 +746,24 @@ async function runSync() {
         .then(d => { if (d.status === 'ok') loadCoach(); })
         .catch(() => {});
     } else {
-      log.textContent = data.message;
+      log.textContent = data.message || 'Erreur de synchro inconnue';
       showToast('Erreur de synchro', 'err');
     }
-  } catch {
-    log.textContent = 'Serveur inaccessible. Lance : python3 server.py';
-    showToast('Serveur non démarré', 'err');
+  } catch (e) {
+    /* Deux causes très différentes tombaient toutes les deux ici :
+       1) fetch() a rejeté (vraiment aucun serveur joignable — le cas
+          "lance python3 server.py" en dev local)
+       2) une réponse EST arrivée mais n'était pas du JSON valide
+          (page d'erreur/timeout côté hébergeur) — le message local
+          n'a alors aucun sens et masque la vraie cause.
+       Dans tous les cas : la synchro a juste échoué, rien n'a été
+       vidé côté cache — les données affichées restent intactes. */
+    const isNetworkFailure = e instanceof TypeError; // fetch() a rejeté
+    const isLocalDev = ['localhost', '127.0.0.1'].includes(location.hostname);
+    log.textContent = isNetworkFailure && isLocalDev
+      ? 'Serveur local inaccessible. Lance : python3 server.py'
+      : `Le serveur n'a pas répondu correctement (${e?.message || 'erreur inconnue'}). Réessaie dans quelques instants — tes données actuelles ne sont pas affectées.`;
+    showToast('Échec de la synchro — données inchangées', 'err');
   } finally {
     btn.disabled = false;
     btn.textContent = 'Synchroniser';
