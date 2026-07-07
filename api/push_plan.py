@@ -2,8 +2,6 @@ from http.server import BaseHTTPRequestHandler
 import json as _json
 import sys
 
-sys.path.insert(0, os.path.dirname(__file__))
-from _auth import check_auth
 """
 push_plan.py — Génère le plan de la semaine et l'injecte dans Garmin Connect.
 
@@ -18,6 +16,9 @@ Algorithme miroir de js/running.js :
 import os, json
 from datetime import date, timedelta
 from math import exp
+
+sys.path.insert(0, os.path.dirname(__file__))
+from _auth import check_auth
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 

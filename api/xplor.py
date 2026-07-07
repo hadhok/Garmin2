@@ -1,8 +1,4 @@
 """
-import sys
-
-sys.path.insert(0, os.path.dirname(__file__))
-from _auth import check_auth
 Xplor Active (Deciplus) — synchronisation via API REST directe.
 
 Variables d'environnement requises :
@@ -41,8 +37,11 @@ Setup Supabase (une seule fois) :
 """
 
 from http.server import BaseHTTPRequestHandler
-import json, os, re, urllib.request, urllib.error
+import json, os, re, sys, urllib.request, urllib.error
 from datetime import datetime, timedelta, timezone
+
+sys.path.insert(0, os.path.dirname(__file__))
+from _auth import check_auth
 
 # ── Deciplus API ─────────────────────────────────────────────────────────────
 _DECIPLUS_BASE         = 'https://api.deciplus.pro'

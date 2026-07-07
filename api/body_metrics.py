@@ -1,8 +1,8 @@
 from http.server import BaseHTTPRequestHandler
 import json, os, sys
-from _auth import check_auth
 
 sys.path.insert(0, os.path.dirname(__file__))
+from _auth import check_auth
 
 
 class handler(BaseHTTPRequestHandler):

@@ -1,5 +1,4 @@
 """
-from _auth import check_auth
 activity_details.py — Données détaillées d'activité (time-series)
 
 GET  /api/activity_details?id={activity_id}   → retourne les samples stockés
@@ -22,6 +21,7 @@ import json, os, sys
 from urllib.parse import urlparse, parse_qs
 
 sys.path.insert(0, os.path.dirname(__file__))
+from _auth import check_auth
 
 
 # ── Mapping clés Garmin → nom court ──────────────────────────────────────────
