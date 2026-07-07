@@ -837,7 +837,14 @@
           <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6">
             Génère un fichier JSON avec toutes tes données (activités, bien-être, composition corporelle, calculs de forme, records, objectif de course). À partager avec Claude pour une analyse ou un rapport détaillé. Rien n'est envoyé automatiquement — le fichier est simplement téléchargé sur ton appareil.
           </div>
-          <button id="export-report-btn" class="btn btn-primary" onclick="exportFullReport()" style="font-size:13px;width:100%">📄 Exporter le rapport complet</button>
+          <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+            <div style="flex:1;min-width:140px">
+              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:6px">Période</label>
+              <select id="export-report-period" class="settings-input" style="width:100%"></select>
+            </div>
+            <button id="export-report-btn" class="btn btn-primary" onclick="exportFullReport()" style="font-size:13px;flex:1;min-width:160px">📄 Exporter le rapport</button>
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:6px">Les calculs de forme, records et objectif restent basés sur tout l'historique (nécessaire pour des valeurs correctes) — seules les listes d'activités et de bien-être sont limitées à la période choisie.</div>
           <div id="export-report-status" style="display:none;font-size:12px;margin-top:8px"></div>
         </div>
 
