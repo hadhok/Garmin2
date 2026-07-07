@@ -8,7 +8,6 @@ const actState = {
   sort:   { col: 'date', dir: 'desc' },
   page:   0,
 };
-const ACT_PAGE_SIZE = 50;
 
 function sortActBy(col) {
   if (actState.sort.col === col) {
@@ -49,6 +48,44 @@ function getActivitiesByPeriod() {
     if (state.filter !== 'all' && a.type !== state.filter) return false;
     return true;
   });
+}
+
+/* ── Export CSV de la liste filtrée (période + type + recherche) ── */
+function exportActivitiesCSV() {
+  const raw = getActivitiesByPeriod();
+  const q = (document.getElementById('acts-search')?.value || '').trim().toLowerCase();
+  const acts = q ? raw.filter(a => (a.name||'').toLowerCase().includes(q) || (a.type_label||TYPE_LABEL[a.type]||'').toLowerCase().includes(q)) : raw;
+  if (!acts.length) { showToast('Aucune activité à exporter', 'err'); return; }
+
+  const cols = [
+    ['date',          a => a.date || ''],
+    ['nom',           a => a.name || ''],
+    ['type',          a => a.type_label || TYPE_LABEL[a.type] || a.type || ''],
+    ['duree_min',     a => a.duration_min != null ? Math.round(a.duration_min) : ''],
+    ['distance_km',   a => a.distance_km ?? ''],
+    ['calories',      a => a.calories != null ? Math.round(a.calories) : ''],
+    ['fc_moy',        a => a.hr_avg ?? ''],
+    ['fc_max',        a => a.hr_max ?? ''],
+    ['denivele_m',    a => a.elevation_m != null ? Math.round(a.elevation_m) : ''],
+    ['allure_min_km', a => a.pace_min_km || ''],
+    ['charge',        a => a.training_load != null ? Math.round(a.training_load) : ''],
+    ['vo2max',        a => a.vo2max ?? ''],
+  ];
+  const esc = v => {
+    const s = String(v);
+    return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  /* Séparateur ; + BOM UTF-8 : ouverture directe dans Excel FR */
+  const lines = [cols.map(c => c[0]).join(';')]
+    .concat(acts.map(a => cols.map(c => esc(c[1](a))).join(';')));
+  const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `activites_${TODAY_ISO}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast(`${acts.length} activités exportées`, 'ok');
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -118,11 +155,7 @@ function renderActivities() {
     return;
   }
 
-  const escape = (str) => {
-    const div = document.createElement('div');
-    div.textContent = str || '';
-    return div.innerHTML;
-  };
+  const escape = escapeHTML; /* sanit.js */
   tbody.innerHTML = page.map(a => {
     ACT_MAP[a.id] = a;
     const dateStr  = a.date ? new Date(a.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}) : '–';

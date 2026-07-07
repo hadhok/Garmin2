@@ -2,13 +2,13 @@
    RUNNING ANALYSIS
    ══════════════════════════════════════════════════════════ */
 
+/* Priorité : override manuel → auto Garmin (getHRRest/getHRMax, app.js) → défaut */
 let HR_REST  = parseInt(localStorage.getItem('hr_rest')  || '62');
 let HR_MAX   = parseInt(localStorage.getItem('hr_max')   || '177');
-const MIN_DIST = 3;
 
 function applyHRSettings() {
-  HR_REST = parseInt(localStorage.getItem('hr_rest')  || '62');
-  HR_MAX  = parseInt(localStorage.getItem('hr_max')   || '177');
+  HR_REST = (typeof getHRRest === 'function') ? getHRRest() : parseInt(localStorage.getItem('hr_rest') || '62');
+  HR_MAX  = (typeof getHRMax  === 'function') ? getHRMax()  : parseInt(localStorage.getItem('hr_max')  || '177');
 }
 
 // Zones FC en % HRmax (Z1=49-58, Z2=58-69, Z3=69-80, Z4=80-90, Z5=90-100)
@@ -86,6 +86,221 @@ function computeRunForm() {
     days = Math.max(30, Math.ceil((to - from) / 86400000));
   }
   return computeFormeCurve(getRuns(), days);
+}
+
+/* ══════════════════════════════════════════════════════════
+   CALCULATIONS — 9 métriques (VO2, Marathon Shape, ATL, CTL, TSB, A:C, Rest days, Monotony, Training Strain)
+   ══════════════════════════════════════════════════════════ */
+/* Facteurs de calibration Runalyze (saisis dans l'onglet Runalyze) */
+function getCalibrationFactors() {
+  const f = (key) => {
+    const v = parseFloat(localStorage.getItem(key) || '1.00');
+    return (v >= 0.5 && v <= 2.0) ? v : 1.0;
+  };
+  return {
+    vo2:   f('vo2_correction'),
+    shape: f('rz_factor_shape'),
+    ctl:   f('rz_factor_ctl'),
+    atl:   f('rz_factor_atl'),
+  };
+}
+
+function computeCalculations() {
+  try {
+    const runs = getRuns();
+    const form = computeRunForm();
+    const lastForm = form?.[form.length - 1];
+
+    if (!runs.length || !lastForm) return null;
+
+  const factors = getCalibrationFactors();
+
+  // Effective VO2max — fenêtre glissante 30 jours (comme Runalyze),
+  // fallback : 5 derniers runs avec VO2max si aucun run récent
+  const vo2Raw = (() => {
+    const cutoff = new Date(TODAY);
+    cutoff.setDate(cutoff.getDate() - 30);
+    let pool = runs.filter(r => r.vo2max > 0 && new Date(r.start_time) >= cutoff);
+    if (!pool.length) {
+      pool = runs.filter(r => r.vo2max > 0)
+        .sort((a, b) => String(b.start_time).localeCompare(String(a.start_time)))
+        .slice(0, 5);
+    }
+    if (!pool.length) return null;
+    return pool.reduce((s, r) => s + r.vo2max, 0) / pool.length;
+  })();
+  const effectiveVO2max = vo2Raw != null ? (vo2Raw * factors.vo2).toFixed(1) : '–';
+
+  // Marathon Shape — volume (km/sem × 2/3) + long runs (× 1/3) sur 6m
+  const shapeRaw = (() => {
+    const sixMonthAgo = new Date(TODAY);
+    sixMonthAgo.setMonth(sixMonthAgo.getMonth() - 6);
+    const runsLast6m = runs.filter(r => new Date(r.start_time) >= sixMonthAgo);
+    if (!runsLast6m.length) return null;
+
+    const weeks = Math.max(1, Math.ceil((TODAY - sixMonthAgo) / 604800000));
+    const totalKm = runsLast6m.reduce((s, r) => s + (r.distance_km || 0), 0);
+    const weeklyKmAvg = totalKm / weeks;
+
+    const longRuns = runsLast6m
+      .sort((a, b) => (b.distance_km || 0) - (a.distance_km || 0))
+      .slice(0, Math.ceil(weeks * 0.2))
+      .reduce((s, r) => s + (r.distance_km || 0), 0) / Math.max(1, Math.ceil(weeks * 0.2));
+
+    const targetMarathonKm = 42.195;
+    return (weeklyKmAvg * 0.667 + longRuns * 0.333) / targetMarathonKm * 100;
+  })();
+  const marathonShape = shapeRaw != null ? Math.min(200, shapeRaw * factors.shape).toFixed(0) : '–';
+
+  // Fatigue (ATL) et Fitness (CTL) — en % du max historique
+  const atlCurrent = lastForm.atl || 0;
+  const ctlCurrent = lastForm.ctl || 0;
+  const allForm = computeFormeCurve(getRuns(), 365) || [];
+  const atlValues = allForm.map(f => f.atl).filter(v => v > 0);
+  const ctlValues = allForm.map(f => f.ctl).filter(v => v > 0);
+  const maxAtl = atlValues.length ? Math.max(...atlValues) : 1;
+  const maxCtl = ctlValues.length ? Math.max(...ctlValues) : 1;
+  const atlRawPct = atlCurrent / maxAtl * 100;
+  const ctlRawPct = ctlCurrent / maxCtl * 100;
+  const atlPct = (atlRawPct * factors.atl).toFixed(0);
+  const ctlPct = (ctlRawPct * factors.ctl).toFixed(0);
+
+  // Stress Balance (TSB)
+  const tsbValue = (ctlCurrent - atlCurrent).toFixed(1);
+
+  // Workload Ratio (A:C)
+  const acRatio = ctlCurrent > 0 ? (atlCurrent / ctlCurrent).toFixed(2) : '–';
+
+  // Rest days — jours pour atteindre TSB = 0 (ATL décroît de 1/7 par jour)
+  const restDays = (() => {
+    if (atlCurrent <= ctlCurrent) return '0';
+    if (ctlCurrent === 0) return '–';
+    const ln67 = Math.log(6/7);
+    const days = Math.log(ctlCurrent / atlCurrent) / ln67;
+    return Math.max(0, Math.ceil(days)).toString();
+  })();
+
+  // TRIMP quotidien des 7 derniers jours (partagé Monotony / Training Strain)
+  const last7days = (() => {
+    const out = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(TODAY);
+      d.setDate(d.getDate() - i);
+      const iso = localIso(d);
+      const trimp = runs
+        .filter(r => localIso(new Date(r.start_time)) === iso)
+        .reduce((s, r) => s + (computeTRIMP(r) || 0), 0);
+      out.push(trimp);
+    }
+    return out;
+  })();
+
+  // Monotony — avg(TRIMP) / (stddev + avg) sur 7 jours (Foster)
+  const monotony = (() => {
+    const avg = last7days.reduce((s, v) => s + v, 0) / 7;
+    if (avg === 0) return '–';
+    const variance = last7days.reduce((s, v) => s + (v - avg) ** 2, 0) / 7;
+    const stdDev = Math.sqrt(variance);
+    return (avg / (stdDev + avg) * 100).toFixed(0);
+  })();
+
+  // Training Strain — sum(TRIMP) × Monotony / 0.5 sur 7 jours
+  const trainingStrain = (() => {
+    if (monotony === '–') return '–';
+    const totalTrimp = last7days.reduce((s, v) => s + v, 0);
+    return (totalTrimp * (parseInt(monotony) / 100) / 0.5).toFixed(0);
+  })();
+
+    return {
+      effectiveVO2max,
+      marathonShape,
+      atl: atlPct,
+      ctl: ctlPct,
+      tsb: tsbValue,
+      acRatio,
+      restDays,
+      monotony,
+      trainingStrain,
+      /* valeurs brutes (avant calibration) — utilisées par l'onglet Runalyze */
+      raw: {
+        vo2:   vo2Raw,
+        shape: shapeRaw != null ? Math.min(200, shapeRaw) : null,
+        atl:   atlRawPct,
+        ctl:   ctlRawPct,
+      },
+      factors
+    };
+  } catch (e) {
+    console.error('[computeCalculations]', e);
+    return null;
+  }
+}
+
+function renderCalculations() {
+  try {
+    const target = document.getElementById('run-calculations');
+    if (!target) return;
+
+    const calc = computeCalculations();
+    if (!calc) {
+      target.innerHTML = '<div style="grid-column:1/-1;padding:12px;color:var(--muted);text-align:center">Pas assez de données</div>';
+      return;
+    }
+
+  const f = calc.factors || {};
+  const calTag = (factor) => (factor && Math.abs(factor - 1) > 0.005)
+    ? `<div style="font-size:10px;color:#6366f1;margin-top:3px">cal. ×${factor.toFixed(2)}</div>` : '';
+
+  /* Code couleur selon les seuils usuels (Foster / Gabbett / TSB) */
+  const num = (v) => (v === '–' || v == null) ? null : parseFloat(v);
+  const tsbColor = (() => {
+    const v = num(calc.tsb); if (v == null) return null;
+    return v < -20 ? '#dc2626' : v < -5 ? '#d97706' : v > 15 ? '#3b82f6' : '#22c55e';
+  })();
+  const acColor = (() => {
+    const v = num(calc.acRatio); if (v == null) return null;
+    return v > 1.5 ? '#dc2626' : v > 1.3 ? '#d97706' : v < 0.8 ? '#3b82f6' : '#22c55e';
+  })();
+  const monoColor = (() => {
+    const v = num(calc.monotony); if (v == null) return null;
+    return v > 200 ? '#dc2626' : v > 150 ? '#d97706' : '#22c55e';
+  })();
+
+  const metrics = [
+    { label: 'Effective VO2max', unit: 'ml/kg/min', value: calc.effectiveVO2max, cal: calTag(f.vo2),
+      tip: 'Moyenne des VO2max estimés sur les runs des 30 derniers jours, × facteur de calibration.' },
+    { label: 'Marathon Shape', unit: '%', value: calc.marathonShape, cal: calTag(f.shape),
+      tip: 'Préparation marathon : volume hebdomadaire (2/3) + sorties longues (1/3) sur 6 mois.' },
+    { label: 'Fatigue (ATL)', unit: '%', value: calc.atl, cal: calTag(f.atl),
+      tip: 'Charge aiguë : moyenne exponentielle du TRIMP sur 7 jours, en % du max historique.' },
+    { label: 'Fitness (CTL)', unit: '%', value: calc.ctl, cal: calTag(f.ctl),
+      tip: 'Charge chronique : moyenne exponentielle du TRIMP sur 42 jours, en % du max historique.' },
+    { label: 'Stress Balance (TSB)', unit: '', value: calc.tsb, color: tsbColor,
+      tip: 'CTL − ATL. Négatif = fatigue, positif = fraîcheur. Optimal course : +5 à +15.' },
+    { label: 'Workload Ratio (A:C)', unit: '', value: calc.acRatio, color: acColor,
+      tip: 'Charge aiguë ÷ chronique. Zone sûre 0.8–1.3, risque de blessure au-delà de 1.5 (Gabbett).' },
+    { label: 'Rest days', unit: 'jours', value: calc.restDays,
+      tip: 'Jours de repos nécessaires pour revenir à TSB = 0 (décroissance naturelle de l\'ATL).' },
+    { label: 'Monotony', unit: '%', value: calc.monotony, color: monoColor,
+      tip: 'Uniformité de la charge sur 7 jours (Foster). > 150 % : risque accru — varier les séances.' },
+    { label: 'Training strain', unit: '', value: calc.trainingStrain,
+      tip: 'Contrainte globale : somme du TRIMP 7 jours × monotonie (Foster).' }
+  ];
+
+    target.innerHTML = metrics.map(m => `
+      <div title="${m.tip}" style="padding:12px;background:var(--card-bg);border-radius:var(--radius);border:1px solid var(--border);cursor:help">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px">${m.label}</div>
+        <div style="font-size:20px;font-weight:600;color:${m.color || 'var(--text)'}">
+          ${m.value}<span style="font-size:12px;color:var(--muted);margin-left:4px">${m.unit}</span>
+        </div>
+        ${m.cal || ''}
+      </div>
+    `).join('');
+  } catch (e) {
+    console.error('[renderCalculations]', e);
+    const target = document.getElementById('run-calculations');
+    if (target) target.innerHTML = '<div style="grid-column:1/-1;padding:12px;color:#ef4444">Erreur lors du calcul</div>';
+  }
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -435,7 +650,7 @@ function renderRunKPIs() {
       for (let d = 0; d < 7; d++) {
         const dd = new Date(monday);
         dd.setDate(dd.getDate() + d);
-        if (runDates.has(dd'${ISO:=$(dateToISO($d))')) { found = true; break; }
+        if (runDates.has(localIso(dd))) { found = true; break; }
       }
       if (!found) break;
       streak++;
@@ -1029,7 +1244,7 @@ function renderRunTRIMP() {
   const trimpMap = buildTRIMPMap(allActs);
   const loads7 = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(TODAY); d.setDate(d.getDate() - i);
-    return trimpMap[dateToISO(d)] || 0;
+    return trimpMap[localIso(d)] || 0;
   });
   const mean7    = loads7.reduce((s, v) => s + v, 0) / 7;
   const std7     = Math.sqrt(loads7.reduce((s, v) => s + (v - mean7) ** 2, 0) / 7);
@@ -1354,7 +1569,7 @@ function renderFormeDiagram() {
 
   for (let i = DAYS - 1; i >= 0; i--) {
     const d = new Date(TODAY); d.setDate(d.getDate() - i);
-    const iso = d'${ISO:=$(dateToISO($d))';
+    const iso = localIso(d);
     const load = loadMap[iso] || 0;
     ctl = ctl + (load - ctl) / 42;
     atl = atl + (load - atl) / 7;
@@ -1551,7 +1766,7 @@ function generateWeekPlan() {
   let ctl=0, atl=0;
   for (let i=179; i>=0; i--) {
     const d = new Date(TODAY); d.setDate(d.getDate()-i);
-    const iso = d'${ISO:=$(dateToISO($d))';
+    const iso = localIso(d);
     const l = allLoad[iso]||0;
     ctl = ctl + (l-ctl)/42;
     atl = atl + (l-atl)/7;
@@ -1878,7 +2093,7 @@ function renderRunStatsTable() {
   start.setDate(1);
   const cur = new Date(start);
   while (cur <= end) {
-    const key = cur'${ISO:=$(dateToISO($d))'.slice(0,7);
+    const key = localIso(cur).slice(0,7);
     months.push(key);
     cur.setMonth(cur.getMonth() + 1);
   }
@@ -2095,7 +2310,7 @@ function renderRunVolumeChart() {
     const nMonths = runState.globalPeriod === '1y' ? 12 : 24;
     for (let m = nMonths - 1; m >= 0; m--) {
       const d = new Date(TODAY); d.setDate(1); d.setMonth(d.getMonth() - m);
-      const key = d'${ISO:=$(dateToISO($d))'.slice(0,7);
+      const key = localIso(d).slice(0,7);
       const km = allRuns.filter(r => r.date.startsWith(key)).reduce((s, r) => s + (r.distance_km || 0), 0);
       labels.push(`${MOIS_FR[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`);
       volumes.push(+km.toFixed(1));
@@ -2149,7 +2364,7 @@ function renderRunPaceTrend() {
     const d = new Date(TODAY);
     d.setDate(1);
     d.setMonth(d.getMonth() - m);
-    const key = d'${ISO:=$(dateToISO($d))'.slice(0,7);
+    const key = localIso(d).slice(0,7);
     const monthRuns = allRuns.filter(r => r.date.startsWith(key) && r.pace_min_km && r.distance_km);
 
     labels.push(`${MOIS_FR[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`);
@@ -2402,7 +2617,7 @@ function renderRunElevationCharts() {
   const months = [];
   for (let m = 11; m >= 0; m--) {
     const d = new Date(TODAY); d.setDate(1); d.setMonth(d.getMonth() - m);
-    months.push(d'${ISO:=$(dateToISO($d))'.slice(0,7));
+    months.push(localIso(d).slice(0,7));
   }
   const elevByMonth = {};
   allRuns.forEach(r => {
@@ -2940,6 +3155,8 @@ function renderRunning() {
     if (el) { el._slicerReady = true; initRunSlicer(); return; }
   }
   safe(renderRunKPIs);
+  if (typeof renderRunGoal === 'function') safe(renderRunGoal);
+  safe(renderCalculations);
   safe(renderWeekPlan);
   safe(renderRunPR);
   safe(renderRunFormChart);
@@ -3201,7 +3418,7 @@ function updateRunCompare() {
     <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">
       <div style="flex:1;min-width:140px;padding:10px 12px;border-radius:8px;background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.2)">
         <div style="font-size:10px;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">A</div>
-        <div style="font-size:13px;font-weight:600">${a.name || 'Course'}</div>
+        <div style="font-size:13px;font-weight:600">${escapeHTML(a.name || 'Course')}</div>
         <div style="font-size:11px;color:var(--muted)">${dateA}</div>
       </div>
       <div style="flex:1;min-width:140px;padding:10px 12px;border-radius:8px;background:rgba(249,115,22,0.07);border:1px solid rgba(249,115,22,0.2)">

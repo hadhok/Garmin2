@@ -128,6 +128,7 @@ function _fmtDurMin(min) {
 
 /* ── Construit le chart Chart.js ──────────────────────────────────────────── */
 function _buildDetailChart() {
+  if (typeof Chart === 'undefined') return; // CDN non chargé
   // Détruit les anciens charts
   Object.values(_detailChartInstances).forEach(c => { try { c.destroy(); } catch {} });
   _detailChartInstances = {};

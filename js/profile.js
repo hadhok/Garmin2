@@ -312,6 +312,7 @@ function togglePeriod(row, safeKey) {
    ══════════════════════════════════════════════════════════ */
 function renderProfile() {
   initSettingsInputs();
+  if (typeof initReportPeriodSelect === 'function') initReportPeriodSelect();
   const d  = computeProfileData();
   const lv = athleteLevel(d.weeklyLoad);
 

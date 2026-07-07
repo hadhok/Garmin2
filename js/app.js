@@ -5,6 +5,52 @@
 /* ── Global activity map for detail modal ── */
 const ACT_MAP = {};
 
+/* ── Auth API : injecte X-App-Key sur tous les appels /api/*
+   (clé saisie dans Profil → Paramètres, doit correspondre à
+   la variable d'env APP_API_KEY sur Vercel) ──
+   Un 401 signifie : APP_API_KEY est défini côté serveur mais
+   la clé envoyée par le client est absente ou ne correspond pas.
+   Signalé une seule fois (throttlé) plutôt que noyé dans chaque
+   message d'erreur générique des différents appelants. */
+let _lastAuthWarning = 0;
+function _warnUnauthorized() {
+  const now = Date.now();
+  if (now - _lastAuthWarning < 10000) return; // évite le spam si plusieurs fetch échouent en rafale
+  _lastAuthWarning = now;
+  if (typeof showToast === 'function') {
+    showToast('Clé API invalide ou manquante — vérifie Profil → Paramètres', 'err');
+  }
+}
+
+/* Un header HTTP ne peut contenir que des caractères ISO-8859-1 (Latin-1).
+   Une clé collée avec un tiret typographique, des guillemets courbes ou un
+   accent fait planter fetch() de façon synchrone ("String contains non
+   ISO-8859-1 code point") pour TOUT appel /api/*, pas seulement celui visé —
+   toute l'app perd l'accès aux données. On valide donc la clé avant de
+   l'utiliser, ici et à la sauvegarde (saveHRSettings). */
+function isValidApiKey(key) {
+  return /^[\x20-\x7E]*$/.test(key); // ASCII imprimable uniquement
+}
+
+const _origFetch = window.fetch.bind(window);
+window.fetch = (url, opts = {}) => {
+  if (typeof url === 'string' && url.startsWith('/api/')) {
+    const key = localStorage.getItem('app_api_key');
+    if (key && isValidApiKey(key)) {
+      opts = { ...opts, headers: { ...(opts.headers || {}), 'X-App-Key': key } };
+    } else if (key) {
+      // Clé invalide déjà stockée (ancienne saisie) : on l'ignore plutôt
+      // que de laisser fetch() planter sur CHAQUE appel de l'app.
+      console.warn('Clé API ignorée : contient des caractères non-ASCII. Ressaisis-la dans Profil → Paramètres.');
+    }
+    return _origFetch(url, opts).then(r => {
+      if (r.status === 401) _warnUnauthorized();
+      return r;
+    });
+  }
+  return _origFetch(url, opts);
+};
+
 /* ── Application state ── */
 const state = {
   view:               'today',      // today | training | recovery | history | profile
@@ -20,47 +66,54 @@ const state = {
 const TODAY = new Date();
 
 /* ── Type colors ── */
-const TYPE_COLOR = {
-  run:       '#22c55e',
-  swim:      '#3b82f6',
-  hiit:      '#f97316',
-  rowing:    '#06b6d4',
-  jump_rope: '#a855f7',
-  strength:  '#ef4444',
-  cardio:    '#f43f5e',
-  hockey:    '#64748b',
-  tennis:    '#84cc16',
-  padel:     '#10b981',
-  bike:      '#f59e0b',
-  walk:      '#06b6d4',
-  pilates:   '#e879f9',
-  yoga:      '#7c3aed',
-  hike:      '#84cc16',
-  ski:       '#93c5fd',
-  sup:       '#0ea5e9',
-  other:     '#64748b',
-};
-
-const TYPE_LABEL = {
-  run:'Course', swim:'Natation', hiit:'HIIT', rowing:'Rameur',
-  jump_rope:'Jump Rope', strength:'Muscu', cardio:'Cardio',
-  hockey:'Hockey', tennis:'Tennis', padel:'Padel', bike:'Vélo',
-  walk:'Marche', pilates:'Pilates', yoga:'Yoga', hike:'Rando',
-  ski:'Ski', sup:'SUP', other:'Autre',
-};
 
 const MONTHS_FR = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 const MONTHS_LONG = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-const DAYS_FR = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+
+/* ── Thème clair / sombre ── */
+function isDarkTheme() {
+  const t = document.documentElement.dataset.theme;
+  if (t === 'dark')  return true;
+  if (t === 'light') return false;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+function applyChartTheme() {
+  /* Chart peut manquer si le CDN n'a pas chargé (offline 1re visite) —
+     l'app doit rester utilisable sans graphiques */
+  if (typeof Chart !== 'undefined') {
+    Chart.defaults.color       = isDarkTheme() ? '#94a3b8' : '#6b7280';
+    Chart.defaults.borderColor = isDarkTheme() ? '#2a2f3a' : '#e5e7eb';
+  }
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = isDarkTheme() ? '☀️' : '🌙';
+}
+
+function toggleTheme() {
+  const next = isDarkTheme() ? 'light' : 'dark';
+  localStorage.setItem('theme', next);
+  document.documentElement.dataset.theme = next;
+  applyChartTheme();
+  markAllDirty();
+  renderAll();
+}
+
+/* Applique le thème sauvegardé le plus tôt possible (avant les renders) */
+(() => {
+  const saved = localStorage.getItem('theme');
+  if (saved === 'dark' || saved === 'light') document.documentElement.dataset.theme = saved;
+})();
 
 /* ── Chart.js defaults ── */
-Chart.defaults.color        = '#6b7280';
-Chart.defaults.borderColor  = '#e5e7eb';
-Chart.defaults.font.family  = "Inter, system-ui, -apple-system, sans-serif";
-Chart.defaults.font.size    = 11;
+if (typeof Chart !== 'undefined') {
+  Chart.defaults.font.family = "Inter, system-ui, -apple-system, sans-serif";
+  Chart.defaults.font.size   = 11;
+}
+applyChartTheme();
 
 const CHARTS = {};
 function mkChart(id, cfg) {
+  if (typeof Chart === 'undefined') return; // CDN non chargé
   if (CHARTS[id]) { CHARTS[id].destroy(); }
   const el = document.getElementById(id);
   if (!el) return;
@@ -77,15 +130,28 @@ function fmt_dur(min) {
 /* ══════════════════════════════════════════════════════════
    DATA LOADING
    ══════════════════════════════════════════════════════════ */
-const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
-
+/* Cache "frais" : respecte le TTL, ne renvoie rien au-delà.
+   Ne supprime JAMAIS l'entrée expirée — cacheGetStale() doit
+   pouvoir s'en servir de filet de sécurité si le réseau est down. */
 function cacheGet(key) {
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return null;
     const { ts, data } = JSON.parse(raw);
-    if (Date.now() - ts > CACHE_TTL_MS) { localStorage.removeItem(key); return null; }
+    if (Date.now() - ts > CACHE_TTL_MS) return null;
     return data;
+  } catch { return null; }
+}
+
+/* Dernière donnée connue, même expirée — utilisé uniquement en
+   dernier recours quand l'API est injoignable (mieux qu'un
+   retour brutal aux données de démo). */
+function cacheGetStale(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const { ts, data } = JSON.parse(raw);
+    return { data, ts };
   } catch { return null; }
 }
 
@@ -108,6 +174,7 @@ async function loadData() {
       try {
         const r = await fetch('/api/activities', { signal: controller.signal });
         clearTimeout(timeout);
+        if (r.status === 401) { const e = new Error('unauthorized'); e.isAuthError = true; throw e; }
         if (!r.ok) throw new Error('not found');
         state.data = await r.json();
         cacheSet('cache_activities', state.data);
@@ -121,9 +188,24 @@ async function loadData() {
     if (labelEl) labelEl.textContent = `Synchro : ${ls}`;
     const dotEl = document.getElementById('sync-dot');
     if (dotEl) dotEl.classList.remove('syncing');
-  } catch {
+  } catch (e) {
+    /* API injoignable : préférer les dernières données connues
+       (même périmées) plutôt que basculer silencieusement sur
+       les activités de démo, qui donnent l'impression d'avoir
+       perdu ses données. Cas 401 = clé API distinct d'une vraie
+       coupure réseau, on ne veut pas dire "hors ligne" à tort. */
+    const stale = cacheGetStale('cache_activities');
     const labelEl = document.getElementById('sync-label');
-    if (labelEl) labelEl.textContent = 'Mode démo';
+    if (e?.isAuthError) {
+      if (labelEl) labelEl.textContent = '🔒 Clé API invalide — Profil → Paramètres';
+      if (stale?.data) state.data = stale.data; // affiche quand même les dernières données connues
+    } else if (stale?.data) {
+      state.data = stale.data;
+      const ageMin = Math.round((Date.now() - stale.ts) / 60000);
+      if (labelEl) labelEl.textContent = `⚠ Hors ligne — données du cache (${ageMin} min)`;
+    } else if (labelEl) {
+      labelEl.textContent = 'Mode démo';
+    }
   }
 }
 
@@ -137,11 +219,16 @@ async function loadWellness() {
       const r = await fetch('/api/wellness', { signal: controller.signal });
       clearTimeout(timeout);
       if (r.ok) { state.wellness = await r.json(); cacheSet('cache_wellness', state.wellness); }
+      else throw new Error('not found');
     } catch (e) {
       clearTimeout(timeout);
       throw e;
     }
-  } catch {}
+  } catch {
+    /* API injoignable : garder le dernier wellness connu plutôt que rien */
+    const stale = cacheGetStale('cache_wellness');
+    if (stale?.data) state.wellness = stale.data;
+  }
 }
 
 function _renderCoachItems(sectionId, dateId, itemsId, data) {
@@ -168,6 +255,9 @@ function _renderCoachItems(sectionId, dateId, itemsId, data) {
     // Snapshot pills
     const snap   = data.stats_snapshot || {};
     const snapEl = document.getElementById(itemsId.replace('coach-items', 'coach-snap'));
+    // Sanitize HTML content to prevent XSS
+    const escape = escapeHTML; /* sanit.js */
+
     if (snapEl) {
       const PHASE = { progression:'En progression 📈', recovery:'Récupération 🔄', peak:'Pic de forme 🔥', base:'Construction 💪', maintenance:'Maintien ⚖️' };
       const FATIGUE_LBL   = { fresh:'Frais', normal:'Normal', tired:'Fatigué', very_tired:'Très fatigué' };
@@ -190,12 +280,6 @@ function _renderCoachItems(sectionId, dateId, itemsId, data) {
       snapEl.style.display = pills.length ? 'flex' : 'none';
     }
 
-    // Sanitize HTML content to prevent XSS
-    const escape = (str) => {
-      const div = document.createElement('div');
-      div.textContent = str || '';
-      return div.innerHTML;
-    };
     itemsEl.innerHTML = data.items.map(item => {
       const safeTitle = escape(item.title || '');
       const safeText = escape(item.text || '').replace(/\n/g, '<br>');
@@ -321,13 +405,42 @@ function getPrevFiltered() {
 }
 
 /* ══════════════════════════════════════════════════════════
+   FC REPOS / FC MAX — auto-détection depuis les données Garmin
+   Priorité : override manuel (Profil) → donnée Garmin → défaut
+   ══════════════════════════════════════════════════════════ */
+function getHRRest() {
+  const manual = parseInt(localStorage.getItem('hr_rest'));
+  if (manual >= 30 && manual <= 90) return manual;
+  /* Auto : dernière FC repos remontée par Garmin */
+  const days = Object.values(state.wellness?.days || {})
+    .filter(d => d.date && d.resting_hr >= 30 && d.resting_hr <= 90)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  if (days.length) return Math.round(days[0].resting_hr);
+  return 62;
+}
+
+function getHRMax() {
+  const manual = parseInt(localStorage.getItem('hr_max'));
+  if (manual >= 140 && manual <= 220) return manual;
+  /* Auto : FC max observée sur les activités des 12 derniers mois */
+  const cutoff = new Date(TODAY);
+  cutoff.setFullYear(cutoff.getFullYear() - 1);
+  let max = 0;
+  getAll().forEach(a => {
+    if (a.hr_max > max && new Date(a.start_time || a.date) >= cutoff) max = a.hr_max;
+  });
+  if (max >= 140 && max <= 220) return Math.round(max);
+  return 177;
+}
+
+/* ══════════════════════════════════════════════════════════
    TRIMP — global (toutes activités avec FC)
    Banister (1991) : durée × ratio_FC × 0.64 × exp(1.92 × ratio_FC)
    ══════════════════════════════════════════════════════════ */
 function computeTRIMP(act) {
   if (!act.hr_avg || !act.duration_min) return 0;
-  const HR_REST = parseInt(localStorage.getItem('hr_rest') || '62');
-  const HR_MAX  = parseInt(localStorage.getItem('hr_max')  || '177');
+  const HR_REST = getHRRest();
+  const HR_MAX  = getHRMax();
   if (HR_MAX <= HR_REST + 20) return 0; // paramètres incohérents — silently bail
   const ratio = (act.hr_avg - HR_REST) / (HR_MAX - HR_REST);
   if (ratio <= 0 || ratio > 1.5) return 0;
@@ -652,6 +765,11 @@ async function runSync() {
 
   try {
     const r = await fetch('/api/sync', { method:'POST', headers:{'Content-Type':'application/json'} });
+    if (r.status === 401) {
+      log.textContent = '🔒 Clé API invalide ou manquante. Vérifie Profil → Paramètres (doit correspondre à APP_API_KEY sur Vercel).';
+      showToast('Clé API invalide', 'err');
+      return;
+    }
     const data = await r.json();
     if (data.status === 'ok') {
       log.textContent = data.message;
@@ -664,18 +782,32 @@ async function runSync() {
       if (typeof loadBodyMetrics === 'function') await loadBodyMetrics();
       markAllDirty();
       renderAll();
+      /* Détection de nouveaux records sur les activités fraîchement synchronisées */
+      if (typeof checkNewPRs === 'function') { try { checkNewPRs(); } catch(e) {} }
       // Mise à jour du coach en arrière-plan
       fetch('/api/update-coach', { method: 'POST' })
         .then(r => r.json())
         .then(d => { if (d.status === 'ok') loadCoach(); })
         .catch(() => {});
     } else {
-      log.textContent = data.message;
+      log.textContent = data.message || 'Erreur de synchro inconnue';
       showToast('Erreur de synchro', 'err');
     }
-  } catch {
-    log.textContent = 'Serveur inaccessible. Lance : python3 server.py';
-    showToast('Serveur non démarré', 'err');
+  } catch (e) {
+    /* Deux causes très différentes tombaient toutes les deux ici :
+       1) fetch() a rejeté (vraiment aucun serveur joignable — le cas
+          "lance python3 server.py" en dev local)
+       2) une réponse EST arrivée mais n'était pas du JSON valide
+          (page d'erreur/timeout côté hébergeur) — le message local
+          n'a alors aucun sens et masque la vraie cause.
+       Dans tous les cas : la synchro a juste échoué, rien n'a été
+       vidé côté cache — les données affichées restent intactes. */
+    const isNetworkFailure = e instanceof TypeError; // fetch() a rejeté
+    const isLocalDev = ['localhost', '127.0.0.1'].includes(location.hostname);
+    log.textContent = isNetworkFailure && isLocalDev
+      ? 'Serveur local inaccessible. Lance : python3 server.py'
+      : `Le serveur n'a pas répondu correctement (${e?.message || 'erreur inconnue'}). Réessaie dans quelques instants — tes données actuelles ne sont pas affectées.`;
+    showToast('Échec de la synchro — données inchangées', 'err');
   } finally {
     btn.disabled = false;
     btn.textContent = 'Synchroniser';
@@ -715,7 +847,7 @@ function exportWeekPDF() {
     return `<tr>
       <td>${d}</td>
       <td>${a.icon || ''} ${a.type_label || a.type || ''}</td>
-      <td>${a.name || ''}</td>
+      <td>${escapeHTML(a.name || '')}</td>
       <td>${dist}</td>
       <td>${fmt_dur(a.duration_min)}</td>
       <td>${a.calories ? Math.round(a.calories) + ' kcal' : '–'}</td>
@@ -823,6 +955,7 @@ function switchView(view, swipeDir) {
     recovery: 'Récupération',
     history:  'Historique',
     profile:  'Profil',
+    runalyze: 'Runalyze',
     poc:      '🔬 Science',
     /* legacy aliases */
     dashboard: 'Dashboard', activities: 'Activités', health: 'Santé',
@@ -835,15 +968,39 @@ function switchView(view, swipeDir) {
 }
 
 function switchSubTab(tab) {
-  state.tab = tab;
-  state.offset = 0;
-  document.querySelectorAll('.subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-  /* Gérer le sous-onglet course : switche vers running */
+  /* Sous-onglet course : switche vers la vue running SANS toucher
+     state.tab, sinon le retour sur Entraînement calcule sur l'année */
   if (tab === 'course') {
     switchView('running');
     return;
   }
+  state.tab = tab;
+  state.offset = 0;
+  document.querySelectorAll('.subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   renderAll();
+}
+
+/* ── Menu "Plus" (bottom nav mobile) ── */
+function toggleMoreMenu(e) {
+  if (e) e.stopPropagation();
+  const menu = document.getElementById('more-menu');
+  if (!menu) return;
+  const open = menu.classList.toggle('open');
+  if (open) {
+    const close = (ev) => {
+      if (!menu.contains(ev.target)) { menu.classList.remove('open'); document.removeEventListener('click', close); }
+    };
+    setTimeout(() => document.addEventListener('click', close), 0);
+  }
+}
+
+function switchViewFromMore(view) {
+  const menu = document.getElementById('more-menu');
+  if (menu) menu.classList.remove('open');
+  switchView(view);
+  /* Highlight du bouton "Plus" quand une vue du menu est active */
+  const moreBtn = document.querySelector('.bottom-nav-item[data-view="__more"]');
+  if (moreBtn) moreBtn.classList.add('active');
 }
 
 function movePeriod(dir) { state.offset += dir; renderAll(); }
@@ -915,11 +1072,11 @@ function renderTodayHero() {
     ? todayActs.map(a => {
         const dist = a.distance_km > 0 ? `${a.distance_km} km` : '';
         const dur  = a.duration_min ? fmt_dur(a.duration_min) : '';
-        const stat = [dist, dur].filter(Boolean).join(' · ') || a.calories ? `${Math.round(a.calories)} kcal` : '';
+        const stat = [dist, dur].filter(Boolean).join(' · ') || (a.calories ? `${Math.round(a.calories)} kcal` : '');
         return `<div class="today-act-row" onclick="openDetail(${a.id})">
           <div class="today-act-icon act-icon ${a.type||'other'}">${a.icon||'⚡'}</div>
           <div class="today-act-info">
-            <div class="today-act-name">${a.name || a.type_label || a.type}</div>
+            <div class="today-act-name">${escapeHTML(a.name || a.type_label || a.type)}</div>
             <div class="today-act-sub">${a.type_label || ''}</div>
           </div>
           <div class="today-act-stat">${stat}</div>
@@ -961,7 +1118,8 @@ function renderToday() {
 
 function renderTraining() {
   /* Semaine/mois/année : utilise state.tab courant */
-  if (state.tab === 'day') state.tab = 'week'; // default
+  if (!['week','month','year'].includes(state.tab)) state.tab = 'week'; // default
+  document.querySelectorAll('.subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === state.tab));
   const periodLbl = document.getElementById('period-label');
   if (periodLbl) periodLbl.textContent = formatPeriodLabel();
   const trainingPeriodLbl = document.getElementById('period-label-training');
@@ -984,7 +1142,7 @@ function _renderKey() {
 }
 
 function markAllDirty() {
-  ['today','training','recovery','history','profile','running','poc','help'].forEach(v => _viewDirty.add(v));
+  ['today','training','recovery','history','profile','runalyze','running','poc','help'].forEach(v => _viewDirty.add(v));
   _lastRenderKey = '';
 }
 
@@ -1004,9 +1162,11 @@ function renderAll() {
     if (typeof renderPocHRV       === 'function') { try { renderPocHRV();       } catch(e) { console.warn('[recovery] poc hrv', e); } }
     if (typeof renderRHRTrend     === 'function') try { renderRHRTrend();     } catch(e) {}
     if (typeof renderBodyMetrics  === 'function') try { renderBodyMetrics();  } catch(e) {}
+    if (typeof renderCorrelations === 'function') try { renderCorrelations(); } catch(e) { console.warn('[recovery] correlations', e); }
     return;
   }
   if (state.view === 'history')  { renderActivities(); return; }
+  if (state.view === 'runalyze') { if (typeof onSwitchToRunalyze === 'function') onSwitchToRunalyze(); return; }
   /* Aliases legacy */
   if (state.view === 'health')     { renderHealth();     return; }
   if (state.view === 'profile')    { renderProfile();    return; }
@@ -1041,21 +1201,71 @@ const MOCK_ACTIVITIES = [
    PARAMÈTRES HR
    ══════════════════════════════════════════════════════════ */
 function saveHRSettings() {
-  const hrMax  = parseInt(document.getElementById('set-hr-max')?.value);
-  const hrRest = parseInt(document.getElementById('set-hr-rest')?.value);
-  if (hrMax  >= 140 && hrMax  <= 220) localStorage.setItem('hr_max',  hrMax);
-  if (hrRest >= 30  && hrRest <= 90)  localStorage.setItem('hr_rest', hrRest);
+  const maxRaw  = document.getElementById('set-hr-max')?.value ?? '';
+  const restRaw = document.getElementById('set-hr-rest')?.value ?? '';
+  const hrMax  = parseInt(maxRaw);
+  const hrRest = parseInt(restRaw);
+  const vo2Correction = parseFloat(document.getElementById('set-vo2-correction')?.value);
+  const apiKey = document.getElementById('set-api-key')?.value;
+
+  /* Champ vide = retour à l'auto-détection Garmin */
+  if (!maxRaw.trim())  localStorage.removeItem('hr_max');
+  else if (hrMax >= 140 && hrMax <= 220) localStorage.setItem('hr_max', hrMax);
+
+  if (!restRaw.trim()) localStorage.removeItem('hr_rest');
+  else if (hrRest >= 30 && hrRest <= 90) localStorage.setItem('hr_rest', hrRest);
+
+  if (vo2Correction >= 0.8 && vo2Correction <= 1.5) localStorage.setItem('vo2_correction', vo2Correction.toFixed(2));
+  if (apiKey != null) {
+    const trimmed = apiKey.trim();
+    if (!trimmed) {
+      localStorage.removeItem('app_api_key');
+    } else if (!isValidApiKey(trimmed)) {
+      /* Un caractère non-ASCII (tiret typographique, guillemet courbe, accent…)
+         ferait planter TOUS les appels API — on refuse de l'enregistrer. */
+      showToast('Clé API invalide : utilise uniquement lettres, chiffres et symboles ASCII simples', 'err');
+    } else {
+      localStorage.setItem('app_api_key', trimmed);
+    }
+  }
   if (typeof applyHRSettings === 'function') applyHRSettings();
+  initSettingsInputs();
   const msg = document.getElementById('settings-saved');
   if (msg) { msg.style.display = 'block'; setTimeout(() => msg.style.display = 'none', 3000); }
+  markAllDirty();
   renderAll();
 }
 
 function initSettingsInputs() {
   const maxEl  = document.getElementById('set-hr-max');
   const restEl = document.getElementById('set-hr-rest');
-  if (maxEl)  maxEl.value  = localStorage.getItem('hr_max')  || '177';
-  if (restEl) restEl.value = localStorage.getItem('hr_rest') || '62';
+  const vo2El  = document.getElementById('set-vo2-correction');
+  const keyEl  = document.getElementById('set-api-key');
+  /* Valeur affichée = override manuel uniquement ; sinon champ vide
+     avec la valeur auto Garmin en placeholder */
+  if (maxEl) {
+    maxEl.value = localStorage.getItem('hr_max') || '';
+    maxEl.placeholder = `auto : ${getHRMax()} (Garmin)`;
+  }
+  if (restEl) {
+    restEl.value = localStorage.getItem('hr_rest') || '';
+    restEl.placeholder = `auto : ${getHRRest()} (Garmin)`;
+  }
+  if (vo2El)  vo2El.value  = localStorage.getItem('vo2_correction') || '1.00';
+  if (keyEl) {
+    const storedKey = localStorage.getItem('app_api_key') || '';
+    /* Purge une clé invalide enregistrée avant le correctif — sinon elle
+       reste bloquée silencieusement en mémoire (fetch() l'ignore mais
+       plus rien n'indique qu'il faut la ressaisir). */
+    if (storedKey && !isValidApiKey(storedKey)) {
+      localStorage.removeItem('app_api_key');
+      showToast('Clé API précédente invalide (caractères non-ASCII) — merci de la ressaisir', 'err');
+      keyEl.value = '';
+    } else {
+      keyEl.value = storedKey;
+    }
+  }
+  if (typeof updateNotifButton === 'function') updateNotifButton();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1242,6 +1452,9 @@ async function init() {
 
   await Promise.all([loadData(), loadWellness(), loadCoach()]);
 
+  /* FC repos / FC max : recalcule les valeurs auto depuis les données Garmin */
+  if (typeof applyHRSettings === 'function') applyHRSettings();
+
   // Load Xplor after other data so week plan projection includes gym sessions
   if (typeof loadXplorSessions === 'function') await loadXplorSessions();
 
@@ -1253,6 +1466,19 @@ async function init() {
 
   markAllDirty();
   renderAll();
+
+  /* Records battus depuis la dernière visite (sync cron entre-temps) */
+  if (typeof checkNewPRs === 'function') { try { checkNewPRs(); } catch(e) {} }
+  /* Conseil du matin (notification locale, 1×/jour) */
+  if (typeof maybeMorningNotification === 'function') { try { maybeMorningNotification(); } catch(e) {} }
 }
+
+/* PWA laissée ouverte pendant la nuit : TODAY et tous les calculs
+   dérivés (streaks, ACWR, plan semaine) seraient figés sur la veille */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && localIso(new Date()) !== TODAY_ISO) {
+    location.reload();
+  }
+});
 
 init();

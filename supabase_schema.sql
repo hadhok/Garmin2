@@ -77,3 +77,17 @@ ALTER TABLE wellness_days DISABLE ROW LEVEL SECURITY;
 ALTER TABLE garmin_tokens DISABLE ROW LEVEL SECURITY;
 ALTER TABLE sync_meta     DISABLE ROW LEVEL SECURITY;
 ALTER TABLE body_metrics  DISABLE ROW LEVEL SECURITY;
+
+-- ── Configuration Runalyze (token + settings) ──────────────
+CREATE TABLE IF NOT EXISTS runalyze_config (
+  id               INT  PRIMARY KEY DEFAULT 1,
+  token            TEXT,                -- API token personnel Runalyze
+  enabled          BOOLEAN DEFAULT FALSE,
+  last_sync        TEXT,                -- ISO timestamp du dernier sync
+  sync_settings    JSONB,               -- { "use_vo2max": true, "use_ctl": true, ... }
+  last_athlete     JSONB,               -- données athlete cachées
+  last_error       TEXT,                -- dernier message d'erreur API
+  updated_at       TEXT
+);
+
+ALTER TABLE runalyze_config DISABLE ROW LEVEL SECURITY;

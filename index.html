@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Garmin Dashboard</title>
+  <script>/* Anti-flash : applique le thème sauvegardé avant le premier paint */
+    (function(){var t=localStorage.getItem('theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;})();</script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -88,6 +90,11 @@
         <span class="nav-label">Science</span>
         <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
+      <button class="nav-item" data-view="runalyze" onclick="switchView('runalyze')">
+        <span class="nav-icon">🔗</span>
+        <span class="nav-label">Runalyze</span>
+        <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
     </div>
 
     <div class="sidebar-footer">
@@ -118,6 +125,7 @@
         <span class="topbar-title" id="topbar-title">Dashboard</span>
       </div>
       <div class="topbar-right">
+        <button class="btn btn-ghost" id="theme-toggle" onclick="toggleTheme()" aria-label="Basculer le thème clair/sombre" title="Thème clair/sombre" style="font-size:15px;padding:6px 10px">🌙</button>
         <button class="btn btn-ghost btn-sync-mobile" onclick="openSyncModal()" style="font-size:12px;padding:6px 12px">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
           Sync
@@ -384,6 +392,7 @@
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
               <input class="acts-search" id="acts-search" type="text" placeholder="Rechercher…" oninput="renderActivities()">
             </div>
+            <button class="btn btn-ghost" onclick="exportActivitiesCSV()" title="Exporter la liste filtrée en CSV" style="font-size:12px;padding:6px 12px">⬇ CSV</button>
           </div>
         </div>
 
@@ -655,7 +664,53 @@
           </div>
         </div>
 
+        <!-- Corrélations bien-être → performance -->
+        <div class="section-header collapsible" onclick="toggleSection(this)" style="margin-top:8px">Corrélations bien-être → performance <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="health-grid">
+            <div class="card">
+              <div class="section-header" style="margin:0 0 4px">😴 Sommeil → Efficience du run</div>
+              <div id="corr-sleep-txt" style="font-size:11px;color:var(--muted);margin-bottom:8px"></div>
+              <div class="chart-wrap" style="height:200px"><canvas id="chart-corr-sleep"></canvas></div>
+            </div>
+            <div class="card">
+              <div class="section-header" style="margin:0 0 4px">⚡ Charge de la veille → HRV</div>
+              <div id="corr-load-txt" style="font-size:11px;color:var(--muted);margin-bottom:8px"></div>
+              <div class="chart-wrap" style="height:200px"><canvas id="chart-corr-load"></canvas></div>
+            </div>
+          </div>
+        </div>
+
       </div><!-- /view-recovery -->
+
+      <!-- ════════════════════════════════════════════════
+           VIEW : RUNALYZE — CALIBRATION
+      ════════════════════════════════════════════════ -->
+      <div id="view-runalyze" class="view">
+        <div style="padding:16px">
+          <div class="section-header">🎯 Calibration Runalyze</div>
+
+          <div class="card" style="margin-bottom:16px">
+            <div style="font-size:12px;color:var(--muted);line-height:1.7">
+              L'API gratuite de Runalyze ne permet pas de lire les métriques calculées (écriture seule).
+              Les valeurs sont donc <strong>calculées localement</strong> puis calibrées sur celles de runalyze.com :
+              ouvre ton tableau de bord Runalyze, recopie les valeurs affichées ci-dessous, et enregistre.
+              Le facteur de correction (valeur Runalyze ÷ calcul local) est appliqué automatiquement
+              dans la section Calculations de l'onglet Course.
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="section-header" style="margin:0 0 12px;font-size:14px">Métriques</div>
+            <div id="rz-calibration"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
+              <button class="btn btn-primary" onclick="saveRunalyzeCalibration()" style="font-size:13px">💾 Enregistrer la calibration</button>
+              <button class="btn" onclick="resetRunalyzeCalibration()" style="font-size:13px">↺ Réinitialiser</button>
+            </div>
+            <div id="rz-status" style="display:none;font-size:12px;margin-top:8px;padding:8px;border-radius:4px;background:rgba(34,197,94,0.12);color:#16a34a"></div>
+          </div>
+        </div>
+      </div><!-- /view-runalyze -->
 
       <!-- ════════════════════════════════════════════════
            VIEW : PROFIL
@@ -776,18 +831,51 @@
         <div class="section-header" style="margin-top:24px">Trophées</div>
         <div class="badges-grid" id="profile-badges"></div>
 
+        <!-- Export rapport complet -->
+        <div class="section-header" style="margin-top:24px">Export rapport</div>
+        <div class="card" style="max-width:480px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6">
+            Génère un fichier JSON avec toutes tes données (activités, bien-être, composition corporelle, calculs de forme, records, objectif de course). À partager avec Claude pour une analyse ou un rapport détaillé. Rien n'est envoyé automatiquement — le fichier est simplement téléchargé sur ton appareil.
+          </div>
+          <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+            <div style="flex:1;min-width:140px">
+              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:6px">Période</label>
+              <select id="export-report-period" class="settings-input" style="width:100%"></select>
+            </div>
+            <button id="export-report-btn" class="btn btn-primary" onclick="exportFullReport()" style="font-size:13px;flex:1;min-width:160px">📄 Exporter le rapport</button>
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:6px">Les calculs de forme, records et objectif restent basés sur tout l'historique (nécessaire pour des valeurs correctes) — seules les listes d'activités et de bien-être sont limitées à la période choisie.</div>
+          <div id="export-report-status" style="display:none;font-size:12px;margin-top:8px"></div>
+        </div>
+
         <!-- Paramètres -->
         <div id="profile-settings" class="section-header" style="margin-top:24px">Paramètres</div>
         <div class="card" style="max-width:480px">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
             <div>
               <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">FC Max (bpm)</label>
               <input id="set-hr-max" type="number" min="140" max="220" class="settings-input" value="">
+              <div style="font-size:10px;color:var(--muted);margin-top:3px">Vide = auto (max observé sur 12 mois)</div>
             </div>
             <div>
               <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">FC Repos (bpm)</label>
               <input id="set-hr-rest" type="number" min="30" max="90" class="settings-input" value="">
+              <div style="font-size:10px;color:var(--muted);margin-top:3px">Vide = auto (FC repos Garmin du jour)</div>
             </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Correction VO2max</label>
+              <input id="set-vo2-correction" type="number" min="0.8" max="1.5" step="0.01" class="settings-input" value="">
+            </div>
+          </div>
+          <div style="margin-bottom:16px">
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Notifications</label>
+            <button id="notif-toggle-btn" class="btn btn-primary" onclick="toggleNotifications()" style="font-size:13px">🔕 Activer les notifications</button>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">Conseil du matin (à l'ouverture de l'app) et alertes nouveaux records.</div>
+          </div>
+          <div style="margin-bottom:16px">
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Clé API (sécurité)</label>
+            <input id="set-api-key" type="password" class="settings-input" placeholder="Optionnel — doit correspondre à APP_API_KEY sur Vercel" autocomplete="off" style="width:100%">
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">Protège tes données de santé : définis APP_API_KEY dans les variables d'environnement Vercel puis saisis la même clé ici.</div>
           </div>
           <button class="btn btn-primary" onclick="saveHRSettings()" style="font-size:13px">Enregistrer</button>
           <div id="settings-saved" style="display:none;font-size:12px;color:#22c55e;margin-top:8px">✓ Paramètres enregistrés — les calculs sont mis à jour.</div>
@@ -830,6 +918,17 @@
 
         <!-- KPI bar -->
         <div class="kpi-grid" id="run-kpis"></div>
+
+        <!-- Objectif de course -->
+        <div id="run-goal" style="margin:16px 0"></div>
+
+        <!-- Calculations -->
+        <div id="rsh-calculations" class="section-header collapsible" onclick="toggleSection(this)">Calculations <span style="font-size:10px;font-weight:400;color:var(--muted);text-transform:none">(course uniquement · calibrable dans l'onglet Runalyze)</span> <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="card">
+            <div id="run-calculations" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px"></div>
+          </div>
+        </div>
 
         <!-- Plan de la semaine -->
         <div id="rsh-weekplan" class="section-header collapsible" onclick="toggleSection(this)">Plan de la semaine <span class="chev">▾</span></div>
@@ -1251,23 +1350,34 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
     Récupération
   </button>
-  <button class="bottom-nav-item" data-view="history" onclick="switchView('history')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
-    Historique
-  </button>
-  <button class="bottom-nav-item" data-view="profile" onclick="switchView('profile')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-    Profil
-  </button>
-  <button class="bottom-nav-item" data-view="poc" onclick="switchView('poc')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
-    Science
+  <button class="bottom-nav-item" data-view="__more" onclick="toggleMoreMenu(event)" aria-label="Plus d'options">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+    Plus
   </button>
 </nav>
 
+<!-- Menu "Plus" (mobile) -->
+<div class="more-menu" id="more-menu">
+  <button class="more-menu-item" data-view="history" onclick="switchViewFromMore('history')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+    Historique
+  </button>
+  <button class="more-menu-item" data-view="profile" onclick="switchViewFromMore('profile')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    Profil
+  </button>
+  <button class="more-menu-item" data-view="poc" onclick="switchViewFromMore('poc')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
+    Science
+  </button>
+  <button class="more-menu-item" data-view="runalyze" onclick="switchViewFromMore('runalyze')">
+    <span style="font-size:16px;line-height:1">🎯</span>
+    Runalyze
+  </button>
+</div>
+
 <!-- Scripts -->
 <script src="/js/constants.js"></script>
-<script src="/js/date-utils.js"></script>
 <script src="/js/sanit.js"></script>
 <script src="/js/app.js"></script>
 <script src="/js/dashboard.js"></script>
@@ -1280,6 +1390,10 @@
 <script src="/js/poc.js"></script>
 <script src="/js/renpho.js"></script>
 <script src="/js/help.js"></script>
+<script src="/js/runalyze.js"></script>
+<script src="/js/goal.js"></script>
+<script src="/js/insights.js"></script>
+<script src="/js/report.js"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js', { scope: '/' }));

@@ -1,9 +1,14 @@
 from http.server import BaseHTTPRequestHandler
 import json, os, urllib.request, urllib.error
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__))
+from _auth import check_auth
 
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
+        if not check_auth(self): return
         token = os.environ.get('GITHUB_PAT')
         if not token:
             self._respond(500, {'error': 'GITHUB_PAT non configuré'})
