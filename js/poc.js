@@ -701,8 +701,11 @@ function renderPocPhase() {
 
 /* ──────────────────────────────────────────────────────────
    5. PACE RESERVE (RP)
-   RP = (allure_seuil − allure_run) / allure_seuil × 100
-   Ref : Renfree & Gibson (2013) Sports Medicine
+   RP = (allure_run − allure_seuil) / allure_seuil × 100
+   Une allure plus LENTE que le seuil (plus de minutes/km) = plus de
+   réserve = RP positif élevé (facile). Une allure plus RAPIDE que le
+   seuil (proche du max) = peu/pas de réserve = RP faible ou négatif
+   (intense). Ref : Renfree & Gibson (2013) Sports Medicine
    ────────────────────────────────────────────────────────── */
 function renderPocPaceReserve() {
   const el = document.getElementById('poc-pacereserve');
@@ -726,7 +729,7 @@ function renderPocPaceReserve() {
 
   function rp(pace) {
     if (!pace || pace <= 0) return null;
-    return +((thresholdPace - pace) / thresholdPace * 100).toFixed(1);
+    return +((pace - thresholdPace) / thresholdPace * 100).toFixed(1);
   }
 
   /* 12 dernières semaines — avg RP par semaine */
