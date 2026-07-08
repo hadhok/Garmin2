@@ -59,6 +59,7 @@ const state = {
   filter:             'all',
   data:               null,
   wellness:           null,
+  raceGoal:           undefined, // undefined = pas encore chargé, null = aucun objectif
   healthDays:         30,
   profileGranularity: 'month',
 };
@@ -1458,7 +1459,7 @@ async function init() {
   const syncDot = document.getElementById('sync-dot');
   if (syncDot) syncDot.classList.add('syncing');
 
-  await Promise.all([loadData(), loadWellness(), loadCoach()]);
+  await Promise.all([loadData(), loadWellness(), loadCoach(), (typeof loadRaceGoal === 'function' ? loadRaceGoal() : Promise.resolve())]);
 
   /* FC repos / FC max : recalcule les valeurs auto depuis les données Garmin */
   if (typeof applyHRSettings === 'function') applyHRSettings();

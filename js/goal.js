@@ -11,12 +11,47 @@ const GOAL_PRESETS = [
   { label: 'Marathon', km: 42.195 },
 ];
 
-function getRaceGoal() {
+/* Objectif de course : stocké côté serveur (Supabase, table race_goal)
+   pour persister entre appareils/navigateurs — le localStorage seul ne
+   survit pas à un changement d'origine (preview Vercel, autre appareil). */
+async function loadRaceGoal() {
   try {
-    const g = JSON.parse(localStorage.getItem('race_goal') || 'null');
-    if (!g || !g.date || !g.km) return null;
-    return g;
-  } catch { return null; }
+    const r = await fetch('/api/race_goal');
+    if (r.ok) {
+      const data = await r.json();
+      state.raceGoal = data.goal || null;
+    } else {
+      state.raceGoal = null;
+    }
+  } catch { state.raceGoal = null; }
+
+  /* Migration : objectif présent en localStorage (ancienne version,
+     stockage local uniquement) mais absent côté serveur -> on le pousse
+     une fois pour qu'il persiste enfin entre appareils. */
+  if (!state.raceGoal) {
+    try {
+      const legacy = JSON.parse(localStorage.getItem('race_goal') || 'null');
+      if (legacy?.date && legacy?.km > 0) {
+        await saveRaceGoalData(legacy);
+      }
+    } catch {}
+  }
+}
+
+function getRaceGoal() {
+  return state.raceGoal || null;
+}
+
+async function saveRaceGoalData(goal) {
+  const r = await fetch('/api/race_goal', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(goal),
+  });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'échec de l\'enregistrement');
+  const data = await r.json();
+  state.raceGoal = data.goal || goal;
+  localStorage.removeItem('race_goal'); // source de vérité désormais côté serveur
 }
 
 /* "3:45:00" ou "45:30" → secondes */
@@ -212,7 +247,7 @@ function showGoalForm() {
   });
 }
 
-function saveRaceGoal() {
+async function saveRaceGoal() {
   const name = document.getElementById('goal-name')?.value?.trim() || '';
   const date = document.getElementById('goal-date')?.value;
   const distSel = document.getElementById('goal-dist')?.value;
@@ -225,12 +260,26 @@ function saveRaceGoal() {
   if (!(km > 0)) { showToast('Distance invalide', 'err'); return; }
   if (target && parseTimeToSec(target) == null) { showToast('Temps visé invalide (format h:mm:ss)', 'err'); return; }
 
-  localStorage.setItem('race_goal', JSON.stringify({ name, date, km, target }));
-  showToast('Objectif enregistré 🎯', 'ok');
+  const btn = document.querySelector('#run-goal button[onclick="saveRaceGoal()"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Enregistrement…'; }
+  try {
+    await saveRaceGoalData({ name, date, km, target });
+    showToast('Objectif enregistré 🎯', 'ok');
+  } catch (e) {
+    showToast('Erreur : ' + e.message, 'err');
+  }
   renderRunGoal();
 }
 
-function clearRaceGoal() {
+async function clearRaceGoal() {
+  try {
+    await fetch('/api/race_goal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clear: true }),
+    });
+  } catch {}
+  state.raceGoal = null;
   localStorage.removeItem('race_goal');
   renderRunGoal();
 }

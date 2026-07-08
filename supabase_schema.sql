@@ -91,3 +91,15 @@ CREATE TABLE IF NOT EXISTS runalyze_config (
 );
 
 ALTER TABLE runalyze_config DISABLE ROW LEVEL SECURITY;
+
+-- ── Objectif de course (1 seule ligne, id=1) ────────────────
+CREATE TABLE IF NOT EXISTS race_goal (
+  id          INT  PRIMARY KEY DEFAULT 1,
+  name        TEXT,
+  date        TEXT,          -- 'YYYY-MM-DD'
+  km          FLOAT,
+  target      TEXT,          -- temps visé "h:mm:ss", optionnel
+  updated_at  TEXT
+);
+
+ALTER TABLE race_goal DISABLE ROW LEVEL SECURITY;
