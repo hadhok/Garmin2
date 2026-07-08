@@ -708,8 +708,14 @@ function renderPocPaceReserve() {
   const el = document.getElementById('poc-pacereserve');
   if (!el) return;
 
+  /* pace_min_km est stocké en chaîne "M:SS" (ex. "7:54"), pas en nombre —
+     avg_pace_min_km n'existe dans aucune donnée réelle. paceToSec() (running.js,
+     chargé avant ce fichier) convertit en secondes/km ; on dérive ensuite les
+     minutes/km décimales attendues par le reste de la fonction. */
   const runs = (state.data?.activities || [])
-    .filter(a => a.date && a.type === 'run' && a.distance_km >= 3 && a.avg_pace_min_km > 0)
+    .filter(a => a.date && a.type === 'run' && a.distance_km >= 3 && a.pace_min_km)
+    .map(a => ({ ...a, avg_pace_min_km: (paceToSec(a.pace_min_km) || 0) / 60 }))
+    .filter(a => a.avg_pace_min_km > 0 && a.avg_pace_min_km < 20)
     .sort((a, b) => a.date.localeCompare(b.date));
 
   if (runs.length < 5) { el.innerHTML = '<div class="empty">Données insuffisantes (min 5 sorties ≥ 3 km)</div>'; return; }
