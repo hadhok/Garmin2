@@ -1776,7 +1776,7 @@ function generateWeekPlan() {
   // ── Wellness récent ──────────────────────────────────────
   const well = state.wellness?.days || {};
   const wellDays = Object.values(well).filter(w => w.date).sort((a,b) => b.date.localeCompare(a.date));
-  const lastHRV  = wellDays.find(w => w.hrv_weekly_avg > 0)?.hrv_weekly_avg || null;
+  const lastHRV  = wellDays.find(w => w.hrv_overnight_avg > 0)?.hrv_overnight_avg || null;
   const lastBB   = wellDays[0]?.body_battery_end || null;
 
   // ── VO2max courant ───────────────────────────────────────

@@ -213,20 +213,26 @@ function renderPocRecovery() {
     return Math.sqrt(vals.reduce((s, v) => s + (v - mean) ** 2, 0) / vals.length) || 1;
   }
 
+  /* hrv_overnight_avg / sleep_total_min : vrais noms de champs (Garmin, via
+     sync.py). hrv_rmssd/hrv_weekly_avg/sleep_duration_h n'existent dans
+     aucune donnée réelle — ces composantes (30% + 20%) étaient donc
+     toujours ignorées silencieusement. */
+  const sleepH = d => d.sleep_total_min ? d.sleep_total_min / 60 : null;
   const b28 = {
-    hrv:     avg(last28, d => d.hrv_rmssd || d.hrv_weekly_avg),
+    hrv:     avg(last28, d => d.hrv_overnight_avg),
     hr_rest: avg(last28, d => d.resting_hr),
     bb:      avg(last28, d => d.body_battery_high),
-    sleep:   avg(last28, d => d.sleep_duration_h),
+    sleep:   avg(last28, sleepH),
   };
 
   /* Score normalisé 0–100 par jour */
   function scoreDay(d) {
     const scores = [];
+    const dSleepH = sleepH(d);
 
-    if (b28.hrv != null && d.hrv_rmssd != null) {
+    if (b28.hrv != null && d.hrv_overnight_avg != null) {
       // HRV: plus élevé = mieux, normalise autour de baseline
-      const s = Math.min(100, Math.max(0, 50 + (d.hrv_rmssd - b28.hrv) / b28.hrv * 150));
+      const s = Math.min(100, Math.max(0, 50 + (d.hrv_overnight_avg - b28.hrv) / b28.hrv * 150));
       scores.push({ s, w: 0.30 });
     }
     if (b28.hr_rest != null && d.resting_hr != null) {
@@ -237,9 +243,9 @@ function renderPocRecovery() {
     if (d.body_battery_high != null) {
       scores.push({ s: d.body_battery_high, w: 0.25 });
     }
-    if (d.sleep_duration_h != null) {
+    if (dSleepH != null) {
       // Cible 7.5h, ±1.5h = ±50 pts
-      const s = Math.min(100, Math.max(0, 50 + (d.sleep_duration_h - 7.5) / 1.5 * 50));
+      const s = Math.min(100, Math.max(0, 50 + (dSleepH - 7.5) / 1.5 * 50));
       scores.push({ s, w: 0.20 });
     }
 
@@ -333,12 +339,12 @@ function renderPocHRV() {
   if (!el || !state.wellness?.days) return;
 
   const days = Object.values(state.wellness.days)
-    .filter(d => d.date && (d.hrv_rmssd || d.hrv_weekly_avg))
+    .filter(d => d.date && d.hrv_overnight_avg)
     .sort((a, b) => a.date.localeCompare(b.date));
 
   if (days.length < 14) { el.innerHTML = '<div class="empty">Données HRV insuffisantes (min 14 jours)</div>'; return; }
 
-  const hrv = d => d.hrv_rmssd || d.hrv_weekly_avg || null;
+  const hrv = d => d.hrv_overnight_avg || null;
 
   /* Rolling 7-day average per day */
   function rolling7(arr, i) {

@@ -489,12 +489,19 @@ function computeRecoveryScoreDay(today, last28) {
     const v = last28.map(fn).filter(x => x != null && !isNaN(x));
     return v.length ? v.reduce((s,x)=>s+x,0)/v.length : null;
   }
-  const b = { hrv: avg(d=>d.hrv_rmssd||d.hrv_weekly_avg), hr: avg(d=>d.resting_hr), bb: avg(d=>d.body_battery_high), sleep: avg(d=>d.sleep_duration_h) };
+  /* hrv_overnight_avg / sleep_total_min : noms de champs réels remontés par
+     sync.py (Garmin). hrv_rmssd/hrv_weekly_avg/sleep_duration_h n'existent
+     dans aucune donnée synchronisée — ces composantes étaient donc
+     silencieusement ignorées depuis toujours (30% + 20% du score jamais
+     appliqués, seuls FC repos + Body Battery comptaient réellement). */
+  const sleepH = d => d.sleep_total_min ? d.sleep_total_min / 60 : null;
+  const b = { hrv: avg(d=>d.hrv_overnight_avg), hr: avg(d=>d.resting_hr), bb: avg(d=>d.body_battery_high), sleep: avg(sleepH) };
+  const todaySleepH = sleepH(today);
   const sc = [];
-  if (b.hrv  && b.hrv > 0 && today.hrv_rmssd)       sc.push({ s: Math.min(100,Math.max(0, 50 + (today.hrv_rmssd - b.hrv) / b.hrv * 150)),         w: 0.30 });
-  if (b.hr   && b.hr > 0  && today.resting_hr)      sc.push({ s: Math.min(100,Math.max(0, 50 - (today.resting_hr - b.hr)  / b.hr  * 150)),         w: 0.25 });
+  if (b.hrv  && b.hrv > 0 && today.hrv_overnight_avg) sc.push({ s: Math.min(100,Math.max(0, 50 + (today.hrv_overnight_avg - b.hrv) / b.hrv * 150)), w: 0.30 });
+  if (b.hr   && b.hr > 0  && today.resting_hr)        sc.push({ s: Math.min(100,Math.max(0, 50 - (today.resting_hr - b.hr)  / b.hr  * 150)),         w: 0.25 });
   if (today.body_battery_high != null) sc.push({ s: today.body_battery_high,                                                            w: 0.25 });
-  if (today.sleep_duration_h  != null) sc.push({ s: Math.min(100,Math.max(0, 50 + (today.sleep_duration_h - 7.5) / 1.5 * 50)),         w: 0.20 });
+  if (todaySleepH != null) sc.push({ s: Math.min(100,Math.max(0, 50 + (todaySleepH - 7.5) / 1.5 * 50)),         w: 0.20 });
   if (!sc.length) return null;
   const tw = sc.reduce((s,x)=>s+x.w, 0);
   return Math.round(sc.reduce((s,x)=>s+x.s*x.w, 0) / tw);
@@ -521,9 +528,9 @@ function computeDailyReco() {
   /* HRV signal */
   let hrvSignal = null, hrvDetail = null;
   if (well) {
-    const wDays = Object.values(well).filter(d=>d.date&&(d.hrv_rmssd||d.hrv_weekly_avg)).sort((a,b)=>a.date.localeCompare(b.date));
+    const wDays = Object.values(well).filter(d=>d.date&&d.hrv_overnight_avg).sort((a,b)=>a.date.localeCompare(b.date));
     if (wDays.length >= 14) {
-      const hrv = d => d.hrv_rmssd||d.hrv_weekly_avg||null;
+      const hrv = d => d.hrv_overnight_avg||null;
       const r7 = wDays.slice(-7).map(hrv).filter(v=>v!=null);
       const b28= wDays.slice(-28).map(hrv).filter(v=>v!=null);
       if (r7.length && b28.length) {
@@ -1051,9 +1058,10 @@ function renderTodayHero() {
 
   /* Wellness pills : sommeil, body battery, HRV */
   const pills = [];
-  if (todayWell?.sleep_duration_h != null) {
-    const h = Math.floor(todayWell.sleep_duration_h), m = Math.round((todayWell.sleep_duration_h - h) * 60);
-    const sleepColor = todayWell.sleep_duration_h >= 7 ? '#22c55e' : todayWell.sleep_duration_h >= 6 ? '#f59e0b' : '#ef4444';
+  if (todayWell?.sleep_total_min != null) {
+    const h = Math.floor(todayWell.sleep_total_min / 60), m = Math.round(todayWell.sleep_total_min % 60);
+    const sleepH = todayWell.sleep_total_min / 60;
+    const sleepColor = sleepH >= 7 ? '#22c55e' : sleepH >= 6 ? '#f59e0b' : '#ef4444';
     pills.push({ val: `${h}h${m > 0 ? m : ''}`, unit: '', lbl: 'Sommeil', color: sleepColor });
   }
   if (todayWell?.body_battery_high != null) {

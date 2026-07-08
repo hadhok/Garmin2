@@ -281,7 +281,7 @@ def push_plan_to_garmin():
 
     # 3. Wellness récent
     sorted_well = sorted(wellness.values(), key=lambda w: w.get('date',''), reverse=True)
-    last_hrv = next((w['hrv_weekly_avg'] for w in sorted_well if (w.get('hrv_weekly_avg') or 0) > 0), None)
+    last_hrv = next((w['hrv_overnight_avg'] for w in sorted_well if (w.get('hrv_overnight_avg') or 0) > 0), None)
     last_bb  = sorted_well[0].get('body_battery_end') if sorted_well else None
     if last_hrv: print(f"   HRV {last_hrv:.0f} ms")
     if last_bb:  print(f"   Body Battery {last_bb:.0f}%")
