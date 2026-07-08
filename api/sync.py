@@ -348,7 +348,7 @@ class handler(BaseHTTPRequestHandler):
             results['garmin'] = f'error: {e}'
 
         try:
-            from renpho_sync import run_renpho_sync
+            from _renpho_sync import run_renpho_sync
             results['renpho'] = run_renpho_sync()
         except Exception as e:
             results['renpho'] = f'error: {e}'

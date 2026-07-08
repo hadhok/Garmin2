@@ -3,7 +3,7 @@ import json, os, sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 from sync import _run_sync
-from renpho_sync import run_renpho_sync
+from _renpho_sync import run_renpho_sync
 from update_coach import run_coach_update
 
 
