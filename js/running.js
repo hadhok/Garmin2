@@ -2796,7 +2796,7 @@ function renderRunCardiacReserve() {
     </div>`;
   }
 
-  const labels = runs.map(r => new Date(r.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
+  const labels = allRuns.map(r => new Date(r.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
 
   mkChart('chart-run-cardiac-reserve', {
     type: 'line',
