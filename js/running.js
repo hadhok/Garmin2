@@ -1218,6 +1218,66 @@ function renderRunEfficiencyChart() {
 }
 
 /* ══════════════════════════════════════════════════════════
+   RENDER : Graphique TRIMP quotidien (60 jours)
+   Barres empilées course / autres activités + moyenne mobile 7j
+   ══════════════════════════════════════════════════════════ */
+function renderRunTRIMPChart() {
+  if (!document.getElementById('chart-run-trimp')) return;
+
+  const DAYS = 60;
+  const allActs = getAll();
+  const runIds  = new Set(getRuns().map(a => a.id));
+
+  const dayRun = {}, dayOther = {};
+  allActs.forEach(a => {
+    if (!a.hr_avg || !a.duration_min) return;
+    const dt = (a.date || a.start_time || '').slice(0, 10);
+    if (!dt) return;
+    const t = computeTRIMP(a);
+    if (runIds.has(a.id)) dayRun[dt] = (dayRun[dt] || 0) + t;
+    else dayOther[dt] = (dayOther[dt] || 0) + t;
+  });
+
+  const labels = [], runVals = [], otherVals = [], totalVals = [], rollingAvg = [];
+  for (let i = DAYS - 1; i >= 0; i--) {
+    const d = new Date(TODAY); d.setDate(d.getDate() - i);
+    const iso = localIso(d);
+    labels.push(d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
+    const r = dayRun[iso] || 0, o = dayOther[iso] || 0;
+    runVals.push(r); otherVals.push(o); totalVals.push(r + o);
+  }
+  /* Moyenne mobile 7j sur le total, pour lisser la lecture des pics/creux */
+  for (let i = 0; i < totalVals.length; i++) {
+    const start = Math.max(0, i - 6);
+    const slice = totalVals.slice(start, i + 1);
+    rollingAvg.push(+(slice.reduce((s, v) => s + v, 0) / slice.length).toFixed(1));
+  }
+
+  mkChart('chart-run-trimp', {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Course', data: runVals, backgroundColor: 'rgba(34,197,94,0.75)', stack: 'trimp', borderRadius: 2 },
+        { label: 'Autres activités', data: otherVals, backgroundColor: 'rgba(99,102,241,0.55)', stack: 'trimp', borderRadius: 2 },
+        { label: 'Moyenne mobile 7j', data: rollingAvg, type: 'line', borderColor: '#f97316', borderWidth: 2, pointRadius: 0, tension: 0.3, stack: undefined },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, labels: { boxWidth: 10, font: { size: 10 } } },
+        tooltip: { mode: 'index', intersect: false },
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 9 } } },
+        y: { stacked: true, title: { display: true, text: 'TRIMP (pts)', font: { size: 10 }, color: '#6b7280' }, grid: { color: 'rgba(107,114,128,0.1)' } },
+      },
+    },
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
    RENDER : TRIMP & Monotonie
    ══════════════════════════════════════════════════════════ */
 function renderRunTRIMP() {
@@ -3169,6 +3229,7 @@ function renderRunning() {
   safe(renderRunPaceTrend);
   safe(renderRunEfficiencyChart);
   safe(renderRunCardiacReserve);
+  safe(renderRunTRIMPChart);
   safe(renderRunTRIMP);
   safe(renderRunACWR);
   safe(renderRunElevationCharts);
