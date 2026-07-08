@@ -44,7 +44,7 @@ const INFO_CONTENT = {
   },
   'phase': {
     title: 'Phase d\'Entraînement Automatique',
-    text: 'La phase est détectée automatiquement à partir de la pente du CTL (fitness trend), du TSB (forme du moment) et de l\'ACWR (ratio charge aiguë/chronique). Elle évolue semaine après semaine.',
+    text: 'La phase est détectée automatiquement à partir du rythme hebdomadaire du CTL (fitness trend, en pts/semaine — même unité que le "ramp rate" cité en coaching, ~3-8 pts/sem), du TSB (forme du moment) et de l\'ACWR (ratio charge aiguë/chronique). Elle évolue semaine après semaine. Ces seuils sont des heuristiques inspirées de la littérature de coaching (Coggan/TrainingPeaks, Gabbett 2016), pas des valeurs cliniquement validées — l\'ACWR en particulier fait l\'objet de critiques méthodologiques depuis 2018 (couplage mathématique).',
     levels: [
       { color: '#3b82f6', label: 'Base',      desc: 'Construction aérobie, CTL en hausse progressive' },
       { color: '#f97316', label: 'Charge',     desc: 'Bloc intensif, TSB négatif contrôlé' },
@@ -607,15 +607,24 @@ function renderPocPhase() {
 
   function detectPhase(w) {
     const { ctl, atl, tsb, acwr } = w;
-    const prevCTL = weekData(w._wk + 4)?.ctl || ctl;
-    const ctlSlope = ctl - prevCTL;
+    /* Rythme CTL en points/semaine — moyenne lissée sur les 3 dernières
+       semaines (4 points), plutôt qu'un delta brut sur 4 semaines d'un
+       seul coup (bruité, sensible à 2 points isolés). Exprimé dans la
+       même unité que le "ramp rate" cité en littérature de coaching
+       (TrainingPeaks / Couzens : ~3–8 pts/semaine = hausse de charge
+       volontaire). Ce seuil de catégorisation de phase n'est PAS lui-même
+       un chiffre validé par une étude — seule l'unité (pts/semaine) est
+       alignée sur les repères habituels du domaine. */
+    const ctl3wAgo = weekData(w._wk + 3)?.ctl ?? ctl;
+    const weeklyRamp = (ctl - ctl3wAgo) / 3;
+    w.weeklyRamp = weeklyRamp; // exposé pour l'affichage dans la carte
 
     if (acwr != null && acwr > 1.5 && tsb < -20) return 'surcharge';
-    if (tsb > 5 && ctlSlope >= 0)               return 'pic';
-    if (tsb > 10)                                return 'recuperation';
-    if (ctlSlope > 3 && tsb < -5)               return 'build';
-    if (ctlSlope > 0)                            return 'base';
-    if (ctlSlope < -3)                           return 'recuperation';
+    if (tsb > 5 && weeklyRamp >= 0)              return 'pic';
+    if (tsb > 10)                                 return 'recuperation';
+    if (weeklyRamp > 3 && tsb < -5)              return 'build';
+    if (weeklyRamp > 0)                           return 'base';
+    if (weeklyRamp < -3)                          return 'recuperation';
     return 'base';
   }
 
@@ -646,7 +655,7 @@ function renderPocPhase() {
       <div style="font-size:16px;font-weight:800;color:${cfg.color}">${cfg.label}</div>
       <div style="font-size:12px;color:var(--text);margin-top:4px;line-height:1.5">${cfg.desc}</div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:12px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;font-size:12px">
       <div style="background:var(--surface2);border-radius:8px;padding:8px 10px">
         <div style="color:var(--muted);font-size:10px">CTL (Forme)</div>
         <b>${todayPhase.ctl.toFixed(1)}</b>
@@ -658,6 +667,10 @@ function renderPocPhase() {
       <div style="background:var(--surface2);border-radius:8px;padding:8px 10px">
         <div style="color:var(--muted);font-size:10px">ACWR</div>
         <b>${todayPhase.acwr != null ? todayPhase.acwr.toFixed(2) : '–'}</b>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:8px 10px" title="Moyenne lissée sur 3 semaines — unité alignée sur le ramp rate de la littérature coaching (~3-8 pts/sem), mais le seuil de catégorisation reste un choix de l'app">
+        <div style="color:var(--muted);font-size:10px">Rythme CTL</div>
+        <b style="color:${todayPhase.weeklyRamp > 0 ? '#22c55e' : todayPhase.weeklyRamp < 0 ? '#ef4444' : 'var(--text)'}">${todayPhase.weeklyRamp > 0 ? '+' : ''}${todayPhase.weeklyRamp.toFixed(1)}/sem</b>
       </div>
     </div>`;
 
