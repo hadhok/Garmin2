@@ -1001,29 +1001,6 @@ function setTrainingTab(tab) {
   renderAll();
 }
 
-/* ── Menu "Plus" (bottom nav mobile) ── */
-function toggleMoreMenu(e) {
-  if (e) e.stopPropagation();
-  const menu = document.getElementById('more-menu');
-  if (!menu) return;
-  const open = menu.classList.toggle('open');
-  if (open) {
-    const close = (ev) => {
-      if (!menu.contains(ev.target)) { menu.classList.remove('open'); document.removeEventListener('click', close); }
-    };
-    setTimeout(() => document.addEventListener('click', close), 0);
-  }
-}
-
-function switchViewFromMore(view) {
-  const menu = document.getElementById('more-menu');
-  if (menu) menu.classList.remove('open');
-  switchView(view);
-  /* Highlight du bouton "Plus" quand une vue du menu est active */
-  const moreBtn = document.querySelector('.bottom-nav-item[data-view="__more"]');
-  if (moreBtn) moreBtn.classList.add('active');
-}
-
 function movePeriod(dir) { state.offset += dir; renderAll(); }
 function resetPeriod()   { state.offset = 0;    renderAll(); }
 

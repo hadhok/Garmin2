@@ -1402,41 +1402,6 @@ body.loading main::before {
   .bottom-nav-item svg { width: 18px; height: 18px; }
 }
 
-/* ── Menu "Plus" (bottom nav) ── */
-.more-menu {
-  display: none;
-  position: fixed;
-  bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 8px);
-  right: 8px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
-  z-index: 210;
-  padding: 6px;
-  min-width: 170px;
-  flex-direction: column;
-}
-.more-menu.open { display: flex; }
-.more-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 14px;
-  border: none;
-  background: transparent;
-  color: var(--text);
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  text-align: left;
-  border-radius: 9px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.more-menu-item:hover { background: var(--surface2); }
-.more-menu-item svg { width: 18px; height: 18px; flex-shrink: 0; }
-
 /* Indicateur de position swipe — barre active en haut de l'onglet sélectionné */
 .bottom-nav-item.active::before {
   content: '';
