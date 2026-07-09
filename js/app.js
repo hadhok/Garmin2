@@ -937,9 +937,9 @@ ${morningHtml ? `<div class="morning"><div class="morning-title">☀️ Résumé
 const TAB_ORDER = ['today', 'training', 'recovery', 'history', 'profile'];
 
 function switchView(view, swipeDir) {
-  /* "running" (Course) a fusionné dans "training" (Entraînement) — un lien
-     ou un appel historique vers 'running' redirige vers le bon segment. */
-  if (view === 'running') {
+  /* "running" (Course) et "poc" (Science) ont fusionné dans "training"
+     (Entraînement) — un lien ou un appel historique redirige vers le bon segment. */
+  if (view === 'running' || view === 'poc') {
     view = 'training';
     state.trainingTab = 'running';
   }
@@ -971,10 +971,9 @@ function switchView(view, swipeDir) {
     history:  'Historique',
     profile:  'Profil',
     runalyze: 'Runalyze',
-    poc:      '🔬 Science',
     /* legacy aliases */
     dashboard: 'Dashboard', activities: 'Activités', health: 'Santé',
-    running: 'Running', poc: 'Science du sport', help: 'Aide',
+    running: 'Running', help: 'Aide',
   };
   const titleEl = document.getElementById('topbar-title');
   if (titleEl) titleEl.textContent = titles[view] || view;
@@ -1167,7 +1166,7 @@ function _renderKey() {
 }
 
 function markAllDirty() {
-  ['today','training','recovery','history','profile','runalyze','running','poc','help'].forEach(v => _viewDirty.add(v));
+  ['today','training','recovery','history','profile','runalyze','running','help'].forEach(v => _viewDirty.add(v));
   _lastRenderKey = '';
 }
 
@@ -1180,7 +1179,12 @@ function renderAll() {
   /* Nouveaux noms de vue */
   if (state.view === 'today')    { renderToday();      return; }
   if (state.view === 'training') {
-    if (state.trainingTab === 'running') { if (typeof renderRunning === 'function') renderRunning(); }
+    if (state.trainingTab === 'running') {
+      if (typeof renderRunning === 'function') renderRunning();
+      if (typeof renderPocLongRatio   === 'function') try { renderPocLongRatio();   } catch(e) { console.warn('[training] longratio', e); }
+      if (typeof renderPocPhase       === 'function') try { renderPocPhase();       } catch(e) { console.warn('[training] phase', e); }
+      if (typeof renderPocPaceReserve === 'function') try { renderPocPaceReserve(); } catch(e) { console.warn('[training] pacereserve', e); }
+    }
     else { renderTraining(); }
     return;
   }
@@ -1201,7 +1205,6 @@ function renderAll() {
   if (state.view === 'profile')    { renderProfile();    return; }
   if (state.view === 'activities') { renderActivities(); return; }
   if (state.view === 'running')    { renderRunning();    return; }
-  if (state.view === 'poc')        { renderPOC();        return; }
   if (state.view === 'help')       { renderHelp();       return; }
 
   /* Dashboard (fallback) */

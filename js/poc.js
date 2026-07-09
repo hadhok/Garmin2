@@ -835,17 +835,3 @@ function renderRHRTrend() {
       </div>
     </div>`;
 }
-
-/* ──────────────────────────────────────────────────────────
-   ENTRY POINT
-   ────────────────────────────────────────────────────────── */
-function renderPOC() {
-  const safe = (fn) => { try { fn(); } catch(e) { console.error('[POC]', fn.name, e); } };
-  safe(renderPocSynthesis);
-  safe(renderPocRecovery);
-  safe(renderPocHRV);
-  safe(renderPocLongRatio);
-  safe(renderPocPhase);
-  safe(renderPocPaceReserve);
-  if (typeof renderBodyMetrics === 'function') safe(renderBodyMetrics);
-}

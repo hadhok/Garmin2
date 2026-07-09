@@ -80,11 +80,6 @@
         <span class="nav-label">Profil</span>
         <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
-      <button class="nav-item" data-view="poc" onclick="switchView('poc')">
-        <span class="nav-icon">🔬</span>
-        <span class="nav-label">Science</span>
-        <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
       <button class="nav-item" data-view="runalyze" onclick="switchView('runalyze')">
         <span class="nav-icon">🔗</span>
         <span class="nav-label">Runalyze</span>
@@ -673,6 +668,56 @@
           <div class="card" id="run-race-predictor"></div>
         </div>
 
+        <!-- Ratio longue sortie / volume (ex-Science) -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">Ratio Longue Sortie / Volume Hebdomadaire <button class="info-btn" onclick="event.stopPropagation();showInfoModal('longratio')" title="En savoir plus">i</button> <span class="chev">▾</span></div>
+        <div class="section-body" data-secondary>
+          <div class="card">
+            <div class="section-header" style="margin:0 0 12px">% de la longue sortie dans le volume total — 16 semaines</div>
+            <div id="poc-longratio-current"></div>
+            <div class="chart-wrap" style="height:180px"><canvas id="chart-poc-longratio"></canvas></div>
+          </div>
+          <div class="card" style="margin-top:0;font-size:12px;color:var(--muted);padding:12px 16px;line-height:1.7">
+            <b style="color:var(--text)">Méthodologie :</b> La sortie longue doit représenter 25–30% du volume hebdomadaire (km).
+            Au-dessus de 35% = charge asymétrique, risque de blessure. En-dessous de 20% = manque de stimulus aérobie long.
+            Référence : Daniels & Gilbert — <i>Oxygen Power</i> (1979).
+          </div>
+        </div>
+
+        <!-- Détection de phase d'entraînement (ex-Science) -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">Détection Automatique de Phase <button class="info-btn" onclick="event.stopPropagation();showInfoModal('phase')" title="En savoir plus">i</button> <span class="chev">▾</span></div>
+        <div class="section-body" data-secondary>
+          <div class="card">
+            <div class="section-header" style="margin:0 0 12px">Phase détectée — 24 semaines</div>
+            <div id="poc-phase-current"></div>
+            <div id="poc-phase-timeline"></div>
+          </div>
+          <div class="card" style="margin-top:0;font-size:12px;color:var(--muted);padding:12px 16px;line-height:1.7">
+            <b style="color:var(--text)">Méthodologie :</b> Détection basée sur pente CTL (4 semaines), TSB, et ACWR.
+            Base : CTL↑ lent + TSB neutre · Build : CTL↑ fort + TSB négatif · Pic : CTL stable + TSB remonte ·
+            Récup : CTL↓ + TSB positif · Surcharge : ACWR &gt; 1.5 + TSB très négatif.
+          </div>
+        </div>
+
+        <!-- Pace Reserve (ex-Science) -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">Pace Reserve (RP) <button class="info-btn" onclick="event.stopPropagation();showInfoModal('pacereserve')" title="En savoir plus">i</button> <span class="chev">▾</span></div>
+        <div class="section-body" data-secondary>
+          <div class="health-grid">
+            <div class="card">
+              <div class="section-header" style="margin:0 0 12px">Marge allure actuelle vs seuil</div>
+              <div id="poc-pacereserve"></div>
+            </div>
+            <div class="card health-full">
+              <div class="section-header" style="margin:0 0 12px">Évolution RP — 12 semaines</div>
+              <div class="chart-wrap" style="height:180px"><canvas id="chart-poc-pacereserve"></canvas></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:0;font-size:12px;color:var(--muted);padding:12px 16px;line-height:1.7">
+            <b style="color:var(--text)">Méthodologie :</b> RP = (allure seuil − allure moyenne run) / allure seuil × 100.
+            RP &gt; 15% = sortie facile. 5–15% = tempo/seuil. &lt; 5% = sortie intense. Progression du RP à effort constant = gain de forme.
+            Référence : Renfree & Gibson (2013) <i>Sports Medicine</i>.
+          </div>
+        </div>
+
       </div><!-- /view-running -->
       </div><!-- /view-training -->
 
@@ -1185,70 +1230,6 @@
       ════════════════════════════════════════════════ -->
 
       <!-- ════════════════════════════════════════════════
-           VIEW : POC — sections 3-5 (dissolues dans Entraînement/Course)
-           Sections 0-2 déplacées dans view-recovery
-      ════════════════════════════════════════════════ -->
-      <div id="view-poc" class="view">
-
-        <!-- 3. Ratio longue sortie / volume -->
-        <div class="section-header collapsible" onclick="toggleSection(this)">
-          3. Ratio Longue Sortie / Volume Hebdomadaire <button class="info-btn" onclick="event.stopPropagation();showInfoModal('longratio')" title="En savoir plus">i</button> <span class="chev">▾</span>
-        </div>
-        <div class="section-body">
-          <div class="card">
-            <div class="section-header" style="margin:0 0 12px">% de la longue sortie dans le volume total — 16 semaines</div>
-            <div id="poc-longratio-current"></div>
-            <div class="chart-wrap" style="height:180px"><canvas id="chart-poc-longratio"></canvas></div>
-          </div>
-          <div class="card" style="margin-top:0;font-size:12px;color:var(--muted);padding:12px 16px;line-height:1.7">
-            <b style="color:var(--text)">Méthodologie :</b> La sortie longue doit représenter 25–30% du volume hebdomadaire (km).
-            Au-dessus de 35% = charge asymétrique, risque de blessure. En-dessous de 20% = manque de stimulus aérobie long.
-            Référence : Daniels & Gilbert — <i>Oxygen Power</i> (1979).
-          </div>
-        </div>
-
-        <!-- 4. Détection de phase d'entraînement -->
-        <div class="section-header collapsible" onclick="toggleSection(this)">
-          4. Détection Automatique de Phase <button class="info-btn" onclick="event.stopPropagation();showInfoModal('phase')" title="En savoir plus">i</button> <span class="chev">▾</span>
-        </div>
-        <div class="section-body">
-          <div class="card">
-            <div class="section-header" style="margin:0 0 12px">Phase détectée — 24 semaines</div>
-            <div id="poc-phase-current"></div>
-            <div id="poc-phase-timeline"></div>
-          </div>
-          <div class="card" style="margin-top:0;font-size:12px;color:var(--muted);padding:12px 16px;line-height:1.7">
-            <b style="color:var(--text)">Méthodologie :</b> Détection basée sur pente CTL (4 semaines), TSB, et ACWR.
-            Base : CTL↑ lent + TSB neutre · Build : CTL↑ fort + TSB négatif · Pic : CTL stable + TSB remonte ·
-            Récup : CTL↓ + TSB positif · Surcharge : ACWR &gt; 1.5 + TSB très négatif.
-          </div>
-        </div>
-
-        <!-- 5. Pace Reserve -->
-        <div class="section-header collapsible" onclick="toggleSection(this)">
-          5. Pace Reserve (RP) <button class="info-btn" onclick="event.stopPropagation();showInfoModal('pacereserve')" title="En savoir plus">i</button> <span class="chev">▾</span>
-        </div>
-        <div class="section-body">
-          <div class="health-grid">
-            <div class="card">
-              <div class="section-header" style="margin:0 0 12px">Marge allure actuelle vs seuil</div>
-              <div id="poc-pacereserve"></div>
-            </div>
-            <div class="card health-full">
-              <div class="section-header" style="margin:0 0 12px">Évolution RP — 12 semaines</div>
-              <div class="chart-wrap" style="height:180px"><canvas id="chart-poc-pacereserve"></canvas></div>
-            </div>
-          </div>
-          <div class="card" style="margin-top:0;font-size:12px;color:var(--muted);padding:12px 16px;line-height:1.7">
-            <b style="color:var(--text)">Méthodologie :</b> RP = (allure seuil − allure moyenne run) / allure seuil × 100.
-            RP &gt; 15% = sortie facile. 5–15% = tempo/seuil. &lt; 5% = sortie intense. Progression du RP à effort constant = gain de forme.
-            Référence : Renfree & Gibson (2013) <i>Sports Medicine</i>.
-          </div>
-        </div>
-
-      </div><!-- /view-poc -->
-
-      <!-- ════════════════════════════════════════════════
            VIEW : AIDE
       ════════════════════════════════════════════════ -->
       <div id="view-help" class="view"></div>
@@ -1359,10 +1340,6 @@
   <button class="more-menu-item" data-view="profile" onclick="switchViewFromMore('profile')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     Profil
-  </button>
-  <button class="more-menu-item" data-view="poc" onclick="switchViewFromMore('poc')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
-    Science
   </button>
   <button class="more-menu-item" data-view="runalyze" onclick="switchViewFromMore('runalyze')">
     <span style="font-size:16px;line-height:1">🎯</span>
