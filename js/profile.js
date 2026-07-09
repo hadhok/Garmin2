@@ -421,6 +421,7 @@ function renderProfile() {
   renderFormChart();
   renderVo2maxChart();
   renderBadges();
+  if (typeof renderRunalyzeCalibration === 'function') renderRunalyzeCalibration();
 }
 
 function setProfileGranularity(g, btn) {

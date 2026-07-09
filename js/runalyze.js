@@ -130,8 +130,3 @@ function resetRunalyzeCalibration() {
     setTimeout(() => statusEl.style.display = 'none', 3000);
   }
 }
-
-/* Appelé par le routage de vue (app.js) */
-function onSwitchToRunalyze() {
-  renderRunalyzeCalibration();
-}

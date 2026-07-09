@@ -943,6 +943,8 @@ function switchView(view, swipeDir) {
     view = 'training';
     state.trainingTab = 'running';
   }
+  /* "runalyze" a fusionné dans "profile" (section Paramètres). */
+  if (view === 'runalyze') view = 'profile';
   const prev = state.view;
   state.view = view;
 
@@ -970,7 +972,6 @@ function switchView(view, swipeDir) {
     recovery: 'Récupération',
     history:  'Historique',
     profile:  'Profil',
-    runalyze: 'Runalyze',
     /* legacy aliases */
     dashboard: 'Dashboard', activities: 'Activités', health: 'Santé',
     running: 'Running', help: 'Aide',
@@ -1166,7 +1167,7 @@ function _renderKey() {
 }
 
 function markAllDirty() {
-  ['today','training','recovery','history','profile','runalyze','running','help'].forEach(v => _viewDirty.add(v));
+  ['today','training','recovery','history','profile','running','help'].forEach(v => _viewDirty.add(v));
   _lastRenderKey = '';
 }
 
@@ -1199,7 +1200,6 @@ function renderAll() {
     return;
   }
   if (state.view === 'history')  { renderActivities(); return; }
-  if (state.view === 'runalyze') { if (typeof onSwitchToRunalyze === 'function') onSwitchToRunalyze(); return; }
   /* Aliases legacy */
   if (state.view === 'health')     { renderHealth();     return; }
   if (state.view === 'profile')    { renderProfile();    return; }

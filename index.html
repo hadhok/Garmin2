@@ -80,11 +80,6 @@
         <span class="nav-label">Profil</span>
         <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
-      <button class="nav-item" data-view="runalyze" onclick="switchView('runalyze')">
-        <span class="nav-icon">🔗</span>
-        <span class="nav-label">Runalyze</span>
-        <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
     </div>
 
     <div class="sidebar-footer">
@@ -1026,35 +1021,6 @@
       </div><!-- /view-recovery -->
 
       <!-- ════════════════════════════════════════════════
-           VIEW : RUNALYZE — CALIBRATION
-      ════════════════════════════════════════════════ -->
-      <div id="view-runalyze" class="view">
-        <div style="padding:16px">
-          <div class="section-header">🎯 Calibration Runalyze</div>
-
-          <div class="card" style="margin-bottom:16px">
-            <div style="font-size:12px;color:var(--muted);line-height:1.7">
-              L'API gratuite de Runalyze ne permet pas de lire les métriques calculées (écriture seule).
-              Les valeurs sont donc <strong>calculées localement</strong> puis calibrées sur celles de runalyze.com :
-              ouvre ton tableau de bord Runalyze, recopie les valeurs affichées ci-dessous, et enregistre.
-              Le facteur de correction (valeur Runalyze ÷ calcul local) est appliqué automatiquement
-              dans la section Calculations de l'onglet Course.
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="section-header" style="margin:0 0 12px;font-size:14px">Métriques</div>
-            <div id="rz-calibration"></div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
-              <button class="btn btn-primary" onclick="saveRunalyzeCalibration()" style="font-size:13px">💾 Enregistrer la calibration</button>
-              <button class="btn" onclick="resetRunalyzeCalibration()" style="font-size:13px">↺ Réinitialiser</button>
-            </div>
-            <div id="rz-status" style="display:none;font-size:12px;margin-top:8px;padding:8px;border-radius:4px;background:rgba(34,197,94,0.12);color:#16a34a"></div>
-          </div>
-        </div>
-      </div><!-- /view-runalyze -->
-
-      <!-- ════════════════════════════════════════════════
            VIEW : PROFIL
       ════════════════════════════════════════════════ -->
       <div id="view-profile" class="view">
@@ -1223,6 +1189,27 @@
           <div id="settings-saved" style="display:none;font-size:12px;color:#22c55e;margin-top:8px">✓ Paramètres enregistrés — les calculs sont mis à jour.</div>
         </div>
 
+        <!-- Calibration Runalyze (ex-onglet Runalyze) -->
+        <div class="section-header" style="margin-top:24px">🎯 Calibration Runalyze</div>
+        <div class="card" style="max-width:480px;margin-bottom:16px">
+          <div style="font-size:12px;color:var(--muted);line-height:1.7">
+            L'API gratuite de Runalyze ne permet pas de lire les métriques calculées (écriture seule).
+            Les valeurs sont donc <strong>calculées localement</strong> puis calibrées sur celles de runalyze.com :
+            ouvre ton tableau de bord Runalyze, recopie les valeurs affichées ci-dessous, et enregistre.
+            Le facteur de correction (valeur Runalyze ÷ calcul local) est appliqué automatiquement
+            dans la section Calculations de l'onglet Entraînement.
+          </div>
+        </div>
+        <div class="card" style="max-width:480px">
+          <div class="section-header" style="margin:0 0 12px;font-size:14px">Métriques</div>
+          <div id="rz-calibration"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
+            <button class="btn btn-primary" onclick="saveRunalyzeCalibration()" style="font-size:13px">💾 Enregistrer la calibration</button>
+            <button class="btn" onclick="resetRunalyzeCalibration()" style="font-size:13px">↺ Réinitialiser</button>
+          </div>
+          <div id="rz-status" style="display:none;font-size:12px;margin-top:8px;padding:8px;border-radius:4px;background:rgba(34,197,94,0.12);color:#16a34a"></div>
+        </div>
+
       </div><!-- /view-profile -->
 
       <!-- ════════════════════════════════════════════════
@@ -1340,10 +1327,6 @@
   <button class="more-menu-item" data-view="profile" onclick="switchViewFromMore('profile')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     Profil
-  </button>
-  <button class="more-menu-item" data-view="runalyze" onclick="switchViewFromMore('runalyze')">
-    <span style="font-size:16px;line-height:1">🎯</span>
-    Runalyze
   </button>
 </div>
 
