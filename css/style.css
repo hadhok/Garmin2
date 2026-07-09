@@ -533,6 +533,18 @@ body.loading main::before {
 }
 
 /* ── Sub-tab bar (Day/Week/Month/Year within Dashboard) ── */
+/* Sélecteur segmenté (Vue d'ensemble / Course à pied) — voir maquette de refonte */
+.seg-control {
+  display: flex; gap: 2px; background: var(--surface2); border-radius: 12px;
+  padding: 3px; width: fit-content; margin-bottom: 20px; max-width: 100%;
+}
+.seg-btn {
+  border: 0; background: transparent; padding: 9px 18px; border-radius: 9px;
+  font-family: inherit; font-size: 13px; font-weight: 700; color: var(--muted);
+  cursor: pointer; white-space: nowrap;
+}
+.seg-btn.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+
 .subtab-bar {
   display: flex;
   gap: 6px;

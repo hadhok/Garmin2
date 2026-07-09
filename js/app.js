@@ -54,7 +54,8 @@ window.fetch = (url, opts = {}) => {
 /* ── Application state ── */
 const state = {
   view:               'today',      // today | training | recovery | history | profile
-  tab:                'week',       // day | week | month | year | course (within training)
+  tab:                'week',       // day | week | month | year (within training, vue d'ensemble)
+  trainingTab:        'overview',   // overview | running — segment actif dans Entraînement
   offset:             0,
   filter:             'all',
   data:               null,
@@ -936,6 +937,12 @@ ${morningHtml ? `<div class="morning"><div class="morning-title">☀️ Résumé
 const TAB_ORDER = ['today', 'training', 'recovery', 'history', 'profile'];
 
 function switchView(view, swipeDir) {
+  /* "running" (Course) a fusionné dans "training" (Entraînement) — un lien
+     ou un appel historique vers 'running' redirige vers le bon segment. */
+  if (view === 'running') {
+    view = 'training';
+    state.trainingTab = 'running';
+  }
   const prev = state.view;
   state.view = view;
 
@@ -976,15 +983,21 @@ function switchView(view, swipeDir) {
 }
 
 function switchSubTab(tab) {
-  /* Sous-onglet course : switche vers la vue running SANS toucher
-     state.tab, sinon le retour sur Entraînement calcule sur l'année */
-  if (tab === 'course') {
-    switchView('running');
-    return;
-  }
   state.tab = tab;
   state.offset = 0;
   document.querySelectorAll('.subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  renderAll();
+}
+
+/* ── Segment Entraînement : Vue d'ensemble / Course à pied ── */
+function setTrainingTab(tab) {
+  state.trainingTab = tab;
+  document.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('on', b.dataset.seg === tab));
+  const overviewPanel = document.getElementById('training-overview-panel');
+  const runningPanel  = document.getElementById('view-running');
+  if (overviewPanel) overviewPanel.style.display = tab === 'overview' ? '' : 'none';
+  if (runningPanel)  runningPanel.style.display  = tab === 'running'  ? '' : 'none';
+  _lastRenderKey = ''; // force le rendu du segment nouvellement affiché
   renderAll();
 }
 
@@ -1150,7 +1163,7 @@ const _viewDirty = new Set();
 let   _lastRenderKey = '';
 
 function _renderKey() {
-  return `${state.view}|${state.tab}|${state.offset}|${state.filter}|${state.healthDays}`;
+  return `${state.view}|${state.tab}|${state.trainingTab}|${state.offset}|${state.filter}|${state.healthDays}`;
 }
 
 function markAllDirty() {
@@ -1166,7 +1179,11 @@ function renderAll() {
 
   /* Nouveaux noms de vue */
   if (state.view === 'today')    { renderToday();      return; }
-  if (state.view === 'training') { renderTraining();   return; }
+  if (state.view === 'training') {
+    if (state.trainingTab === 'running') { if (typeof renderRunning === 'function') renderRunning(); }
+    else { renderTraining(); }
+    return;
+  }
   if (state.view === 'recovery') {
     renderHealth();
     if (typeof renderPocSynthesis === 'function') { try { renderPocSynthesis(); } catch(e) { console.warn('[recovery] poc synthesis', e); } }
