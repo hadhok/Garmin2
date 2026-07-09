@@ -2180,9 +2180,15 @@ body.loading main::before {
    RUNNING VIEW — mini-nav + sections avancées
    ══════════════════════════════════════════════════════════ */
 
-/* Sections secondaires cachées par défaut */
-#view-running:not(.run-advanced) .section-body[data-secondary] { display: none; }
-#view-running:not(.run-advanced) .section-header:has(+ .section-body[data-secondary]) { display: none; }
+/* Sections secondaires ("Analyses avancées") : repliées par défaut sur mobile
+   (bouton "+ Avancé"), toujours visibles sur grand écran — pas de geste caché. */
+@media (max-width: 768px) {
+  #view-running:not(.run-advanced) .section-body[data-secondary] { display: none; }
+  #view-running:not(.run-advanced) .section-header:has(+ .section-body[data-secondary]) { display: none; }
+}
+@media (min-width: 769px) {
+  #btn-run-advanced { display: none; }
+}
 
 /* Mini-nav horizontale sticky */
 .run-mini-nav {
