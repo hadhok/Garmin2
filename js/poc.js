@@ -190,6 +190,11 @@ function renderPocSynthesis() {
    1. SCORE DE RÉCUPÉRATION COMPOSITE
    HRV 30% - FC repos 25% - Body Battery 25% - Sommeil 20%
    Ref : Plews et al. (2013) IJSPP
+   Formule canonique : computeRecoveryScoreDay() (app.js) — c'est la même
+   fonction que celle utilisée par le hero "Aujourd'hui" et le rapport
+   exporté, pour ne plus jamais avoir deux scores différents pour le même
+   jour. Fenêtre de 28 jours glissante propre à chaque point du graphique
+   (pas une baseline unique pour toute la période).
    ────────────────────────────────────────────────────────── */
 function renderPocRecovery() {
   const el    = document.getElementById('poc-recovery-score');
@@ -201,61 +206,14 @@ function renderPocRecovery() {
 
   if (days.length < 7) { el.innerHTML = '<div class="empty">Données insuffisantes (min 7 jours)</div>'; return; }
 
-  /* baseline 28j pour chaque composante */
-  const last28 = days.slice(-28);
-  function avg(arr, fn) {
-    const vals = arr.map(fn).filter(v => v != null && !isNaN(v));
-    return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
-  }
-  function std(arr, fn, mean) {
-    const vals = arr.map(fn).filter(v => v != null && !isNaN(v));
-    if (!vals.length || mean == null) return 1;
-    return Math.sqrt(vals.reduce((s, v) => s + (v - mean) ** 2, 0) / vals.length) || 1;
-  }
-
-  /* hrv_overnight_avg / sleep_total_min : vrais noms de champs (Garmin, via
-     sync.py). hrv_rmssd/hrv_weekly_avg/sleep_duration_h n'existent dans
-     aucune donnée réelle — ces composantes (30% + 20%) étaient donc
-     toujours ignorées silencieusement. */
-  const sleepH = d => d.sleep_total_min ? d.sleep_total_min / 60 : null;
-  const b28 = {
-    hrv:     avg(last28, d => d.hrv_overnight_avg),
-    hr_rest: avg(last28, d => d.resting_hr),
-    bb:      avg(last28, d => d.body_battery_high),
-    sleep:   avg(last28, sleepH),
-  };
-
-  /* Score normalisé 0–100 par jour */
-  function scoreDay(d) {
-    const scores = [];
-    const dSleepH = sleepH(d);
-
-    if (b28.hrv != null && d.hrv_overnight_avg != null) {
-      // HRV: plus élevé = mieux, normalise autour de baseline
-      const s = Math.min(100, Math.max(0, 50 + (d.hrv_overnight_avg - b28.hrv) / b28.hrv * 150));
-      scores.push({ s, w: 0.30 });
-    }
-    if (b28.hr_rest != null && d.resting_hr != null) {
-      // FC repos: plus bas = mieux, inverse
-      const s = Math.min(100, Math.max(0, 50 - (d.resting_hr - b28.hr_rest) / b28.hr_rest * 150));
-      scores.push({ s, w: 0.25 });
-    }
-    if (d.body_battery_high != null) {
-      scores.push({ s: d.body_battery_high, w: 0.25 });
-    }
-    if (dSleepH != null) {
-      // Cible 7.5h, ±1.5h = ±50 pts
-      const s = Math.min(100, Math.max(0, 50 + (dSleepH - 7.5) / 1.5 * 50));
-      scores.push({ s, w: 0.20 });
-    }
-
-    if (!scores.length) return null;
-    const totalW = scores.reduce((s, x) => s + x.w, 0);
-    return Math.round(scores.reduce((s, x) => s + x.s * x.w, 0) / totalW);
-  }
-
-  const scored = days.slice(-30).map(d => ({ date: d.date, score: scoreDay(d) })).filter(d => d.score != null);
+  const scored = days.slice(-30).map(d => {
+    const idx = days.indexOf(d);
+    const window28 = days.slice(Math.max(0, idx - 27), idx + 1);
+    return { date: d.date, score: computeRecoveryScoreDay(d, window28) };
+  }).filter(d => d.score != null);
   if (!scored.length) { el.innerHTML = '<div class="empty">Données HRV / FC repos manquantes</div>'; return; }
+
+  const last = days[days.length - 1];
 
   const today = scored[scored.length - 1];
   const score = today.score;
@@ -283,10 +241,10 @@ function renderPocRecovery() {
       <div style="font-size:12px;color:var(--muted);margin-top:4px">${reco}</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;font-size:12px">
-      ${b28.hrv     != null ? `<div style="background:var(--surface2);border-radius:8px;padding:8px 10px"><div style="color:var(--muted);font-size:10px">HRV base 28j</div><b>${b28.hrv.toFixed(1)} ms</b></div>` : ''}
-      ${b28.hr_rest != null ? `<div style="background:var(--surface2);border-radius:8px;padding:8px 10px"><div style="color:var(--muted);font-size:10px">FC repos base 28j</div><b>${b28.hr_rest.toFixed(0)} bpm</b></div>` : ''}
-      ${b28.bb      != null ? `<div style="background:var(--surface2);border-radius:8px;padding:8px 10px"><div style="color:var(--muted);font-size:10px">Body Battery base 28j</div><b>${b28.bb.toFixed(0)}%</b></div>` : ''}
-      ${b28.sleep   != null ? `<div style="background:var(--surface2);border-radius:8px;padding:8px 10px"><div style="color:var(--muted);font-size:10px">Sommeil base 28j</div><b>${b28.sleep.toFixed(1)}h</b></div>` : ''}
+      ${last.hrv_overnight_avg  != null ? `<div style="background:var(--surface2);border-radius:8px;padding:8px 10px"><div style="color:var(--muted);font-size:10px">HRV</div><b>${last.hrv_overnight_avg.toFixed(1)} ms</b></div>` : ''}
+      ${last.resting_hr         != null ? `<div style="background:var(--surface2);border-radius:8px;padding:8px 10px"><div style="color:var(--muted);font-size:10px">FC repos</div><b>${last.resting_hr.toFixed(0)} bpm</b></div>` : ''}
+      ${last.body_battery_high  != null ? `<div style="background:var(--surface2);border-radius:8px;padding:8px 10px"><div style="color:var(--muted);font-size:10px">Body Battery</div><b>${last.body_battery_high.toFixed(0)}%</b></div>` : ''}
+      ${last.sleep_total_min    ? `<div style="background:var(--surface2);border-radius:8px;padding:8px 10px"><div style="color:var(--muted);font-size:10px">Sommeil</div><b>${(last.sleep_total_min/60).toFixed(1)}h</b></div>` : ''}
     </div>`;
 
   mkChart('chart-poc-recovery', {

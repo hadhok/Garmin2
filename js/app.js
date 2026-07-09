@@ -1070,6 +1070,9 @@ function renderTodayHero() {
     const bbColor = bb >= 70 ? '#22c55e' : bb >= 40 ? '#f59e0b' : '#ef4444';
     pills.push({ val: bb, unit: '%', lbl: 'Body Battery', color: bbColor });
   }
+  if (todayWell?.resting_hr != null) {
+    pills.push({ val: Math.round(todayWell.resting_hr), unit: ' bpm', lbl: 'FC repos', color: 'var(--text)' });
+  }
   if (dr.hrvDetail) {
     const hrvColor = dr.hrvSignal === 'green' ? '#22c55e' : dr.hrvSignal === 'red' ? '#ef4444' : '#f59e0b';
     pills.push({ val: dr.hrvDetail.r7, unit: 'ms', lbl: 'HRV 7j', color: hrvColor });

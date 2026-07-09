@@ -264,7 +264,6 @@ function renderDashboard() {
 
   if (state.tab === 'day') {
     renderKPIs('kpi-day', acts, prevActs);
-    renderDayBanner();
     renderDayWellnessKPIs();
     renderActivityCards('list-day', acts, 5);
     renderZones('zones-day', zones);
@@ -336,58 +335,8 @@ function _statusInfo(raw) {
   return _TRAINING_STATUS[key] || { label: raw, color: '#94a3b8' };
 }
 
-/* ── 1. Bandeau Forme du jour (Day view) ── */
-function renderDayBanner() {
-  const el = document.getElementById('dash-day-banner');
-  if (!el) return;
-
-  const day = _todayWellness();
-  const rec = (typeof computeRecoveryScore === 'function') ? computeRecoveryScore() : null;
-  if (!day && !rec) { el.style.display = 'none'; return; }
-
-  const score     = rec?.score ?? null;
-  const scoreColor = score != null ? (score >= 70 ? '#22c55e' : score >= 40 ? '#f59e0b' : '#ef4444') : '#94a3b8';
-  const scoreLabel = score != null ? (score >= 70 ? 'Bonne forme' : score >= 40 ? 'Correct' : 'Fatigue') : '';
-  const deg        = score != null ? Math.round((score / 100) * 360) : 0;
-
-  const status    = _statusInfo(day?.training_status);
-  const readiness = day?.training_readiness_score ?? null;
-
-  const stat = (label, val, unit='') => val != null
-    ? `<div style="text-align:center"><div style="font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px">${label}</div><div style="font-size:15px;font-weight:700;color:var(--text)">${val}<span style="font-size:10px;font-weight:400;color:var(--muted)"> ${unit}</span></div></div>`
-    : '';
-
-  const hrv = day?.hrv_overnight_avg ? Math.round(day.hrv_overnight_avg) : null;
-  const rhr = day?.resting_hr ? Math.round(day.resting_hr) : null;
-  const bb  = day?.body_battery_high ?? null;
-
-  el.style.display = '';
-  el.innerHTML = `
-    <div class="card" style="padding:14px 16px">
-      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-        ${score != null ? `
-        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
-          <div style="width:52px;height:52px;border-radius:50%;background:conic-gradient(${scoreColor} 0deg ${deg}deg,var(--surface2) ${deg}deg);display:flex;align-items:center;justify-content:center">
-            <div style="width:40px;height:40px;border-radius:50%;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center">
-              <span style="font-size:15px;font-weight:800;line-height:1;color:${scoreColor}">${score}</span>
-            </div>
-          </div>
-          <div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)">Récupération</div><div style="font-size:12px;font-weight:700;color:${scoreColor}">${scoreLabel}</div></div>
-        </div>
-        <div style="width:1px;height:38px;background:var(--border);flex-shrink:0"></div>` : ''}
-        <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">
-          ${stat('HRV', hrv, 'ms')}
-          ${stat('FC repos', rhr, 'bpm')}
-          ${stat('Body Bat.', bb != null ? Math.round(bb) : null, '%')}
-          ${readiness != null ? stat('Readiness', Math.round(readiness), '') : ''}
-        </div>
-        ${status ? `
-        <div style="margin-left:auto;flex-shrink:0">
-          <span style="padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;background:${status.color}20;color:${status.color}">${status.label}</span>
-        </div>` : ''}
-      </div>
-    </div>`;
-}
+/* Bandeau "Forme du jour" retiré : doublonnait le score de récupération
+   déjà affiché dans le hero #today-hero (app.js) sur ce même onglet. */
 
 /* ── 2. KPIs wellness du jour : Pas, Cal. actives, Sommeil ── */
 function renderDayWellnessKPIs() {

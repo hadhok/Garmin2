@@ -33,75 +33,6 @@ function hlabels(days) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   RECOVERY SCORE
-   ══════════════════════════════════════════════════════════ */
-function computeRecoveryScore() {
-  if (!state.wellness?.days) return null;
-  const days = Object.values(state.wellness.days).sort((a,b) => a.date.localeCompare(b.date));
-  if (!days.length) return null;
-
-  const todayIso = localIso(TODAY);
-  const yesterday = new Date(TODAY); yesterday.setDate(yesterday.getDate()-1);
-  const yesterdayIso = localIso(yesterday);
-  let dayData = state.wellness.days[todayIso] || state.wellness.days[yesterdayIso];
-  if (!dayData) return null;
-
-  const last30  = days.slice(-30);
-  const avgHRV  = avg(last30,'hrv_overnight_avg');
-  const avgRHR  = avg(last30,'resting_hr');
-
-  let score = 50;
-  const hrv = dayData.hrv_overnight_avg;
-  if (hrv && avgHRV) score += Math.max(-25, Math.min(25, ((hrv - avgHRV) / avgHRV) * 100));
-  const rhr = dayData.resting_hr;
-  if (rhr && avgRHR) score += Math.max(-20, Math.min(20, ((avgRHR - rhr) / avgRHR) * 100));
-  const bb = dayData.body_battery_high;
-  if (bb != null) score += Math.max(-25, Math.min(25, (bb - 50) * 0.5));
-
-  score = Math.max(0, Math.min(100, Math.round(score)));
-  return { score, hrv: hrv||null, rhr: rhr||null, bb: bb||null, date: dayData.date };
-}
-
-function renderRecoveryCard() {
-  const rec     = computeRecoveryScore();
-  const section = document.getElementById('recovery-section');
-  if (!rec) { if (section) section.style.display = 'none'; return; }
-  if (section) section.style.display = '';
-
-  const color  = rec.score >= 70 ? '#22c55e' : rec.score >= 40 ? '#f59e0b' : '#ef4444';
-  const deg    = Math.round((rec.score / 100) * 360);
-  const last30 = state.wellness?.days
-    ? Object.values(state.wellness.days).sort((a,b)=>a.date.localeCompare(b.date)).slice(-30)
-    : [];
-  const avgHRV  = avg(last30,'hrv_overnight_avg') || 1;
-  const avgRHR2 = avg(last30,'resting_hr') || 1;
-  const hrvPct  = rec.hrv ? Math.min(100, Math.round((rec.hrv / (avgHRV * 1.5)) * 100)) : 0;
-  const rhrPct  = rec.rhr ? Math.min(100, Math.round(((avgRHR2 * 1.2 - rec.rhr) / (avgRHR2 * 0.4)) * 100)) : 0;
-  const bbPct   = rec.bb  ? rec.bb : 0;
-
-  const bar = (label, pct, color, val) => `
-    <div class="rfactor">
-      <span style="min-width:76px;color:var(--muted);font-size:11px">${label}</span>
-      <div class="rfactor-bg"><div class="rfactor-fill" style="width:${Math.max(0,Math.min(100,pct))}%;background:${color}"></div></div>
-      <span class="rfactor-val">${val}</span>
-    </div>`;
-
-  document.getElementById('recovery-card-inner').innerHTML = `
-    <div class="recovery-ring" style="background:conic-gradient(${color} 0deg ${deg}deg, var(--surface2) ${deg}deg 360deg)">
-      <div class="recovery-inner">
-        <div class="recovery-val" style="color:${color}">${rec.score}</div>
-        <div class="recovery-lbl">Score</div>
-      </div>
-    </div>
-    <div class="rfactors">
-      <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text)">Récupération du jour</div>
-      ${bar('HRV nocturne', hrvPct, '#7c3aed', rec.hrv ? Math.round(rec.hrv)+' ms' : '–')}
-      ${bar('FC repos',     rhrPct, '#ef4444', rec.rhr ? Math.round(rec.rhr)+' bpm' : '–')}
-      ${bar('Body Battery', bbPct,  '#22c55e', rec.bb  != null ? Math.round(rec.bb) : '–')}
-    </div>`;
-}
-
-/* ══════════════════════════════════════════════════════════
    SLEEP SCORE
    Priorité : score officiel Garmin (sleep_score) récupéré via API.
    Fallback : calcul maison si le champ est absent (historique sans resync).
@@ -572,7 +503,9 @@ function renderReadinessChart(days) {
    MAIN RENDER
    ══════════════════════════════════════════════════════════ */
 function renderHealth() {
-  renderRecoveryCard();
+  /* Score de récupération : affiché une seule fois par onglet, via
+     renderPocRecovery() (poc.js) plus haut dans la vue Récupération —
+     évite d'avoir deux chiffres différents pour "aujourd'hui". */
   const days = getWellnessDays();
   if (!days.length) {
     document.getElementById('kpi-health').innerHTML =
