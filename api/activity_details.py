@@ -267,42 +267,6 @@ class handler(BaseHTTPRequestHandler):
                 synced = sum(1 for r in results if r.get('ok') and r.get('samples', 0) > 0)
                 self._reply(200, {'ok': True, 'synced': synced, 'total': len(to_fetch), 'results': results})
 
-            # ── Diagnostic : dump JSON brut Garmin (résumé + clés détail) ──────
-            # Temporaire — pour identifier les champs Garmin non exploités
-            # (ex: cadence rameur, puissance) avant de les ajouter à _METRIC_MAP.
-            elif body.get('action') == 'raw_dump':
-                activity_id = body.get('activity_id')
-                if not activity_id and body.get('type'):
-                    row = (sb.table('activities').select('id,date,name')
-                           .eq('type', body['type']).order('date', desc=True).limit(1).execute())
-                    if not row.data:
-                        self._reply(404, {'error': f"Aucune activité de type '{body['type']}' trouvée"})
-                        return
-                    activity_id = row.data[0]['id']
-
-                if not activity_id:
-                    self._reply(400, {'error': 'activity_id ou type requis'})
-                    return
-
-                client = _get_garmin_client(sb)
-                result = {'activity_id': int(activity_id)}
-                try:
-                    result['summary'] = client.get_activity(int(activity_id))
-                except Exception as e:
-                    result['summary_error'] = str(e)
-                try:
-                    detail = client.get_activity_details(int(activity_id))
-                    result['detail_metric_keys'] = [
-                        d.get('key') or d.get('metricsKey')
-                        for d in (detail.get('metricDescriptors') or [])
-                    ]
-                    raw_metrics = detail.get('activityDetailMetrics') or []
-                    result['detail_sample_point'] = raw_metrics[0] if raw_metrics else None
-                except Exception as e:
-                    result['detail_error'] = str(e)
-
-                self._reply(200, result)
-
             # ── Fetch une activité spécifique ─────────────────────────────────
             elif body.get('activity_id'):
                 activity_id = int(body['activity_id'])
