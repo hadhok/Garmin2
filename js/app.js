@@ -581,6 +581,100 @@ function computeDailyReco() {
 }
 
 /* ══════════════════════════════════════════════════════════
+   TRAINING READINESS (0–100) — algorithme maison, 6 facteurs
+   Inspiré du "Training Readiness" Garmin/Firstbeat, dont le score
+   natif n'est pas exposé par l'API publique (training_readiness_score
+   reste null pour la plupart des comptes). Reproduit la même logique
+   à deux niveaux de pression :
+     Pression aiguë (poids fort)     : sommeil de la nuit, récupération
+                                        restante, statut VRC
+     Pression chronique (poids modéré): charge aiguë (ACWR), historique
+                                        sommeil 3j, historique stress 3j
+   Poids : sommeil nuit 30% · récup. restante 20% · VRC 20% ·
+           charge aiguë 15% · sommeil 3j 8% · stress 3j 7%
+   Retourne null si aucune donnée wellness n'est disponible.
+   ══════════════════════════════════════════════════════════ */
+function computeTrainingReadiness() {
+  const well = state.wellness?.days;
+  if (!well) return null;
+  const wDays = Object.values(well).filter(d => d.date).sort((a,b) => a.date.localeCompare(b.date));
+  if (!wDays.length) return null;
+  const today = wDays[wDays.length - 1];
+  const factors = [];
+
+  /* 1. Sommeil de la nuit dernière (30%) — score officiel Garmin si dispo,
+     sinon estimation depuis la durée (7.5h = référence). */
+  let sleepScore = today.sleep_score;
+  if (sleepScore == null && today.sleep_total_min) {
+    sleepScore = Math.round(Math.min(100, Math.max(0, 50 + (today.sleep_total_min / 60 - 7.5) / 1.5 * 50)));
+  }
+  if (sleepScore != null) {
+    factors.push({ key: 'sleep_last_night', label: 'Sommeil (nuit)', score: sleepScore, weight: 0.30, val: `${sleepScore}/100` });
+  }
+
+  /* 2. Temps de récupération restant (20%) — Garmin ne publie pas ce
+     compteur (propriétaire Firstbeat) : on l'approxime depuis les séances
+     des dernières 72h, 1 pt de training_load ≈ 9 min de récup (plafond 48h). */
+  const acts = getAll();
+  const nowMs = Date.now();
+  let maxRemainingH = 0;
+  acts.forEach(a => {
+    if (!a.start_time || !a.training_load) return;
+    const endMs = new Date(a.start_time.replace(' ', 'T')).getTime() + (a.duration_min || 0) * 60000;
+    const hoursSince = (nowMs - endMs) / 3600000;
+    if (isNaN(hoursSince) || hoursSince < 0 || hoursSince > 72) return;
+    const neededH = Math.min(48, a.training_load * 0.15);
+    const remainH = Math.max(0, neededH - hoursSince);
+    if (remainH > maxRemainingH) maxRemainingH = remainH;
+  });
+  const recoveryTimeScore = Math.round(Math.max(0, 100 - (maxRemainingH / 48) * 100));
+  factors.push({
+    key: 'recovery_time', label: 'Récupération restante', score: recoveryTimeScore, weight: 0.20,
+    val: maxRemainingH > 0.5 ? `~${Math.round(maxRemainingH)}h restantes` : 'Récupéré',
+  });
+
+  /* 3. Statut VRC (20%) — délègue à computeDailyReco() pour la même
+     baseline HRV 28j que le reste de l'app (une seule source de vérité). */
+  const dr = computeDailyReco();
+  if (dr.hrvDetail) {
+    const hrvScore = dr.hrvSignal === 'green' ? 85 : dr.hrvSignal === 'red' ? 25 : 55;
+    const hrvLabel = { green: 'Équilibré', red: 'Bas', orange: 'Normal' }[dr.hrvSignal] || '–';
+    factors.push({ key: 'hrv_status', label: 'Statut VRC', score: hrvScore, weight: 0.20, val: `${hrvLabel} (${dr.hrvDetail.r7} ms)` });
+  } else if (today.hrv_status) {
+    const map = { BALANCED: 85, UNBALANCED: 40, LOW: 20 };
+    factors.push({ key: 'hrv_status', label: 'Statut VRC', score: map[today.hrv_status] ?? 55, weight: 0.20, val: today.hrv_status });
+  }
+
+  /* 4. Charge aiguë / ACWR (15%) — zone optimale neutre, hors zone pénalisant. */
+  if (dr.acwrVal != null) {
+    const a = dr.acwrVal;
+    const loadScore = a <= 1.3 ? 80 : a <= 1.5 ? 55 : a <= 1.8 ? 30 : 15;
+    factors.push({ key: 'acute_load', label: 'Charge aiguë (ACWR)', score: loadScore, weight: 0.15, val: `${a}` });
+  }
+
+  /* 5. Historique sommeil 3j (8%) — dette cumulée vs 7.5h/nuit de référence. */
+  const last3 = wDays.slice(-3).filter(d => d.sleep_total_min != null);
+  if (last3.length) {
+    const avgH = last3.reduce((s, d) => s + d.sleep_total_min, 0) / last3.length / 60;
+    const s3 = Math.round(Math.min(100, Math.max(0, 50 + (avgH - 7.5) / 1.5 * 50)));
+    factors.push({ key: 'sleep_3d', label: 'Sommeil (3j)', score: s3, weight: 0.08, val: `${avgH.toFixed(1)}h/nuit moy.` });
+  }
+
+  /* 6. Historique stress 3j (7%) — stress_avg Garmin (0–100, bas = mieux). */
+  const last3s = wDays.slice(-3).filter(d => d.stress_avg != null);
+  if (last3s.length) {
+    const avgStress = last3s.reduce((s, d) => s + d.stress_avg, 0) / last3s.length;
+    const s6 = Math.round(Math.min(100, Math.max(0, 100 - avgStress)));
+    factors.push({ key: 'stress_3d', label: 'Stress (3j)', score: s6, weight: 0.07, val: `${Math.round(avgStress)}/100` });
+  }
+
+  if (!factors.length) return null;
+  const totalW = factors.reduce((s, f) => s + f.weight, 0);
+  const score = Math.round(factors.reduce((s, f) => s + f.score * f.weight, 0) / totalW);
+  return { score, factors };
+}
+
+/* ══════════════════════════════════════════════════════════
    KPI COMPUTATION
    ══════════════════════════════════════════════════════════ */
 function computeKPIs(acts) {
@@ -1109,6 +1203,9 @@ function renderTodayHero() {
 /* ── Wrappers pour la nouvelle navigation ── */
 function renderToday() {
   renderTodayHero();
+  if (typeof renderTrainingReadiness === 'function') {
+    try { renderTrainingReadiness(); } catch (e) { console.warn('[today] training readiness', e); }
+  }
   /* Forcé en mode "day" pour la vue Aujourd'hui */
   const savedTab = state.tab;
   state.tab = 'day';

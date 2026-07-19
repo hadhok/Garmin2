@@ -71,6 +71,15 @@ const INFO_CONTENT = {
       { color: '#ef4444', label: 'Masse grasse > 28%',   desc: 'Élevée — impact sur performance' },
     ]
   },
+  'training-readiness': {
+    title: 'Training Readiness',
+    text: 'Score 0–100 recalculé en continu, inspiré de l\'algorithme Garmin/Firstbeat (non exposé par l\'API publique — recalculé ici à partir des mêmes données synchronisées). Combine 6 facteurs : sommeil de la nuit (30%), récupération restante (20%), statut VRC (20%), charge aiguë/ACWR (15%), historique sommeil 3j (8%), historique stress 3j (7%). Les 3 premiers pèsent la pression aiguë immédiate, les 3 derniers la fatigue accumulée. Une séance intense fait chuter le score aussitôt enregistrée ; il remonte au fil des heures de repos.',
+    levels: [
+      { color: '#22c55e', label: '≥ 70 — Bonne préparation',        desc: 'Séance intense possible' },
+      { color: '#f97316', label: '40–69 — Préparation limitée',      desc: 'Endurance fondamentale conseillée' },
+      { color: '#ef4444', label: '< 40 — Récupération prioritaire', desc: 'Repos ou séance très légère' },
+    ]
+  },
 };
 
 function showInfoModal(key) {
@@ -183,6 +192,44 @@ function renderPocSynthesis() {
           hrvSignal === 'green' ? '↑ au-dessus baseline' : hrvSignal === 'red' ? '↓ sous baseline' : hrvSignal === 'orange' ? 'Zone normale' : 'Données insuf.')}
       ${sigBadge('Score récupération', recovScore !== null ? recovScore + '/100' : '–', recovColor,
           recovScore !== null ? (recovScore >= 70 ? 'Bonne' : recovScore >= 40 ? 'Partielle' : 'Insuffisante') : 'Données insuf.')}
+    </div>`;
+}
+
+/* ──────────────────────────────────────────────────────────
+   TRAINING READINESS — écran Aujourd'hui
+   Formule canonique : computeTrainingReadiness() (app.js).
+   ────────────────────────────────────────────────────────── */
+function renderTrainingReadiness() {
+  const el = document.getElementById('training-readiness-card');
+  if (!el) return;
+  const tr = (typeof computeTrainingReadiness === 'function') ? computeTrainingReadiness() : null;
+  if (!tr) { el.style.display = 'none'; return; }
+  el.style.display = '';
+
+  const { score, factors } = tr;
+  const tier = score >= 70 ? { color: '#22c55e', bg: 'rgba(34,197,94,0.08)', label: 'Bonne préparation' }
+             : score >= 40 ? { color: '#f97316', bg: 'rgba(249,115,22,0.08)', label: 'Préparation limitée' }
+             : { color: '#ef4444', bg: 'rgba(239,68,68,0.08)', label: 'Récupération prioritaire' };
+
+  const factorCard = f => {
+    const c = f.score >= 70 ? '#22c55e' : f.score >= 40 ? '#f97316' : '#ef4444';
+    return `<div style="background:var(--surface2);border-left:3px solid ${c};border-radius:0 8px 8px 0;padding:8px 12px;font-size:12px">
+      <div style="color:var(--muted);font-size:10px;margin-bottom:2px">${f.label} <span style="opacity:.6">(${Math.round(f.weight * 100)}%)</span></div>
+      <div style="font-weight:700;color:${c}">${f.val}</div>
+    </div>`;
+  };
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Training Readiness</div>
+      <button class="info-btn" onclick="showInfoModal('training-readiness')" title="En savoir plus">i</button>
+    </div>
+    <div style="background:${tier.bg};border:2px solid ${tier.color};border-radius:14px;padding:14px 18px;margin-bottom:12px;display:flex;align-items:center;gap:16px">
+      <div style="font-size:32px;font-weight:800;color:${tier.color};min-width:56px;text-align:center">${score}</div>
+      <div style="font-size:14px;font-weight:700;color:${tier.color}">${tier.label}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px">
+      ${factors.map(factorCard).join('')}
     </div>`;
 }
 
