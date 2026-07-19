@@ -663,11 +663,36 @@ function computeTrainingReadiness() {
     factors.push({ key: 'hrv_status', label: 'Statut VRC', score: hrvScore, weight: 0.20, val: today.hrv_status });
   }
 
-  /* 4. Charge aiguë / ACWR (10%) — zone optimale neutre, hors zone pénalisant. */
-  if (dr.acwrVal != null) {
-    const a = dr.acwrVal;
-    const loadScore = a <= 1.3 ? 80 : a <= 1.5 ? 55 : a <= 1.8 ? 30 : 15;
-    factors.push({ key: 'acute_load', label: 'Charge aiguë (ACWR)', score: loadScore, weight: 0.10, val: `${a}` });
+  /* 4. Charge aiguë / ACWR (10%) — basé sur training_load (activityTrainingLoad
+     Garmin, dérivé de l'EPOC) plutôt que le TRIMP maison utilisé par
+     computeDailyReco(), pour rester sur la même métrique que Garmin calcule
+     réellement en interne. Fallback sur l'ACWR TRIMP si training_load est
+     insuffisamment renseigné sur la fenêtre récente (activités anciennes,
+     types sans charge calculée...). Zone optimale neutre, hors zone pénalisant. */
+  const loadByDay = {};
+  acts.forEach(a => {
+    if (!a.date || a.training_load == null) return;
+    loadByDay[a.date] = (loadByDay[a.date] || 0) + a.training_load;
+  });
+  const sumWindow = days => {
+    let sum = 0, has = false;
+    for (let i = 0; i < days; i++) {
+      const d = new Date(TODAY); d.setDate(d.getDate() - i);
+      const v = loadByDay[localIso(d)];
+      if (v != null) { sum += v; has = true; }
+    }
+    return { sum, has };
+  };
+  const acute7 = sumWindow(7), chronic28 = sumWindow(28);
+  let epocAcwr = null;
+  if (acute7.has && chronic28.sum > 0) {
+    const al = acute7.sum / 7, cl = chronic28.sum / 28;
+    if (cl > 0.5) epocAcwr = +(al / cl).toFixed(2);
+  }
+  const acwrVal = epocAcwr != null ? epocAcwr : dr.acwrVal;
+  if (acwrVal != null) {
+    const loadScore = acwrVal <= 1.3 ? 80 : acwrVal <= 1.5 ? 55 : acwrVal <= 1.8 ? 30 : 15;
+    factors.push({ key: 'acute_load', label: 'Charge aiguë (ACWR)', score: loadScore, weight: 0.10, val: `${acwrVal}` });
   }
 
   /* 5. Historique sommeil 3j (10%) — dette cumulée vs 7.5h/nuit de référence. */
