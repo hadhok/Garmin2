@@ -103,3 +103,8 @@ CREATE TABLE IF NOT EXISTS race_goal (
 );
 
 ALTER TABLE race_goal DISABLE ROW LEVEL SECURITY;
+
+-- ── Diagnostic temporaire : JSON brut Garmin d'une activité (rameur) ────
+-- À retirer une fois l'exploration des champs rameur terminée :
+--   ALTER TABLE activities DROP COLUMN IF EXISTS raw_debug;
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS raw_debug JSONB;

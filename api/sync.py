@@ -169,6 +169,19 @@ def _run_sync():
                 else:
                     raise
 
+    # ── Diagnostic ponctuel : capture le JSON brut Garmin de la dernière
+    # séance de rameur (une seule fois, tant que raw_debug est vide) pour
+    # identifier les champs non exploités (cadence rameur, puissance...).
+    try:
+        last_row = (sb.table('activities').select('id,raw_debug')
+                    .eq('type', 'rowing').order('date', desc=True).limit(1).execute())
+        if last_row.data and not last_row.data[0].get('raw_debug'):
+            rid = last_row.data[0]['id']
+            raw = client.get_activity(rid)
+            sb.table('activities').update({'raw_debug': raw}).eq('id', rid).execute()
+    except Exception:
+        pass  # colonne raw_debug absente ou activité indisponible → ignoré
+
     # ── Poids / composition corporelle : 90 derniers jours (1 seul appel) ──────
     today = now.date()
     weight_by_date = {}
