@@ -177,10 +177,15 @@ def _run_sync():
                     .eq('type', 'rowing').order('date', desc=True).limit(1).execute())
         if last_row.data and not last_row.data[0].get('raw_debug'):
             rid = last_row.data[0]['id']
-            raw = client.get_activity(rid)
-            sb.table('activities').update({'raw_debug': raw}).eq('id', rid).execute()
+            try:
+                raw = client.get_activity(rid)
+                sb.table('activities').update({'raw_debug': raw}).eq('id', rid).execute()
+            except Exception as e:
+                # Stocke l'erreur elle-même : visible au prochain export,
+                # au lieu d'échouer silencieusement sans aucune trace.
+                sb.table('activities').update({'raw_debug': {'_error': str(e)}}).eq('id', rid).execute()
     except Exception:
-        pass  # colonne raw_debug absente ou activité indisponible → ignoré
+        pass  # colonne raw_debug absente de la table → ignoré
 
     # ── Poids / composition corporelle : 90 derniers jours (1 seul appel) ──────
     today = now.date()
