@@ -120,6 +120,9 @@ def _normalize(raw):
         'vo2max':        raw.get('vO2MaxValue'),
         'avg_cadence':   int(raw.get('averageRunningCadenceInStepsPerMinute') or 0) if is_run else None,
         'hr_zones_pct':  hr_zones,
+        # Temps de récupération natif Garmin (minutes) — utilisé par le
+        # Training Readiness du dashboard au lieu d'une estimation maison.
+        'recovery_time_min': raw.get('recoveryTime'),
     }
 
 
@@ -157,14 +160,16 @@ def _run_sync():
     normalized = [_normalize(r) for r in raw_acts if r.get('activityId')]
 
     if normalized:
-        # Upsert par batch de 50 — fallback sans avg_cadence si colonne absente
+        # Upsert par batch de 50 — fallback sans colonnes optionnelles absentes
+        OPTIONAL_COLS = ('avg_cadence', 'recovery_time_min')
         for i in range(0, len(normalized), 50):
             batch = normalized[i:i+50]
             try:
                 sb.table('activities').upsert(batch).execute()
             except Exception as e:
-                if 'avg_cadence' in str(e):
-                    stripped = [{k: v for k, v in row.items() if k != 'avg_cadence'} for row in batch]
+                missing = [c for c in OPTIONAL_COLS if c in str(e)]
+                if missing:
+                    stripped = [{k: v for k, v in row.items() if k not in missing} for row in batch]
                     sb.table('activities').upsert(stripped).execute()
                 else:
                     raise

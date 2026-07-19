@@ -108,3 +108,7 @@ ALTER TABLE race_goal DISABLE ROW LEVEL SECURITY;
 -- À retirer une fois l'exploration des champs rameur terminée :
 --   ALTER TABLE activities DROP COLUMN IF EXISTS raw_debug;
 ALTER TABLE activities ADD COLUMN IF NOT EXISTS raw_debug JSONB;
+
+-- ── Temps de récupération natif Garmin (minutes), champ recoveryTime ────
+-- de l'activité — utilisé par le Training Readiness (écran Aujourd'hui).
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS recovery_time_min INTEGER;

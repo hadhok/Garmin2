@@ -196,6 +196,8 @@ def normalize(raw):
         'vo2max':          raw.get('vO2MaxValue'),
         # Zones cardio Z1–Z5 en %
         'hr_zones_pct':    hr_zones_pct,
+        # Temps de récupération natif Garmin (minutes)
+        'recovery_time_min': raw.get('recoveryTime'),
     }
 
 # ── Main ─────────────────────────────────────────────────────────────────────
