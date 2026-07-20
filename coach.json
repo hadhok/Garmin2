@@ -1,38 +1,38 @@
 {
-  "updated_at": "2026-07-19T10:35:08",
+  "updated_at": "2026-07-20T11:46:24",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "progression",
-    "fatigue_level": "balanced",
+    "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 50.4,
-    "atl": 42.2,
-    "tsb": 8.1,
-    "effort_idx": 1.52,
-    "body_battery": 75,
+    "ctl": 53.1,
+    "atl": 59.4,
+    "tsb": -6.4,
+    "effort_idx": 1.22,
+    "body_battery": 49,
     "training_readiness": null,
     "niveau": "Sportif",
-    "total_activites": 259,
-    "total_km": 643
+    "total_activites": 262,
+    "total_km": 646
   },
   "items": [
     {
-      "type": "tip",
-      "icon": "💪",
-      "title": "Productif",
-      "text": "Effort pondéré 7j : 1.5× (1.0 = charge de base, >2 = intense). TSB +8 pts (CTL 50.4 / ATL 42.2). • HRV 47.9 ms (-1 ms vs S-1) • Sommeil 7.5h/nuit • Body Battery : 75%"
+      "type": "warning",
+      "icon": "🟡",
+      "title": "Sous tension",
+      "text": "Effort pondéré 7j : 1.2× (1.0 = charge de base, >2 = intense). TSB -6 pts (CTL 53.1 / ATL 59.4). • HRV 47.9 ms (-2 ms vs S-1) • Sommeil 7.2h/nuit • Body Battery : 49%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "📊 manque de Zone 1-2 (37% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (33%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n🏃 Course : allure en progression (+0.3 min/km plus rapide)\n⚖️ Poids -1.4 kg — apport protéiné : 128g/j"
+      "text": "💤 Sommeil limite (7.2h) — vise 7h30 minimum\n📊 manque de Zone 1-2 (35% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (34%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (31%) — surveille la fatigue accumulée\n🏃 Course : allure en progression (+0.3 min/km plus rapide)\n⚖️ Poids -1.4 kg — apport protéiné : 128g/j"
     },
     {
       "type": "goal",
       "icon": "📋",
-      "title": "Prescription : Séance longue — Endurance fondamentale",
-      "text": "[Body Battery 75% · TSB +8] Bonne forme, mise sur le volume. 60-90 min à allure modérée. — Z2 — 65-75% FCmax"
+      "title": "Prescription : Séance modérée — Tempo",
+      "text": "Hier : Récupération (rowing). [Body Battery 49% · TSB -6] Forme correcte. 50 min : 10 min Z2 + 25 min tempo + 15 min retour au calme. — Z3 → Z4"
     }
   ]
 }
