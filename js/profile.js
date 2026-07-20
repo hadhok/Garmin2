@@ -326,6 +326,26 @@ function renderProfile() {
   const wLabel=PROFILE_WINDOW[state.profileGranularity];
   document.getElementById('profile-weekly-load').textContent=`~${Math.round(d.weeklyLoad)} pts / semaine${wLabel?` (${wLabel} mois)`:' (tout)'}`;
 
+  /* Fitness Age (Garmin) — dernier jour renseigné */
+  const faEl = document.getElementById('profile-fitness-age');
+  if (faEl) {
+    const wDays = Object.values(state.wellness?.days || {}).filter(w => w.date).sort((a,b) => b.date.localeCompare(a.date));
+    const withFA = wDays.find(w => w.fitness_age != null);
+    if (withFA) {
+      const delta = withFA.chronological_age != null ? +(withFA.chronological_age - withFA.fitness_age).toFixed(1) : null;
+      const deltaColor = delta == null ? 'var(--muted)' : delta > 0 ? '#22c55e' : delta < 0 ? '#ef4444' : 'var(--muted)';
+      const deltaTxt = delta == null ? '' : delta > 0 ? `${delta} an${delta >= 2 ? 's' : ''} de moins` : delta < 0 ? `${Math.abs(delta)} an${Math.abs(delta) >= 2 ? 's' : ''} de plus` : 'égal à l\'âge réel';
+      faEl.style.display = '';
+      faEl.innerHTML = `
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:6px">Âge de forme (Garmin)</div>
+        <div style="font-size:22px;font-weight:800;color:${deltaColor}">${withFA.fitness_age} <span style="font-size:11px;font-weight:400;color:var(--muted)">ans</span></div>
+        ${withFA.chronological_age != null ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">vs ${withFA.chronological_age} ans réels${deltaTxt ? ' — ' + deltaTxt : ''}</div>` : ''}
+      `;
+    } else {
+      faEl.style.display = 'none';
+    }
+  }
+
   /* Sports */
   document.getElementById('profile-sports-list').innerHTML=d.topTypes.map(t=>
     `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
