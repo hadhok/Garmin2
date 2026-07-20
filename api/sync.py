@@ -231,6 +231,7 @@ def _run_sync():
             wdata = weight_by_date.get(date_str, {})
             # Training status & readiness (jour courant seulement)
             tr_status = {}; tr_readiness = {}
+            feature_probe = None
             if i == 0:
                 try:
                     tr_status = client.get_training_status(date_str) or {}
@@ -239,6 +240,36 @@ def _run_sync():
                     print(f"[DEBUG] training_status error: {e}")
                 try: tr_readiness = client.get_training_readiness(date_str) or {}
                 except Exception: pass
+                # Diagnostic ponctuel : quelles métriques Garmin "nouvelle
+                # génération" (endurance/hill score, prédictions de course,
+                # fitness age, tolérance à la course) sont réellement
+                # disponibles pour ce compte/cette montre ? Résultats bruts
+                # rangés dans wellness_days.data (JSONB) — visibles au
+                # prochain export sans endpoint ni colonne supplémentaire.
+                # Ne relance les appels que si pas déjà capté (une seule fois).
+                already_probed = None
+                try:
+                    existing_today = sb.table('wellness_days').select('data').eq('date', date_str).limit(1).execute()
+                    if existing_today.data:
+                        already_probed = (existing_today.data[0].get('data') or {}).get('feature_probe')
+                except Exception:
+                    pass
+                if already_probed:
+                    feature_probe = already_probed
+                else:
+                    feature_probe = {}
+                    for name, fn in [
+                        ('endurance_score', lambda: client.get_endurance_score(date_str)),
+                        ('hill_score',      lambda: client.get_hill_score(date_str)),
+                        ('race_predictions',lambda: client.get_race_predictions()),
+                        ('fitness_age',     lambda: client.get_fitnessage_data(date_str)),
+                        ('running_tolerance', lambda: client.get_running_tolerance(
+                            (today - timedelta(days=28)).strftime('%Y-%m-%d'), date_str, 'daily')),
+                    ]:
+                        try:
+                            feature_probe[name] = fn()
+                        except Exception as e:
+                            feature_probe[name] = {'_error': str(e)}
             day = {
                 'date': date_str,
                 'sleep_total_min':        round((dto.get('sleepTimeSeconds') or 0) / 60),
@@ -278,6 +309,8 @@ def _run_sync():
                 'training_readiness_score': (tr_readiness.get('score')
                                              or tr_readiness.get('trainingReadinessScore')),
                 'training_readiness_level': tr_readiness.get('level'),
+                # ── Diagnostic temporaire (voir plus haut) ────────────────────
+                'feature_probe': feature_probe,
             }
             wellness_records.append({'date': date_str, 'data': day})
         except Exception:
