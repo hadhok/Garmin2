@@ -140,10 +140,13 @@ def _normalize_splits(splits_data: dict) -> list:
 
 # ── Fetch depuis Garmin + stockage ────────────────────────────────────────────
 def _fetch_and_store(activity_id: int, sb, client) -> dict:
-    # Vérifie si déjà en base
-    existing = sb.table('activity_details').select('activity_id').eq('activity_id', activity_id).limit(1).execute()
+    # Vérifie si déjà en base — renvoie les données existantes plutôt qu'un
+    # simple statut, pour que l'appelant (POST) ait le même contrat que le GET.
+    existing = sb.table('activity_details').select('*').eq('activity_id', activity_id).limit(1).execute()
     if existing.data:
-        return {'ok': True, 'activity_id': activity_id, 'status': 'already_stored'}
+        row = existing.data[0]
+        return {'ok': True, 'activity_id': activity_id, 'status': 'already_stored',
+                'samples': row.get('samples') or [], 'splits': row.get('splits') or []}
 
     # Récupère le type depuis activities
     act_row = sb.table('activities').select('type').eq('id', activity_id).limit(1).execute()
@@ -174,7 +177,7 @@ def _fetch_and_store(activity_id: int, sb, client) -> dict:
         'sample_rate_s': rate,
     }).execute()
 
-    return {'ok': True, 'activity_id': activity_id, 'samples': len(samples), 'splits': len(splits)}
+    return {'ok': True, 'activity_id': activity_id, 'samples': samples, 'splits': splits}
 
 
 def _get_garmin_client(sb):
@@ -262,9 +265,15 @@ class handler(BaseHTTPRequestHandler):
                 results = []
                 for act in to_fetch:
                     r = _fetch_and_store(act['id'], sb, client)
-                    results.append(r)
+                    # Résumé du backfill : compte les points plutôt que de
+                    # renvoyer les tableaux complets pour chaque activité.
+                    n_samples = len(r.get('samples') or [])
+                    n_splits  = len(r.get('splits') or [])
+                    trimmed = {k: v for k, v in r.items() if k not in ('samples', 'splits')}
+                    trimmed.update({'n_samples': n_samples, 'n_splits': n_splits})
+                    results.append(trimmed)
 
-                synced = sum(1 for r in results if r.get('ok') and r.get('samples', 0) > 0)
+                synced = sum(1 for r in results if r.get('ok') and r['n_samples'] > 0)
                 self._reply(200, {'ok': True, 'synced': synced, 'total': len(to_fetch), 'results': results})
 
             # ── Fetch une activité spécifique ─────────────────────────────────
