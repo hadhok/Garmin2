@@ -1,38 +1,38 @@
 {
-  "updated_at": "2026-07-21T11:09:48",
+  "updated_at": "2026-07-22T11:10:39",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "progression",
-    "fatigue_level": "tired",
+    "fatigue_level": "balanced",
     "garmin_status": null,
-    "ctl": 53.7,
-    "atl": 62.2,
-    "tsb": -8.5,
-    "effort_idx": 1.36,
-    "body_battery": 54,
+    "ctl": 52.5,
+    "atl": 53.8,
+    "tsb": -1.3,
+    "effort_idx": 1.45,
+    "body_battery": 91,
     "training_readiness": null,
     "niveau": "Sportif",
-    "total_activites": 263,
+    "total_activites": 264,
     "total_km": 650
   },
   "items": [
     {
-      "type": "warning",
-      "icon": "🟡",
-      "title": "Sous tension",
-      "text": "Effort pondéré 7j : 1.4× (1.0 = charge de base, >2 = intense). TSB -8 pts (CTL 53.7 / ATL 62.2). • HRV 50.4 ms (+4 ms vs S-1) • Sommeil 7.7h/nuit • Body Battery : 54%"
+      "type": "tip",
+      "icon": "💪",
+      "title": "Productif",
+      "text": "Effort pondéré 7j : 1.4× (1.0 = charge de base, >2 = intense). TSB -1 pts (CTL 52.5 / ATL 53.8). • HRV 51.0 ms (+6 ms vs S-1) • Sommeil 7.6h/nuit • Body Battery : 91%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "📊 manque de Zone 1-2 (33% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (33%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (33%) — surveille la fatigue accumulée\n🏃 Course : allure en progression (+0.5 min/km plus rapide)\n⚖️ Poids -1.1 kg — apport protéiné : 128g/j"
+      "text": "📊 manque de Zone 1-2 (34% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (33%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (33%) — surveille la fatigue accumulée\n🏃 Course : allure en progression (+0.5 min/km plus rapide)\n⚖️ Poids -1.6 kg — apport protéiné : 127g/j"
     },
     {
       "type": "goal",
       "icon": "📋",
-      "title": "Prescription : Séance modérée — Tempo",
-      "text": "Hier : Aerobic Base (bike). [Body Battery 54% · TSB -8] Forme correcte. 50 min : 10 min Z2 + 25 min tempo + 15 min retour au calme. — Z3 → Z4"
+      "title": "Prescription : Séance légère — Zone 2",
+      "text": "Hier : Tempo (run). [Body Battery 91% · TSB -1] Fatigue accumulée malgré une BB correcte. 45-60 min à allure conversationnelle. (note : perte de poids rapide — veille à l'apport calorique autour de la séance) — Z2 — 60-70% FCmax"
     }
   ]
 }
