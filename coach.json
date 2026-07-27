@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-07-26T10:45:10",
+  "updated_at": "2026-07-27T12:24:48",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "maintien",
     "fatigue_level": "balanced",
     "garmin_status": null,
-    "ctl": 50.0,
-    "atl": 39.7,
-    "tsb": 10.2,
-    "effort_idx": 1.16,
-    "body_battery": 16,
+    "ctl": 48.8,
+    "atl": 34.1,
+    "tsb": 14.7,
+    "effort_idx": 1.25,
+    "body_battery": 62,
     "training_readiness": null,
     "niveau": "Sportif",
     "total_activites": 265,
@@ -20,19 +20,19 @@
       "type": "tip",
       "icon": "🟢",
       "title": "En maintien",
-      "text": "Effort pondéré 7j : 1.2× (1.0 = charge de base, >2 = intense). TSB +10 pts (CTL 50.0 / ATL 39.7). • HRV 47.4 ms (+0 ms vs S-1) • Sommeil 6.7h/nuit • Body Battery : 16%"
+      "text": "Effort pondéré 7j : 1.2× (1.0 = charge de base, >2 = intense). TSB +15 pts (CTL 48.8 / ATL 34.1). • HRV 47.4 ms (-1 ms vs S-1) • Sommeil 6.8h/nuit • Body Battery : 62%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "💤 Sommeil limite (6.7h) — vise 7h30 minimum\n📊 manque de Zone 1-2 (31% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (52%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n🏃 Course : allure en progression (+1.1 min/km plus rapide)\n⚖️ Poids -1.6 kg — apport protéiné : 127g/j"
+      "text": "💤 Sommeil limite (6.8h) — vise 7h30 minimum\n📊 manque de Zone 1-2 (31% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (52%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n🏃 Course : allure en progression (+1.1 min/km plus rapide)\n⚖️ Poids -1.6 kg — apport protéiné : 127g/j"
     },
     {
       "type": "goal",
       "icon": "📋",
-      "title": "Prescription : Récupération active",
-      "text": "[Body Battery 16% · TSB +10] Réserves très basses. 20-30 min marche, mobilité ou yoga uniquement. (note : perte de poids rapide — veille à l'apport calorique autour de la séance) — Z1 — FC < 120 bpm"
+      "title": "Prescription : Séance longue — Endurance fondamentale",
+      "text": "[Body Battery 62% · TSB +15] Bonne forme, mise sur le volume. 60-90 min à allure modérée. (note : perte de poids rapide — veille à l'apport calorique autour de la séance) — Z2 — 65-75% FCmax"
     }
   ]
 }
