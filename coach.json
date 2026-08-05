@@ -1,38 +1,38 @@
 {
-  "updated_at": "2026-08-04T11:23:47",
+  "updated_at": "2026-08-05T11:21:29",
   "coach": "Claude",
   "stats_snapshot": {
-    "phase": "progression",
-    "fatigue_level": "balanced",
+    "phase": "vigilance",
+    "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 47.9,
-    "atl": 48.0,
-    "tsb": -0.1,
-    "effort_idx": 1.53,
-    "body_battery": 56,
+    "ctl": 53.8,
+    "atl": 83.6,
+    "tsb": -29.7,
+    "effort_idx": 1.28,
+    "body_battery": 29,
     "training_readiness": null,
     "niveau": "Sportif",
-    "total_activites": 268,
+    "total_activites": 269,
     "total_km": 673
   },
   "items": [
     {
-      "type": "tip",
-      "icon": "💪",
-      "title": "Productif",
-      "text": "Effort pondéré 7j : 1.5× (1.0 = charge de base, >2 = intense). TSB -0 pts (CTL 47.9 / ATL 48.0). • HRV 45.7 ms (-2 ms vs S-1) • Sommeil 8.3h/nuit • Body Battery : 56%"
+      "type": "warning",
+      "icon": "🟡",
+      "title": "Sous tension",
+      "text": "Effort pondéré 7j : 1.3× (1.0 = charge de base, >2 = intense). TSB -30 pts (CTL 53.8 / ATL 83.6). • HRV 42.2 ms (-6 ms vs S-1) • Sommeil 8.2h/nuit • Body Battery : 29%"
     },
     {
-      "type": "tip",
+      "type": "warning",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "📊 manque de Zone 1-2 (30% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (30%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (41%) — surveille la fatigue accumulée\n🏃 Course : allure en progression (+0.9 min/km plus rapide)\n⚖️ Poids -3.5 kg — apport protéiné : 124g/j"
+      "text": "📊 manque de Zone 1-2 (5% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (40%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (55%) — surveille la fatigue accumulée\n📈 Charge semaine +74% au-dessus de la moyenne — risque de surcharge\n🏃 Course : allure en progression (+0.9 min/km plus rapide)\n⚖️ Poids -1.7 kg — apport protéiné : 127g/j"
     },
     {
       "type": "goal",
       "icon": "📋",
-      "title": "Prescription : Séance légère — Zone 2",
-      "text": "Hier : Tempo (run). [Body Battery 56% · TSB -0] Fatigue accumulée malgré une BB correcte. 45-60 min à allure conversationnelle. (note : perte de poids rapide — veille à l'apport calorique autour de la séance) — Z2 — 60-70% FCmax"
+      "title": "Prescription : Récupération active",
+      "text": "Hier : Tempo (run). [Body Battery 29% · TSB -30] Réserves très basses. 20-30 min marche, mobilité ou yoga uniquement. (note : perte de poids rapide — veille à l'apport calorique autour de la séance) — Z1 — FC < 120 bpm"
     }
   ]
 }
