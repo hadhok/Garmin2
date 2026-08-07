@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-08-06T11:23:23",
+  "updated_at": "2026-08-07T10:02:08",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "vigilance",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 52.6,
-    "atl": 72.0,
-    "tsb": -19.4,
+    "ctl": 51.4,
+    "atl": 61.7,
+    "tsb": -10.3,
     "effort_idx": 1.28,
-    "body_battery": 56,
+    "body_battery": 96,
     "training_readiness": null,
     "niveau": "Sportif",
     "total_activites": 270,
@@ -20,19 +20,19 @@
       "type": "warning",
       "icon": "🟡",
       "title": "Sous tension",
-      "text": "Effort pondéré 7j : 1.3× (1.0 = charge de base, >2 = intense). TSB -19 pts (CTL 52.6 / ATL 72.0). • HRV 40.8 ms (-6 ms vs S-1) • Sommeil 8.3h/nuit • Body Battery : 56%"
+      "text": "Effort pondéré 7j : 1.3× (1.0 = charge de base, >2 = intense). TSB -10 pts (CTL 51.4 / ATL 61.7). • HRV 41.7 ms (-6 ms vs S-1) • Sommeil 8.8h/nuit • Body Battery : 96%"
     },
     {
       "type": "warning",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "📊 manque de Zone 1-2 (25% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (31%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (44%) — surveille la fatigue accumulée\n📈 Charge semaine +88% au-dessus de la moyenne — risque de surcharge\n🏃 Course : allure en progression (+0.9 min/km plus rapide)\n⚖️ Poids -1.4 kg — apport protéiné : 128g/j"
+      "text": "📊 manque de Zone 1-2 (25% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (31%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (44%) — surveille la fatigue accumulée\n📈 Charge semaine +88% au-dessus de la moyenne — risque de surcharge\n🏃 Course : allure en progression (+0.8 min/km plus rapide)\n⚖️ Poids -1.3 kg — apport protéiné : 128g/j"
     },
     {
       "type": "goal",
       "icon": "📋",
-      "title": "Prescription : Séance modérée — Tempo",
-      "text": "Hier : Lactate Threshold (hiit). [Body Battery 56% · TSB -19] Forme correcte. 50 min : 10 min Z2 + 25 min tempo + 15 min retour au calme. — Z3 → Z4"
+      "title": "Prescription : Séance longue — Endurance fondamentale",
+      "text": "Hier : Unknown (pilates). [Body Battery 96% · TSB -10] Bonne forme, mise sur le volume. 60-90 min à allure modérée. — Z2 — 65-75% FCmax"
     }
   ]
 }
