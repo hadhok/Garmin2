@@ -525,6 +525,60 @@ function typeBadge(type, label) {
 }
 
 /* ══════════════════════════════════════════════════════════
+   RÉCUPÉRATION CARDIAQUE (HRR) — % + code couleur
+   ══════════════════════════════════════════════════════════ */
+function hrrPercentInfo(a) {
+  const day = state.wellness?.days?.[a.date];
+  const rhr = day?.resting_hr;
+  const peak = a.hr_max;
+  if (!rhr || !peak || peak <= rhr) return null;
+  const range = peak - rhr;
+  return {
+    pct60:  a.hrr_60s  != null ? Math.round(a.hrr_60s  / range * 100) : null,
+    pct120: a.hrr_120s != null ? Math.round(a.hrr_120s / range * 100) : null,
+  };
+}
+
+function hrrColor(pct) {
+  if (pct == null) return '#9ca3af';
+  if (pct > 20) return '#22c55e';
+  if (pct >= 12) return '#84cc16';
+  if (pct >= 6) return '#f59e0b';
+  return '#ef4444';
+}
+
+function showHrrInfo() {
+  const rows = [
+    ['#22c55e', '> 20%',    'Excellent'],
+    ['#84cc16', '12 – 20%', 'Bon'],
+    ['#f59e0b', '6 – 12%',  'Moyen'],
+    ['#ef4444', '< 6%',     'Faible'],
+  ];
+  const modal = document.createElement('div');
+  modal.className = 'hrr-info-modal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1100;display:flex;align-items:center;justify-content:center;padding:16px;animation:fadeIn .2s';
+  modal.onclick = (e) => e.target === modal && modal.remove();
+  modal.innerHTML = `
+    <div style="background:var(--card,#1a1a1e);border-radius:16px;padding:20px;max-width:340px;width:100%;animation:slideUp .2s">
+      <div style="font-weight:700;font-size:15px;margin-bottom:4px">Récupération cardiaque (HRR)</div>
+      <div style="font-size:12px;color:var(--muted,#9ca3af);margin-bottom:14px">
+        % de FC récupérée en 60s, rapporté à l'écart entre pic FC et FC repos.
+      </div>
+      ${rows.map(([color,range,label]) => `
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 0">
+          <span style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0"></span>
+          <span style="font-size:13px;flex:1">${label}</span>
+          <span style="font-size:13px;color:var(--muted,#9ca3af)">${range}</span>
+        </div>`).join('')}
+      <button onclick="this.closest('.hrr-info-modal').remove()"
+              style="margin-top:14px;width:100%;padding:10px;border-radius:10px;border:none;background:var(--accent,#3b82f6);color:#fff;font-weight:600;font-size:13px">
+        Fermer
+      </button>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+/* ══════════════════════════════════════════════════════════
    ACTIVITY DETAIL MODAL
    ══════════════════════════════════════════════════════════ */
 function openDetail(id) {
@@ -547,8 +601,23 @@ function openDetail(id) {
   if (a.pace_min_km)   stats.push({l:'Allure',    v: a.pace_min_km,           u:'/km'});
   if (a.speed_kmh)     stats.push({l:'Vitesse',   v: a.speed_kmh,             u:'km/h'});
   if (a.vo2max)        stats.push({l:'VO2max',    v: a.vo2max,                u:''});
-  if (a.hrr_60s)       stats.push({l:'Récup 60s', v: Math.round(a.hrr_60s),   u:'bpm'});
-  if (a.hrr_120s)      stats.push({l:'Récup 120s',v: Math.round(a.hrr_120s),  u:'bpm'});
+  const hrrInfo = (a.hrr_60s != null || a.hrr_120s != null) ? hrrPercentInfo(a) : null;
+  if (a.hrr_60s != null) {
+    const pct = hrrInfo?.pct60;
+    stats.push({
+      l: `Récup 60s${pct!=null ? ` <span onclick="showHrrInfo()" style="cursor:pointer;opacity:.6">ⓘ</span>` : ''}`,
+      v: `<span style="color:${hrrColor(pct)}">${Math.round(a.hrr_60s)}</span>`,
+      u: pct!=null ? `bpm (${pct}%)` : 'bpm',
+    });
+  }
+  if (a.hrr_120s != null) {
+    const pct = hrrInfo?.pct120;
+    stats.push({
+      l:'Récup 120s',
+      v: `<span style="color:${hrrColor(pct)}">${Math.round(a.hrr_120s)}</span>`,
+      u: pct!=null ? `bpm (${pct}%)` : 'bpm',
+    });
+  }
 
   document.getElementById('detail-stats').innerHTML = stats.map(s =>
     `<div class="detail-stat">
