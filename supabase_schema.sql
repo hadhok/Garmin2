@@ -26,16 +26,8 @@ CREATE TABLE IF NOT EXISTS activities (
   te_label        TEXT,
   intensity_min   INTEGER,
   vo2max          FLOAT,
-  hr_zones_pct    JSONB,         -- [z1%, z2%, z3%, z4%, z5%]
-  avg_cadence     INTEGER,
-  hrr_60s         FLOAT,         -- récupération cardiaque à 60s (bpm perdus depuis le pic)
-  hrr_120s        FLOAT          -- récupération cardiaque à 120s (bpm perdus depuis le pic)
+  hr_zones_pct    JSONB          -- [z1%, z2%, z3%, z4%, z5%]
 );
-
--- Migration additive si la table existe déjà :
-ALTER TABLE activities ADD COLUMN IF NOT EXISTS avg_cadence INTEGER;
-ALTER TABLE activities ADD COLUMN IF NOT EXISTS hrr_60s     FLOAT;
-ALTER TABLE activities ADD COLUMN IF NOT EXISTS hrr_120s    FLOAT;
 
 CREATE INDEX IF NOT EXISTS idx_activities_date ON activities(date DESC);
 CREATE INDEX IF NOT EXISTS idx_activities_type ON activities(type);
@@ -85,3 +77,29 @@ ALTER TABLE wellness_days DISABLE ROW LEVEL SECURITY;
 ALTER TABLE garmin_tokens DISABLE ROW LEVEL SECURITY;
 ALTER TABLE sync_meta     DISABLE ROW LEVEL SECURITY;
 ALTER TABLE body_metrics  DISABLE ROW LEVEL SECURITY;
+
+-- ── Configuration Runalyze (token + settings) ──────────────
+CREATE TABLE IF NOT EXISTS runalyze_config (
+  id               INT  PRIMARY KEY DEFAULT 1,
+  token            TEXT,                -- API token personnel Runalyze
+  enabled          BOOLEAN DEFAULT FALSE,
+  last_sync        TEXT,                -- ISO timestamp du dernier sync
+  sync_settings    JSONB,               -- { "use_vo2max": true, "use_ctl": true, ... }
+  last_athlete     JSONB,               -- données athlete cachées
+  last_error       TEXT,                -- dernier message d'erreur API
+  updated_at       TEXT
+);
+
+ALTER TABLE runalyze_config DISABLE ROW LEVEL SECURITY;
+
+-- ── Objectif de course (1 seule ligne, id=1) ────────────────
+CREATE TABLE IF NOT EXISTS race_goal (
+  id          INT  PRIMARY KEY DEFAULT 1,
+  name        TEXT,
+  date        TEXT,          -- 'YYYY-MM-DD'
+  km          FLOAT,
+  target      TEXT,          -- temps visé "h:mm:ss", optionnel
+  updated_at  TEXT
+);
+
+ALTER TABLE race_goal DISABLE ROW LEVEL SECURITY;
