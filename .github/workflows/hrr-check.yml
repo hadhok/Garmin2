@@ -1,0 +1,35 @@
+name: HRR Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      name_contains:
+        description: 'Filtre sur le nom de l activité'
+        required: false
+        default: 'hyrox'
+      limit:
+        description: 'Nombre d activités à analyser'
+        required: false
+        default: '2'
+
+jobs:
+  hrr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install garminconnect supabase
+
+      - name: Run HRR check
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python3 hrr_check.py --name-contains "${{ github.event.inputs.name_contains }}" --limit "${{ github.event.inputs.limit }}"
