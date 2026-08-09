@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-08-09T09:39:58",
+  "updated_at": "2026-08-09T16:50:21",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "vigilance",
@@ -9,7 +9,7 @@
     "atl": 45.3,
     "tsb": 3.6,
     "effort_idx": 1.37,
-    "body_battery": 65,
+    "body_battery": 37,
     "training_readiness": null,
     "niveau": "Sportif",
     "total_activites": 270,
@@ -20,7 +20,7 @@
       "type": "warning",
       "icon": "🟡",
       "title": "Sous tension",
-      "text": "Effort pondéré 7j : 1.4× (1.0 = charge de base, >2 = intense). TSB +4 pts (CTL 49.0 / ATL 45.3). • HRV 41.4 ms (-6 ms vs S-1) • Sommeil 8.8h/nuit • Body Battery : 65%"
+      "text": "Effort pondéré 7j : 1.4× (1.0 = charge de base, >2 = intense). TSB +4 pts (CTL 49.0 / ATL 45.3). • HRV 41.4 ms (-6 ms vs S-1) • Sommeil 8.8h/nuit • Body Battery : 37%"
     },
     {
       "type": "warning",
@@ -31,8 +31,8 @@
     {
       "type": "goal",
       "icon": "📋",
-      "title": "Prescription : Séance longue — Endurance fondamentale",
-      "text": "[Body Battery 65% · TSB +4] Bonne forme, mise sur le volume. 60-90 min à allure modérée. — Z2 — 65-75% FCmax"
+      "title": "Prescription : Séance légère — Zone 2",
+      "text": "[Body Battery 37% · TSB +4] Fatigue accumulée malgré une BB correcte. 45-60 min à allure conversationnelle. — Z2 — 60-70% FCmax"
     }
   ]
 }
