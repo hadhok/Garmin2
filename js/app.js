@@ -702,6 +702,8 @@ function openDetail(id) {
   if (a.pace_min_km)   stats.push({l:'Allure',    v: a.pace_min_km,           u:'/km'});
   if (a.speed_kmh)     stats.push({l:'Vitesse',   v: a.speed_kmh,             u:'km/h'});
   if (a.vo2max)        stats.push({l:'VO2max',    v: a.vo2max,                u:''});
+  if (a.hrr_60s)       stats.push({l:'Récup 60s', v: Math.round(a.hrr_60s),   u:'bpm'});
+  if (a.hrr_120s)      stats.push({l:'Récup 120s',v: Math.round(a.hrr_120s),  u:'bpm'});
 
   document.getElementById('detail-stats').innerHTML = stats.map(s =>
     `<div class="detail-stat">
