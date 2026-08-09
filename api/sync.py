@@ -120,6 +120,57 @@ def _normalize(raw):
     }
 
 
+def _compute_hrr(client, activity_id):
+    """Calcule la récupération cardiaque (HRR) 60s/120s après le pic de FC."""
+    try:
+        details = client.get_activity_details(activity_id)
+    except Exception:
+        return None, None
+
+    metrics = details.get('activityDetailMetrics', [])
+    if not metrics:
+        return None, None
+
+    metric_names = [d.get('key') for d in details.get('metricDescriptors', [])]
+    try:
+        hr_idx   = metric_names.index('directHeartRate')
+        time_idx = metric_names.index('sumElapsedDuration')
+    except ValueError:
+        return None, None
+
+    points = []
+    for m in metrics:
+        vals = m.get('metrics', [])
+        if len(vals) > max(hr_idx, time_idx) and vals[hr_idx] is not None:
+            points.append((vals[time_idx], vals[hr_idx]))
+    if not points:
+        return None, None
+
+    points.sort(key=lambda p: p[0])
+    peak_t, peak_hr = max(points, key=lambda p: p[1])
+    end_t = points[-1][0]
+
+    def hr_at(offset_s):
+        target = peak_t + offset_s
+        candidates = [p for p in points if p[0] >= target]
+        return candidates[0][1] if candidates else None
+
+    hrr_60 = hrr_120 = None
+    if end_t >= peak_t + 60:
+        hr_60 = hr_at(60)
+        if hr_60 is not None:
+            hrr_60 = round(peak_hr - hr_60, 1)
+    if end_t >= peak_t + 120:
+        hr_120 = hr_at(120)
+        if hr_120 is not None:
+            hrr_120 = round(peak_hr - hr_120, 1)
+    return hrr_60, hrr_120
+
+
+# Types d'activité pour lesquels la récupération cardiaque a du sens
+HRR_TYPES = {'run', 'hiit', 'cardio', 'bike', 'rowing', 'hike'}
+
+
 def _run_sync():
     from supabase import create_client
     from garminconnect import Garmin
@@ -153,6 +204,13 @@ def _run_sync():
     raw_acts = client.get_activities_by_date(since.strftime('%Y-%m-%d'), now.strftime('%Y-%m-%d'))
     normalized = [_normalize(r) for r in raw_acts if r.get('activityId')]
 
+    # ── Récupération cardiaque (HRR) : uniquement pour les nouvelles activités FC ──
+    for act in normalized:
+        if act['type'] in HRR_TYPES and act.get('hr_avg'):
+            hrr_60, hrr_120 = _compute_hrr(client, act['id'])
+            act['hrr_60s'] = hrr_60
+            act['hrr_120s'] = hrr_120
+
     if normalized:
         # Upsert par batch de 50 — fallback sans avg_cadence si colonne absente
         for i in range(0, len(normalized), 50):
@@ -160,8 +218,10 @@ def _run_sync():
             try:
                 sb.table('activities').upsert(batch).execute()
             except Exception as e:
-                if 'avg_cadence' in str(e):
-                    stripped = [{k: v for k, v in row.items() if k != 'avg_cadence'} for row in batch]
+                msg = str(e)
+                drop_cols = [c for c in ('avg_cadence', 'hrr_60s', 'hrr_120s') if c in msg]
+                if drop_cols:
+                    stripped = [{k: v for k, v in row.items() if k not in drop_cols} for row in batch]
                     sb.table('activities').upsert(stripped).execute()
                 else:
                     raise
