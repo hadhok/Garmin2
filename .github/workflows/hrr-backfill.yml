@@ -1,0 +1,31 @@
+name: HRR Backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Nombre max d activités à traiter'
+        required: false
+        default: '50'
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install garminconnect supabase
+
+      - name: Run HRR backfill
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python3 hrr_backfill.py --limit "${{ github.event.inputs.limit }}"
