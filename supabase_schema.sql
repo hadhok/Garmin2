@@ -26,8 +26,16 @@ CREATE TABLE IF NOT EXISTS activities (
   te_label        TEXT,
   intensity_min   INTEGER,
   vo2max          FLOAT,
-  hr_zones_pct    JSONB          -- [z1%, z2%, z3%, z4%, z5%]
+  hr_zones_pct    JSONB,         -- [z1%, z2%, z3%, z4%, z5%]
+  avg_cadence     INTEGER,
+  hrr_60s         FLOAT,         -- récupération cardiaque à 60s (bpm perdus depuis le pic)
+  hrr_120s        FLOAT          -- récupération cardiaque à 120s (bpm perdus depuis le pic)
 );
+
+-- Migration additive si la table existe déjà :
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS avg_cadence INTEGER;
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS hrr_60s     FLOAT;
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS hrr_120s    FLOAT;
 
 CREATE INDEX IF NOT EXISTS idx_activities_date ON activities(date DESC);
 CREATE INDEX IF NOT EXISTS idx_activities_type ON activities(type);
