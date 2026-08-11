@@ -24,6 +24,18 @@ for a in last2:
     print(f"\n\n=== {a.get('activityName')} — {a.get('startTimeLocal')} (id={aid}) ===")
     try:
         splits = client.get_activity_splits(aid)
-        print(json.dumps(splits, ensure_ascii=False, default=str)[:6000])
+        compact = []
+        for lap in splits.get('lapDTOs', []):
+            for length in lap.get('lengthDTOs', []):
+                compact.append({
+                    'idx':    length.get('lengthIndex'),
+                    'dist':   length.get('distance'),
+                    'dur':    round(length.get('duration', 0), 1),
+                    'stroke': length.get('swimStroke'),
+                    'strokes': length.get('totalNumberOfStrokes'),
+                    'swolf':  length.get('averageSWOLF'),
+                    'hr':     length.get('averageHR'),
+                })
+        print(json.dumps(compact, ensure_ascii=False))
     except Exception as e:
         print("get_activity_splits error:", e)
