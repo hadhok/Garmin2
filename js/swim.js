@@ -117,8 +117,11 @@ function renderSwimPage() {
   _swimLastFiltered = swims;
 
   _renderSwimKpis(swims);
+  _renderSwimPRs(swims);
   _renderSwimCharts(swims);
   _renderSwimTable(swims);
+  _renderSwimZones(swims);
+  _renderSwimDrift(swims);
   populateSwimCompareSelectors();
 
   const selected = swims.find(a => String(a.id) === String(swimState.selectedId)) || swims[0];
@@ -175,6 +178,107 @@ function _renderSwimKpis(swims) {
         <div class="swim-kpi-card-sub">${swims.length} séance${swims.length > 1 ? 's' : ''}</div>
       </div>
     </div>`;
+}
+
+/* ══════════════════════════════════════════════════════════
+   RECORDS PERSONNELS
+   ══════════════════════════════════════════════════════════ */
+function _renderSwimPRs(swims) {
+  const el = document.getElementById('swim-prs');
+  if (!el) return;
+  if (!swims.length) { el.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:13px">Aucune séance de natation.</div>'; return; }
+
+  const withPace  = swims.filter(a => a.pace_per_100m);
+  const bestPace  = withPace.length ? withPace.reduce((a, b) => _swimPaceToSec(a.pace_per_100m) < _swimPaceToSec(b.pace_per_100m) ? a : b) : null;
+  const withSwolf = swims.filter(a => a.swolf > 0);
+  const bestSwolf = withSwolf.length ? withSwolf.reduce((a, b) => a.swolf < b.swolf ? a : b) : null;
+  const longestDist = swims.reduce((a, b) => (b.distance_km || 0) > (a.distance_km || 0) ? b : a);
+  const longestDur  = swims.reduce((a, b) => (b.duration_min || 0) > (a.duration_min || 0) ? b : a);
+
+  const fmt = (d) => d ? new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: '2-digit' }) : '–';
+  const cards = [
+    ['🏆', 'Meilleure allure', bestPace ? `${bestPace.pace_per_100m}/100m` : '–', bestPace],
+    ['🏆', 'Meilleur SWOLF',   bestSwolf ? bestSwolf.swolf : '–', bestSwolf],
+    ['📏', 'Plus longue distance', longestDist.distance_km ? `${longestDist.distance_km.toFixed(2)} km` : '–', longestDist],
+    ['⏱️', 'Plus longue séance',   longestDur.duration_min ? fmt_dur(longestDur.duration_min) : '–', longestDur],
+  ].filter(([, , , act]) => act);
+
+  el.innerHTML = `<div class="pr-grid">${cards.map(([icon, label, val, act]) => `
+    <div class="pr-card" style="cursor:pointer" onclick="openDetail(${act.id})">
+      <div class="pr-badge">${icon}</div>
+      <div class="pr-category">${label}</div>
+      <div class="pr-pace">${val}</div>
+      <div class="pr-meta">${fmt(act.date)}${act.name ? `<br><span style="opacity:.7">${act.name}</span>` : ''}</div>
+    </div>`).join('')}</div>`;
+}
+
+/* ══════════════════════════════════════════════════════════
+   ZONES CARDIO MOYENNES
+   ══════════════════════════════════════════════════════════ */
+function _renderSwimZones(swims) {
+  const el = document.getElementById('swim-zones');
+  if (!el) return;
+  const withZones = swims.filter(a => a.hr_zones_pct?.length === 5);
+  if (!withZones.length) { el.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:13px">Pas de données de zones cardio.</div>'; return; }
+
+  const avgZones = [0, 1, 2, 3, 4].map(i => withZones.reduce((s, a) => s + (a.hr_zones_pct[i] || 0), 0) / withZones.length);
+  const colors = ['#3b82f6', '#22c55e', '#f59e0b', '#f97316', '#ef4444'];
+  const labels = ['Z1 Récupération', 'Z2 Endurance', 'Z3 Aérobie', 'Z4 Seuil', 'Z5 Maxi'];
+
+  el.innerHTML = avgZones.map((p, i) => `
+    <div class="zone-row">
+      <div class="zone-label">${labels[i]}</div>
+      <div class="zone-bar-bg"><div class="zone-bar-fill" style="width:${p}%;background:${colors[i]}"></div></div>
+      <div class="zone-pct">${p.toFixed(0)}%</div>
+    </div>`).join('');
+}
+
+/* ══════════════════════════════════════════════════════════
+   DÉRIVE INTRA-SÉANCE & STYLE DE NAGE (agrégé sur la période)
+   ══════════════════════════════════════════════════════════ */
+function _renderSwimDrift(swims) {
+  const el = document.getElementById('swim-drift');
+  if (!el) return;
+
+  const withDrift = swims.filter(a => a.swim_drift_swolf != null).slice(0, 10);
+  const withStroke = swims.filter(a => a.swim_stroke_pct);
+
+  let driftHtml = '<div style="color:var(--muted);font-size:13px;padding:8px 0">Pas encore de données de dérive (nécessite le backfill).</div>';
+  if (withDrift.length) {
+    driftHtml = `
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Δ = dernier tiers − premier tiers de la séance. Positif = ça se dégrade en cours de séance.</div>
+      <table class="compare-table"><tbody>
+      ${withDrift.map(a => {
+        const dateStr = new Date(a.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+        const swolfColor = a.swim_drift_swolf > 5 ? '#ef4444' : a.swim_drift_swolf > 0 ? '#f59e0b' : '#22c55e';
+        const hrColor = a.swim_drift_hr > 10 ? '#ef4444' : a.swim_drift_hr > 0 ? '#f59e0b' : '#22c55e';
+        return `<tr>
+          <td class="compare-metric" style="text-align:left">${dateStr}</td>
+          <td class="td-num"><span style="color:${swolfColor};font-weight:600">${a.swim_drift_swolf > 0 ? '+' : ''}${a.swim_drift_swolf}</span> SWOLF</td>
+          <td class="td-num"><span style="color:${hrColor};font-weight:600">${a.swim_drift_hr > 0 ? '+' : ''}${a.swim_drift_hr}</span> bpm</td>
+        </tr>`;
+      }).join('')}
+      </tbody></table>`;
+  }
+
+  let strokeHtml = '';
+  if (withStroke.length) {
+    const agg = {};
+    withStroke.forEach(a => Object.entries(a.swim_stroke_pct).forEach(([k, v]) => { agg[k] = (agg[k] || 0) + v; }));
+    const total = Object.values(agg).reduce((s, v) => s + v, 0);
+    strokeHtml = `
+      <div class="detail-section" style="margin-top:16px">Répartition par style</div>
+      ${Object.entries(agg).sort((a, b) => b[1] - a[1]).map(([k, v]) => {
+        const pct = Math.round(v / total * 100);
+        return `<div class="zone-row">
+          <div class="zone-label">${STROKE_LABELS[k] || k}</div>
+          <div class="zone-bar-bg"><div class="zone-bar-fill" style="width:${pct}%;background:#3b82f6"></div></div>
+          <div class="zone-pct">${pct}%</div>
+        </div>`;
+      }).join('')}`;
+  }
+
+  el.innerHTML = driftHtml + strokeHtml;
 }
 
 /* ══════════════════════════════════════════════════════════
