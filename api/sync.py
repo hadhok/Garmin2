@@ -84,6 +84,7 @@ def _normalize(raw):
 
     dist_m   = raw.get('distance', 0) or 0
     dur_s    = raw.get('duration', 0) or 0
+    moving_s = raw.get('movingDuration', 0) or 0
     speed_ms = raw.get('averageSpeed', 0) or 0
     is_run   = act_type in ('run', 'hike', 'walk')
     is_bike  = act_type == 'bike'
@@ -130,6 +131,8 @@ def _normalize(raw):
         'swolf':         round(raw.get('averageSwolf')) if is_swim and raw.get('averageSwolf') else None,
         'swim_cadence':  round(raw.get('averageSwimCadenceInStrokesPerMinute')) if is_swim and raw.get('averageSwimCadenceInStrokesPerMinute') else None,
         'pool_lengths':  int(raw.get('activeLengths')) if is_swim and raw.get('activeLengths') else None,
+        # ── Temps de pause cumulé (durée totale - durée en mouvement) ──────
+        'rest_min':      round((dur_s - moving_s) / 60, 1) if moving_s and dur_s > moving_s else None,
     }
 
 
@@ -233,7 +236,8 @@ def _run_sync():
             except Exception as e:
                 msg = str(e)
                 drop_cols = [c for c in ('avg_cadence', 'hrr_60s', 'hrr_120s',
-                                          'pace_per_100m', 'swolf', 'swim_cadence', 'pool_lengths') if c in msg]
+                                          'pace_per_100m', 'swolf', 'swim_cadence', 'pool_lengths',
+                                          'rest_min') if c in msg]
                 if drop_cols:
                     stripped = [{k: v for k, v in row.items() if k not in drop_cols} for row in batch]
                     sb.table('activities').upsert(stripped).execute()
