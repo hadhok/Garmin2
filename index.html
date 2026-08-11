@@ -470,16 +470,73 @@
           <div class="card" id="swim-prs"></div>
         </div>
 
-        <!-- Tendance & Matrice -->
-        <div class="swim-chart-row">
+        <!-- Tendance globale (volume + allure) -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="swim-card-title">Tendance de Performance et Volume</div>
+          <div style="height:220px"><canvas id="swim-chart-trend"></canvas></div>
+        </div>
+
+        <!-- Grille d'analyse (4 quadrants) -->
+        <div class="swim-quad-grid">
+
+          <!-- 1. Zone cardiaque & Effet d'entraînement -->
           <div class="card">
-            <div class="swim-card-title">Tendance de Performance et Volume</div>
-            <div style="height:240px"><canvas id="swim-chart-trend"></canvas></div>
+            <div class="swim-card-title">1 · Zone Cardiaque &amp; Effet d'Entraînement</div>
+            <div class="swim-quad-sub">
+              <div>
+                <div class="swim-subtitle">Zones cardio</div>
+                <div style="height:150px"><canvas id="swim-q-zones-chart"></canvas></div>
+                <div id="swim-q-zones-table"></div>
+              </div>
+              <div>
+                <div class="swim-subtitle">Effet d'entraînement (TE)</div>
+                <div id="swim-q-te"></div>
+              </div>
+            </div>
           </div>
+
+          <!-- 2. Efficacité & technique -->
           <div class="card">
-            <div class="swim-card-title">Matrice d'Efficacité : SWOLF vs Allure</div>
-            <div style="height:240px"><canvas id="swim-chart-matrix"></canvas></div>
+            <div class="swim-card-title">2 · Efficacité &amp; Technique (SWOLF, cadence, pauses)</div>
+            <div class="swim-quad-sub">
+              <div>
+                <div class="swim-subtitle">Technique (SWOLF)</div>
+                <div style="height:150px"><canvas id="swim-q-technique-chart"></canvas></div>
+              </div>
+              <div>
+                <div class="swim-subtitle">Effort vs Efficacité</div>
+                <div style="height:150px"><canvas id="swim-q-cadence-chart"></canvas></div>
+              </div>
+            </div>
+            <div class="swim-subtitle" style="margin-top:12px">Temps actif / pause</div>
+            <div id="swim-q-activepause"></div>
           </div>
+
+          <!-- 3. Nages & type de séance -->
+          <div class="card">
+            <div class="swim-card-title">3 · Nages &amp; Types de Séance</div>
+            <div class="swim-quad-sub">
+              <div>
+                <div class="swim-subtitle">Répartition des nages</div>
+                <div style="height:160px"><canvas id="swim-q-stroke-chart"></canvas></div>
+              </div>
+              <div>
+                <div class="swim-subtitle">Type de séance</div>
+                <div style="height:160px"><canvas id="swim-q-effort-chart"></canvas></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. Dérive & récupération -->
+          <div class="card">
+            <div class="swim-card-title">4 · Dérive &amp; Récupération</div>
+            <div class="swim-subtitle">Dérive intra-séance (SWOLF &amp; FC)</div>
+            <div style="height:150px"><canvas id="swim-q-drift-chart"></canvas></div>
+            <div id="swim-q-drift-table" style="margin-top:8px"></div>
+            <div class="swim-subtitle" style="margin-top:14px">Récupération cardiaque (HRR)</div>
+            <div id="swim-q-hrr"></div>
+          </div>
+
         </div>
 
         <!-- Historique + Détail séance -->
@@ -501,18 +558,6 @@
           </div>
 
           <div class="card" id="swim-detail-panel"></div>
-        </div>
-
-        <!-- Zones cardio moyennes -->
-        <div id="ssh-zones" class="section-header collapsible" onclick="toggleSection(this)">Zones cardio moyennes <span class="chev">▾</span></div>
-        <div class="section-body">
-          <div class="card" id="swim-zones"></div>
-        </div>
-
-        <!-- Dérive intra-séance & style de nage -->
-        <div id="ssh-drift" class="section-header collapsible" onclick="toggleSection(this)">Dérive intra-séance &amp; style de nage <span class="chev">▾</span></div>
-        <div class="section-body">
-          <div class="card" id="swim-drift"></div>
         </div>
 
         <!-- Comparer deux séances -->

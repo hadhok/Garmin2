@@ -672,8 +672,29 @@ body.loading main::before {
 .swim-detail-metric:last-child { border-bottom: none; }
 .swim-detail-metric-label { color: var(--muted); }
 .swim-detail-metric-value { font-weight: 700; }
+.swim-quad-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.swim-quad-sub {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.swim-subtitle { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+.swim-te-gauge-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; }
+.swim-te-gauge-bg { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 12px; }
+.swim-te-gauge-fill { height: 100%; border-radius: 4px; }
+.swim-activepause-bar { display: flex; height: 20px; border-radius: 6px; overflow: hidden; margin-bottom: 6px; }
+.swim-hrr-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.swim-hrr-row:last-child { border-bottom: none; }
 @media (max-width: 860px) {
-  .swim-chart-row, .swim-detail-row { grid-template-columns: 1fr; }
+  .swim-chart-row, .swim-detail-row, .swim-quad-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .swim-quad-sub { grid-template-columns: 1fr; }
 }
 .kpi-card {
   background: var(--surface);

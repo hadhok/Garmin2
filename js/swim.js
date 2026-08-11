@@ -120,8 +120,6 @@ function renderSwimPage() {
   _renderSwimPRs(swims);
   _renderSwimCharts(swims);
   _renderSwimTable(swims);
-  _renderSwimZones(swims);
-  _renderSwimDrift(swims);
   populateSwimCompareSelectors();
 
   const selected = swims.find(a => String(a.id) === String(swimState.selectedId)) || swims[0];
@@ -213,78 +211,17 @@ function _renderSwimPRs(swims) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   ZONES CARDIO MOYENNES
-   ══════════════════════════════════════════════════════════ */
-function _renderSwimZones(swims) {
-  const el = document.getElementById('swim-zones');
-  if (!el) return;
-  const withZones = swims.filter(a => a.hr_zones_pct?.length === 5);
-  if (!withZones.length) { el.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:13px">Pas de données de zones cardio.</div>'; return; }
-
-  const avgZones = [0, 1, 2, 3, 4].map(i => withZones.reduce((s, a) => s + (a.hr_zones_pct[i] || 0), 0) / withZones.length);
-  const colors = ['#3b82f6', '#22c55e', '#f59e0b', '#f97316', '#ef4444'];
-  const labels = ['Z1 Récupération', 'Z2 Endurance', 'Z3 Aérobie', 'Z4 Seuil', 'Z5 Maxi'];
-
-  el.innerHTML = avgZones.map((p, i) => `
-    <div class="zone-row">
-      <div class="zone-label">${labels[i]}</div>
-      <div class="zone-bar-bg"><div class="zone-bar-fill" style="width:${p}%;background:${colors[i]}"></div></div>
-      <div class="zone-pct">${p.toFixed(0)}%</div>
-    </div>`).join('');
-}
-
-/* ══════════════════════════════════════════════════════════
-   DÉRIVE INTRA-SÉANCE & STYLE DE NAGE (agrégé sur la période)
-   ══════════════════════════════════════════════════════════ */
-function _renderSwimDrift(swims) {
-  const el = document.getElementById('swim-drift');
-  if (!el) return;
-
-  const withDrift = swims.filter(a => a.swim_drift_swolf != null).slice(0, 10);
-  const withStroke = swims.filter(a => a.swim_stroke_pct);
-
-  let driftHtml = '<div style="color:var(--muted);font-size:13px;padding:8px 0">Pas encore de données de dérive (nécessite le backfill).</div>';
-  if (withDrift.length) {
-    driftHtml = `
-      <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Δ = dernier tiers − premier tiers de la séance. Positif = ça se dégrade en cours de séance.</div>
-      <table class="compare-table"><tbody>
-      ${withDrift.map(a => {
-        const dateStr = new Date(a.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-        const swolfColor = a.swim_drift_swolf > 5 ? '#ef4444' : a.swim_drift_swolf > 0 ? '#f59e0b' : '#22c55e';
-        const hrColor = a.swim_drift_hr > 10 ? '#ef4444' : a.swim_drift_hr > 0 ? '#f59e0b' : '#22c55e';
-        return `<tr>
-          <td class="compare-metric" style="text-align:left">${dateStr}</td>
-          <td class="td-num"><span style="color:${swolfColor};font-weight:600">${a.swim_drift_swolf > 0 ? '+' : ''}${a.swim_drift_swolf}</span> SWOLF</td>
-          <td class="td-num"><span style="color:${hrColor};font-weight:600">${a.swim_drift_hr > 0 ? '+' : ''}${a.swim_drift_hr}</span> bpm</td>
-        </tr>`;
-      }).join('')}
-      </tbody></table>`;
-  }
-
-  let strokeHtml = '';
-  if (withStroke.length) {
-    const agg = {};
-    withStroke.forEach(a => Object.entries(a.swim_stroke_pct).forEach(([k, v]) => { agg[k] = (agg[k] || 0) + v; }));
-    const total = Object.values(agg).reduce((s, v) => s + v, 0);
-    strokeHtml = `
-      <div class="detail-section" style="margin-top:16px">Répartition par style</div>
-      ${Object.entries(agg).sort((a, b) => b[1] - a[1]).map(([k, v]) => {
-        const pct = Math.round(v / total * 100);
-        return `<div class="zone-row">
-          <div class="zone-label">${STROKE_LABELS[k] || k}</div>
-          <div class="zone-bar-bg"><div class="zone-bar-fill" style="width:${pct}%;background:#3b82f6"></div></div>
-          <div class="zone-pct">${pct}%</div>
-        </div>`;
-      }).join('')}`;
-  }
-
-  el.innerHTML = driftHtml + strokeHtml;
-}
-
-/* ══════════════════════════════════════════════════════════
    GRAPHIQUES (Chart.js)
    ══════════════════════════════════════════════════════════ */
 let _swimChartInstances = {};
+
+function _swimOpenOnClick(chart, evt, list, mode) {
+  const pts = chart.getElementsAtEventForMode(evt, mode || 'nearest', { intersect: mode === 'point' }, true);
+  if (pts.length) {
+    const act = list[pts[0].index];
+    if (act) openDetail(act.id);
+  }
+}
 
 function _renderSwimCharts(swims) {
   if (typeof Chart === 'undefined') return;
@@ -294,15 +231,7 @@ function _renderSwimCharts(swims) {
   const sorted = swims.filter(a => a.pace_per_100m || a.distance_km > 0).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   const labels = sorted.map(a => new Date(a.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
 
-  const onClickOpen = (evt, chart) => {
-    const points = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, true);
-    if (points.length) {
-      const act = sorted[points[0].index];
-      if (act) openDetail(act.id);
-    }
-  };
-
-  /* Tendance : distance (barres) + allure (ligne) */
+  /* Tendance globale : distance (barres) + allure (ligne) */
   const canvasTrend = document.getElementById('swim-chart-trend');
   if (canvasTrend) {
     _swimChartInstances.trend = new Chart(canvasTrend, {
@@ -315,7 +244,7 @@ function _renderSwimCharts(swims) {
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        onClick(evt) { onClickOpen(evt, this); },
+        onClick(evt) { _swimOpenOnClick(this, evt, sorted); },
         onHover(evt, els) { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
         plugins: { legend: { position: 'top', labels: { color: '#9ca3af', boxWidth: 12, font: { size: 11 } } } },
         scales: {
@@ -327,34 +256,290 @@ function _renderSwimCharts(swims) {
     });
   }
 
-  /* Matrice d'efficacité : SWOLF vs allure */
-  const canvasMatrix = document.getElementById('swim-chart-matrix');
-  if (canvasMatrix) {
-    const points = swims.filter(a => a.pace_per_100m && a.swolf > 0).map(a => ({ x: _swimPaceToSec(a.pace_per_100m), y: a.swolf, _act: a }));
-    _swimChartInstances.matrix = new Chart(canvasMatrix, {
-      type: 'scatter',
-      data: { datasets: [{ label: 'Séances', data: points, backgroundColor: 'rgba(20,184,166,0.75)', pointRadius: 5, pointHoverRadius: 7 }] },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        onClick(evt, els, chart) {
-          const pts = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
-          if (pts.length) {
-            const act = points[pts[0].index]?._act;
-            if (act) openDetail(act.id);
-          }
-        },
-        onHover(evt, els) { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
-        plugins: {
-          legend: { display: false },
-          tooltip: { callbacks: { label: ctx => `${_swimSecToPace(ctx.parsed.x)}/100m · SWOLF ${ctx.parsed.y}` } },
-        },
-        scales: {
-          x: { title: { display: true, text: 'Allure (/100m)', color: '#9ca3af' }, ticks: { color: '#9ca3af', callback: v => _swimSecToPace(v) }, grid: { color: 'rgba(255,255,255,0.05)' } },
-          y: { title: { display: true, text: 'SWOLF', color: '#9ca3af' }, ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-        },
-      },
-    });
+  _renderSwimZoneQuadrant(swims);
+  _renderSwimTeQuadrant(swims);
+  _renderSwimTechniqueChart(swims);
+  _renderSwimCadenceChart(swims);
+  _renderSwimActivePause(swims);
+  _renderSwimStrokeChart(swims);
+  _renderSwimEffortChart(swims);
+  _renderSwimDriftChart(swims);
+  _renderSwimHrr(swims);
+}
+
+/* ── Quadrant 1a : Zones cardio (agrégées sur la période) ── */
+function _renderSwimZoneQuadrant(swims) {
+  const canvas = document.getElementById('swim-q-zones-chart');
+  const tableEl = document.getElementById('swim-q-zones-table');
+  if (!canvas || !tableEl) return;
+
+  const withZones = swims.filter(a => a.hr_zones_pct?.length === 5);
+  if (!withZones.length) {
+    tableEl.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0">Pas de données.</div>';
+    return;
   }
+
+  const zLabels = ['Z1', 'Z2', 'Z3', 'Z4', 'Z5'];
+  const colors = ['#3b82f6', '#22c55e', '#f59e0b', '#f97316', '#ef4444'];
+  const avgPct = [0, 1, 2, 3, 4].map(i => withZones.reduce((s, a) => s + (a.hr_zones_pct[i] || 0), 0) / withZones.length);
+  const totalMin = [0, 1, 2, 3, 4].map(i => withZones.reduce((s, a) => s + (a.hr_zones_pct[i] || 0) / 100 * (a.duration_min || 0), 0));
+
+  _swimChartInstances.zones = new Chart(canvas, {
+    type: 'bar',
+    data: { labels: zLabels, datasets: [{ data: totalMin.map(m => Math.round(m)), backgroundColor: colors, borderRadius: 3 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255,255,255,0.05)' }, title: { display: true, text: 'min', color: '#9ca3af' } },
+        x: { ticks: { color: '#9ca3af' }, grid: { display: false } },
+      },
+    },
+  });
+
+  tableEl.innerHTML = `<table class="compare-table" style="margin-top:8px"><tbody>
+    ${zLabels.map((z, i) => `<tr>
+      <td class="compare-metric" style="text-align:left"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${colors[i]};margin-right:6px"></span>${z}</td>
+      <td class="td-num">${avgPct[i].toFixed(0)}%</td>
+      <td class="td-num">${fmt_dur(totalMin[i])}</td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+
+/* ── Quadrant 1b : Effet d'entraînement (TE) ── */
+function _swimTeLabel(v) {
+  if (v == null) return '–';
+  if (v < 1) return 'Aucun';
+  if (v < 2) return 'Léger';
+  if (v < 3) return 'Entretien';
+  if (v < 4) return 'Amélioration';
+  return 'Très intense';
+}
+
+function _renderSwimTeQuadrant(swims) {
+  const el = document.getElementById('swim-q-te');
+  if (!el) return;
+  const withTe = swims.filter(a => a.aerobic_te != null);
+  if (!withTe.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px">Pas de données.</div>'; return; }
+
+  const avgAerobic = withTe.reduce((s, a) => s + a.aerobic_te, 0) / withTe.length;
+  const avgAnaerobic = withTe.reduce((s, a) => s + (a.anaerobic_te || 0), 0) / withTe.length;
+  const labelCounts = {};
+  swims.forEach(a => { if (a.te_label) labelCounts[a.te_label] = (labelCounts[a.te_label] || 0) + 1; });
+  const dominant = Object.entries(labelCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+
+  const gauge = (label, val, color) => `
+    <div class="swim-te-gauge-label"><span>${label}</span><span style="font-weight:700">${val.toFixed(1)} / 5 · ${_swimTeLabel(val)}</span></div>
+    <div class="swim-te-gauge-bg"><div class="swim-te-gauge-fill" style="width:${Math.min(100, val / 5 * 100)}%;background:${color}"></div></div>`;
+
+  el.innerHTML = gauge('Aérobie', avgAerobic, '#14b8a6') + gauge('Anaérobie', avgAnaerobic, '#f97316') +
+    (dominant ? `<div style="font-size:12px;color:var(--muted);margin-top:4px">Type dominant : <strong style="color:var(--text)">${dominant}</strong></div>` : '');
+}
+
+/* ── Quadrant 2a : Technique (SWOLF dans le temps) ── */
+function _renderSwimTechniqueChart(swims) {
+  const canvas = document.getElementById('swim-q-technique-chart');
+  if (!canvas) return;
+  const sorted = swims.filter(a => a.swolf > 0).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const labels = sorted.map(a => new Date(a.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
+
+  _swimChartInstances.technique = new Chart(canvas, {
+    type: 'line',
+    data: { labels, datasets: [{ label: 'SWOLF', data: sorted.map(a => a.swolf), borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.1)', fill: true, tension: 0.3 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      onClick(evt) { _swimOpenOnClick(this, evt, sorted); },
+      onHover(evt, els) { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        x: { ticks: { color: '#9ca3af', maxRotation: 0, autoSkip: true, font: { size: 10 } }, grid: { display: false } },
+      },
+    },
+  });
+}
+
+/* ── Quadrant 2b : Effort vs Efficacité (SWOLF vs cadence) ── */
+function _renderSwimCadenceChart(swims) {
+  const canvas = document.getElementById('swim-q-cadence-chart');
+  if (!canvas) return;
+  const points = swims.filter(a => a.swim_cadence > 0 && a.swolf > 0).map(a => ({ x: a.swim_cadence, y: a.swolf, _act: a }));
+
+  _swimChartInstances.cadence = new Chart(canvas, {
+    type: 'scatter',
+    data: { datasets: [{ data: points, backgroundColor: 'rgba(20,184,166,0.75)', pointRadius: 5, pointHoverRadius: 7 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      onClick(evt) { _swimOpenOnClick(this, evt, points.map(p => p._act), 'point'); },
+      onHover(evt, els) { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => `${ctx.parsed.x} coups/min · SWOLF ${ctx.parsed.y}` } },
+      },
+      scales: {
+        x: { title: { display: true, text: 'Cadence', color: '#9ca3af' }, ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { title: { display: true, text: 'SWOLF', color: '#9ca3af' }, ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+      },
+    },
+  });
+}
+
+/* ── Quadrant 2c : Temps actif / pause ── */
+function _renderSwimActivePause(swims) {
+  const el = document.getElementById('swim-q-activepause');
+  if (!el) return;
+  const withRest = swims.filter(a => a.rest_min != null && a.duration_min);
+  if (!withRest.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px">Pas de données.</div>'; return; }
+
+  const totalDur = withRest.reduce((s, a) => s + a.duration_min, 0);
+  const totalRest = withRest.reduce((s, a) => s + a.rest_min, 0);
+  const totalActive = Math.max(0, totalDur - totalRest);
+  const activePct = totalDur > 0 ? (totalActive / totalDur * 100) : 0;
+
+  el.innerHTML = `
+    <div class="swim-activepause-bar">
+      <div style="width:${activePct}%;background:#14b8a6"></div>
+      <div style="width:${100 - activePct}%;background:#f59e0b"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted)">
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#14b8a6;margin-right:4px"></span>Actif : ${fmt_dur(totalActive)}</span>
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;margin-right:4px"></span>Pause : ${fmt_dur(totalRest)}</span>
+    </div>`;
+}
+
+/* ── Quadrant 3a : Répartition des nages (agrégée) ── */
+function _renderSwimStrokeChart(swims) {
+  const canvas = document.getElementById('swim-q-stroke-chart');
+  if (!canvas) return;
+  const withStroke = swims.filter(a => a.swim_stroke_pct);
+  if (!withStroke.length) { canvas.parentElement.innerHTML = '<div style="color:var(--muted);font-size:12px">Pas de données.</div>'; return; }
+
+  const agg = {};
+  withStroke.forEach(a => Object.entries(a.swim_stroke_pct).forEach(([k, v]) => { agg[k] = (agg[k] || 0) + v; }));
+  const entries = Object.entries(agg).sort((a, b) => b[1] - a[1]);
+  const palette = ['#14b8a6', '#f97316', '#3b82f6', '#a855f7', '#94a3b8'];
+
+  _swimChartInstances.stroke = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: entries.map(([k]) => STROKE_LABELS[k] || k),
+      datasets: [{ data: entries.map(([, v]) => v), backgroundColor: entries.map((_, i) => palette[i % palette.length]), borderWidth: 0 }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af', boxWidth: 10, font: { size: 11 } } } },
+    },
+  });
+}
+
+/* ── Quadrant 3b : Type de séance (te_label) ── */
+function _renderSwimEffortChart(swims) {
+  const canvas = document.getElementById('swim-q-effort-chart');
+  if (!canvas) return;
+  const counts = {};
+  swims.forEach(a => { if (a.te_label) counts[a.te_label] = (counts[a.te_label] || 0) + 1; });
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  if (!entries.length) { canvas.parentElement.innerHTML = '<div style="color:var(--muted);font-size:12px">Pas de données.</div>'; return; }
+
+  _swimChartInstances.effort = new Chart(canvas, {
+    type: 'bar',
+    data: { labels: entries.map(([k]) => k), datasets: [{ data: entries.map(([, v]) => v), backgroundColor: 'rgba(20,184,166,0.75)', borderRadius: 3 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#9ca3af', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: { ticks: { color: '#9ca3af', font: { size: 11 } }, grid: { display: false } },
+      },
+    },
+  });
+}
+
+/* ── Quadrant 4a : Dérive intra-séance (graphique + table) ── */
+function _renderSwimDriftChart(swims) {
+  const canvas = document.getElementById('swim-q-drift-chart');
+  const tableEl = document.getElementById('swim-q-drift-table');
+  if (!canvas || !tableEl) return;
+
+  const withDrift = swims.filter(a => a.swim_drift_swolf != null).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  if (!withDrift.length) {
+    tableEl.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0">Pas encore de données de dérive.</div>';
+    return;
+  }
+  const labels = withDrift.map(a => new Date(a.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
+
+  _swimChartInstances.drift = new Chart(canvas, {
+    data: {
+      labels,
+      datasets: [
+        { type: 'line', label: 'Δ SWOLF', data: withDrift.map(a => a.swim_drift_swolf), borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.1)', tension: 0.3, yAxisID: 'y' },
+        { type: 'line', label: 'Δ FC', data: withDrift.map(a => a.swim_drift_hr), borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.1)', tension: 0.3, yAxisID: 'y1' },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      onClick(evt) { _swimOpenOnClick(this, evt, withDrift); },
+      onHover(evt, els) { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+      plugins: { legend: { position: 'top', labels: { color: '#9ca3af', boxWidth: 12, font: { size: 11 } } } },
+      scales: {
+        y:  { position: 'left',  ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y1: { position: 'right', ticks: { color: '#9ca3af' }, grid: { display: false } },
+        x:  { ticks: { color: '#9ca3af', maxRotation: 0, autoSkip: true, font: { size: 10 } }, grid: { display: false } },
+      },
+    },
+  });
+
+  const rows = withDrift.slice(-8).reverse();
+  tableEl.innerHTML = `
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Δ = dernier tiers − premier tiers de la séance.</div>
+    <table class="compare-table"><tbody>
+    ${rows.map(a => {
+      const dateStr = new Date(a.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+      const swolfColor = _swimDriftColor(a.swim_drift_swolf);
+      const hrColor = a.swim_drift_hr > 10 ? '#ef4444' : a.swim_drift_hr > 0 ? '#f59e0b' : '#22c55e';
+      return `<tr>
+        <td class="compare-metric" style="text-align:left">${dateStr}</td>
+        <td class="td-num"><span style="color:${swolfColor};font-weight:600">${a.swim_drift_swolf > 0 ? '+' : ''}${a.swim_drift_swolf}</span> SWOLF</td>
+        <td class="td-num"><span style="color:${hrColor};font-weight:600">${a.swim_drift_hr > 0 ? '+' : ''}${a.swim_drift_hr}</span> bpm</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
+}
+
+/* ── Quadrant 4b : Récupération cardiaque (HRR) ── */
+function _swimHrrColor(bpm) {
+  if (bpm == null) return 'var(--muted)';
+  if (bpm > 25) return '#22c55e';
+  if (bpm >= 18) return '#84cc16';
+  if (bpm >= 12) return '#f59e0b';
+  return '#ef4444';
+}
+function _swimHrrLabel(bpm) {
+  if (bpm == null) return '';
+  if (bpm > 25) return 'Excellente';
+  if (bpm >= 18) return 'Bonne';
+  if (bpm >= 12) return 'Moyenne';
+  return 'Faible';
+}
+
+function _renderSwimHrr(swims) {
+  const el = document.getElementById('swim-q-hrr');
+  if (!el) return;
+  const with60 = swims.filter(a => a.hrr_60s != null);
+  const with120 = swims.filter(a => a.hrr_120s != null);
+  if (!with60.length && !with120.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px">Pas de données.</div>'; return; }
+
+  const avg60 = with60.length ? with60.reduce((s, a) => s + a.hrr_60s, 0) / with60.length : null;
+  const avg120 = with120.length ? with120.reduce((s, a) => s + a.hrr_120s, 0) / with120.length : null;
+
+  const row = (label, val) => val == null ? '' : `
+    <div class="swim-hrr-row">
+      <span class="swim-detail-metric-label">${label}</span>
+      <span style="font-weight:700;color:${_swimHrrColor(val)}">${Math.round(val)} bpm <span style="font-weight:400;font-size:11px">(${_swimHrrLabel(val)})</span></span>
+    </div>`;
+
+  el.innerHTML = row('Récup. moyenne à 60s', avg60) + row('Récup. moyenne à 120s', avg120);
 }
 
 /* ══════════════════════════════════════════════════════════
