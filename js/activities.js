@@ -89,6 +89,9 @@ function renderActivities() {
   /* Sport breakdown cards */
   renderSportCards(acts);
 
+  /* Comparateur natation */
+  if (typeof populateSwimCompareSelectors === 'function') populateSwimCompareSelectors();
+
   /* Afficher calendrier ou table */
   if (actState.view === 'calendar') {
     renderHistoryCalendar();
@@ -457,4 +460,159 @@ function showDayActivities(dateStr) {
 
   modal.appendChild(card);
   document.body.appendChild(modal);
+}
+
+/* ══════════════════════════════════════════════════════════
+   COMPARER DEUX SÉANCES DE NATATION
+   ══════════════════════════════════════════════════════════ */
+function getSwims() {
+  return getAll().filter(a => a.type === 'swim');
+}
+
+function populateSwimCompareSelectors() {
+  const swims = getSwims()
+    .sort((a, b) => (b.start_time || b.date || '').localeCompare(a.start_time || a.date || ''));
+  const opts = swims.map(s => {
+    const dateStr = s.date || (s.start_time || '').slice(0, 10);
+    const date = dateStr ? new Date(dateStr + 'T12:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: '2-digit' }) : '–';
+    const dist = s.distance_km ? `${s.distance_km.toFixed(2)} km` : '';
+    const pace = s.pace_per_100m ? ` · ${s.pace_per_100m}/100m` : '';
+    const name = s.name ? ` — ${s.name.slice(0, 28)}` : '';
+    return `<option value="${s.id}">${date} ${dist}${pace}${name}</option>`;
+  }).join('');
+
+  ['swim-compare-sel-a', 'swim-compare-sel-b'].forEach((id, idx) => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">— Choisir une séance —</option>' + opts;
+    if (prev) {
+      sel.value = prev;
+    } else if (swims.length > idx) {
+      sel.value = String(swims[idx].id);
+    }
+  });
+  updateSwimCompare();
+}
+
+function updateSwimCompare() {
+  const idA = document.getElementById('swim-compare-sel-a')?.value;
+  const idB = document.getElementById('swim-compare-sel-b')?.value;
+  const el  = document.getElementById('swim-compare-result');
+  if (!el) return;
+
+  if (!idA || !idB) { el.innerHTML = ''; return; }
+  if (idA === idB) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0">Sélectionne deux séances différentes.</div>';
+    return;
+  }
+
+  const swims = getSwims();
+  const a = swims.find(s => String(s.id) === String(idA));
+  const b = swims.find(s => String(s.id) === String(idB));
+  if (!a || !b) return;
+
+  // Métrique : [label, valA, valB, unitA, unitB, lowerIsBetter (null = pas de gagnant)]
+  const metrics = [
+    ['Distance',      a.distance_km?.toFixed(2), b.distance_km?.toFixed(2), 'km', 'km', null],
+    ['Durée',         a.duration_min ? (typeof secToTime==='function' ? secToTime(a.duration_min*60) : `${Math.round(a.duration_min)}min`) : null,
+                       b.duration_min ? (typeof secToTime==='function' ? secToTime(b.duration_min*60) : `${Math.round(b.duration_min)}min`) : null, '', '', null],
+    ['Allure',        a.pace_per_100m, b.pace_per_100m, '/100m', '/100m', true],
+    ['SWOLF',         a.swolf,         b.swolf,         '', '', true],
+    ['Cadence',       a.swim_cadence,  b.swim_cadence,  'coups/min', 'coups/min', null],
+    ['Longueurs',     a.pool_lengths,  b.pool_lengths,  '', '', null],
+    ['FC moy.',       a.hr_avg,        b.hr_avg,        'bpm', 'bpm', true],
+    ['FC max',        a.hr_max,        b.hr_max,        'bpm', 'bpm', true],
+    ['Charge',        a.training_load ? Math.round(a.training_load) : null, b.training_load ? Math.round(b.training_load) : null, 'pts', 'pts', null],
+    ['Calories',      a.calories,      b.calories,      'kcal', 'kcal', null],
+  ].filter(([, vA, vB]) => vA != null && vB != null);
+
+  const toNum = (v) => {
+    if (typeof v === 'string' && v.includes(':')) {
+      const [m, s] = v.split(':').map(Number);
+      return m * 60 + (s || 0);
+    }
+    return parseFloat(v);
+  };
+
+  const rows = metrics.map(([label, vA, vB, uA, uB, lowerBetter]) => {
+    const nA = toNum(vA), nB = toNum(vB);
+    const max = Math.max(nA, nB) || 1;
+    const wA = Math.round((nA / max) * 100);
+    const wB = Math.round((nB / max) * 100);
+    const aWins = lowerBetter === null ? false : (lowerBetter ? nA < nB : nA > nB);
+    const bWins = lowerBetter === null ? false : (lowerBetter ? nB < nA : nB > nA);
+    const badge = aWins
+      ? `<span class="compare-winner compare-win-a">A</span>`
+      : bWins ? `<span class="compare-winner compare-win-b">B</span>` : '';
+
+    return `<tr>
+      <td class="compare-val-a">
+        <div class="compare-bar-wrap" style="justify-content:flex-end">
+          ${badge && aWins ? badge : ''}
+          <span>${vA}<span style="font-weight:400;font-size:11px;color:var(--muted)"> ${uA}</span></span>
+          <div class="compare-bar-a" style="width:${wA}px;max-width:80px"></div>
+        </div>
+      </td>
+      <td class="compare-metric">${label}</td>
+      <td class="compare-val-b">
+        <div class="compare-bar-wrap">
+          <div class="compare-bar-b" style="width:${wB}px;max-width:80px"></div>
+          <span>${vB}<span style="font-weight:400;font-size:11px;color:var(--muted)"> ${uB}</span></span>
+          ${badge && bWins ? badge : ''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Zones FC
+  let zonesHtml = '';
+  if (a.hr_zones_pct && b.hr_zones_pct) {
+    const zColors = ['#94a3b8', '#22c55e', '#3b82f6', '#f97316', '#ef4444'];
+    const zLabels = ['Z1', 'Z2', 'Z3', 'Z4', 'Z5'];
+    zonesHtml = `
+      <div class="compare-zones-title">Zones FC</div>
+      <div class="compare-zones-wrap">
+        ${zLabels.map((z, i) => {
+          const pA = (a.hr_zones_pct[i] || 0).toFixed(1);
+          const pB = (b.hr_zones_pct[i] || 0).toFixed(1);
+          return `<div class="compare-zones-row">
+            <div class="compare-zones-lbl">${z}</div>
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:6px;font-size:11px">
+                <span style="color:#3b82f6;width:34px;text-align:right">${pA}%</span>
+                <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;position:relative">
+                  <div style="position:absolute;top:0;left:0;height:50%;width:${pA}%;background:${zColors[i]};opacity:0.9;border-radius:2px"></div>
+                  <div style="position:absolute;bottom:0;left:0;height:50%;width:${pB}%;background:${zColors[i]};opacity:0.5;border-radius:2px"></div>
+                </div>
+                <span style="color:#f97316;width:34px">${pB}%</span>
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
+        <div style="display:flex;justify-content:center;gap:20px;margin-top:6px;font-size:11px">
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#3b82f6;margin-right:4px"></span>Session A</span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#f97316;opacity:0.6;margin-right:4px"></span>Session B</span>
+        </div>
+      </div>`;
+  }
+
+  const dateA = new Date(a.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long' });
+  const dateB = new Date(b.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long' });
+
+  el.innerHTML = `
+    <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <div style="flex:1;min-width:140px;padding:10px 12px;border-radius:8px;background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.2)">
+        <div style="font-size:10px;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">A</div>
+        <div style="font-size:13px;font-weight:600">${a.name || 'Natation'}</div>
+        <div style="font-size:11px;color:var(--muted)">${dateA}</div>
+      </div>
+      <div style="flex:1;min-width:140px;padding:10px 12px;border-radius:8px;background:rgba(249,115,22,0.07);border:1px solid rgba(249,115,22,0.2)">
+        <div style="font-size:10px;font-weight:700;color:#f97316;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">B</div>
+        <div style="font-size:13px;font-weight:600">${b.name || 'Natation'}</div>
+        <div style="font-size:11px;color:var(--muted)">${dateB}</div>
+      </div>
+    </div>
+    <table class="compare-table"><tbody>${rows}</tbody></table>
+    ${zonesHtml}`;
 }
