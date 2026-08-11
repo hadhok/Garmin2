@@ -518,7 +518,7 @@ function updateSwimCompare() {
     ['Durée',         a.duration_min ? (typeof secToTime==='function' ? secToTime(a.duration_min*60) : `${Math.round(a.duration_min)}min`) : null,
                        b.duration_min ? (typeof secToTime==='function' ? secToTime(b.duration_min*60) : `${Math.round(b.duration_min)}min`) : null, '', '', null],
     ['Allure',        a.pace_per_100m, b.pace_per_100m, '/100m', '/100m', true],
-    ['SWOLF',         a.swolf,         b.swolf,         '', '', true],
+    ['SWOLF <span onclick="showSwolfInfo()" style="cursor:pointer;opacity:.6">ⓘ</span>', a.swolf, b.swolf, '', '', true],
     ['Cadence',       a.swim_cadence,  b.swim_cadence,  'coups/min', 'coups/min', null],
     ['Longueurs',     a.pool_lengths,  b.pool_lengths,  '', '', null],
     ['Pause',         a.rest_min>0 ? (typeof fmt_dur==='function'?fmt_dur(a.rest_min):`${Math.round(a.rest_min)}min`) : null,
