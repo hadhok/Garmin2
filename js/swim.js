@@ -2,8 +2,33 @@
    SWIM.JS — Page dédiée Natation
    ══════════════════════════════════════════════════════════ */
 
+const swimState = { period: 'all' };
+
 function getSwims() {
   return getAll().filter(a => a.type === 'swim');
+}
+
+function getSwimsByPeriod() {
+  const all = getSwims();
+  const now = new Date(TODAY_ISO + 'T12:00:00');
+  let cutoff;
+  if (swimState.period === 'week') {
+    cutoff = new Date(now); cutoff.setDate(now.getDate() - 7);
+  } else if (swimState.period === 'month') {
+    cutoff = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else if (swimState.period === 'year') {
+    cutoff = new Date(now.getFullYear(), 0, 1);
+  } else {
+    return all;
+  }
+  return all.filter(a => new Date((a.date || '1970-01-01') + 'T12:00:00') >= cutoff);
+}
+
+function setSwimPeriod(p, btn) {
+  swimState.period = p;
+  document.querySelectorAll('.swim-period-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderSwimPage();
 }
 
 function _swimPaceToSec(p) {
@@ -22,14 +47,13 @@ function _swimSecToPace(s) {
    RENDER DISPATCHER
    ══════════════════════════════════════════════════════════ */
 function renderSwimPage() {
-  const swims = getSwims().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const swims = getSwimsByPeriod().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
   _renderSwimKpis(swims);
   _renderSwimPRs(swims);
   _renderSwimCharts(swims);
   _renderSwimZones(swims);
   _renderSwimDrift(swims);
-  _renderSwimCalendar(swims);
   populateSwimCompareSelectors();
   _renderSwimTable(swims);
 }
@@ -82,18 +106,20 @@ function _renderSwimPRs(swims) {
   const longestDist = swims.reduce((a, b) => (b.distance_km || 0) > (a.distance_km || 0) ? b : a);
   const longestDur  = swims.reduce((a, b) => (b.duration_min || 0) > (a.duration_min || 0) ? b : a);
 
-  const fmt = (d) => d ? new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '–';
-  const rows = [
-    ['🏆 Meilleure allure', bestPace ? `${bestPace.pace_per_100m}/100m` : '–', bestPace?.date],
-    ['🏆 Meilleur SWOLF',   bestSwolf ? bestSwolf.swolf : '–', bestSwolf?.date],
-    ['📏 Plus longue distance', longestDist.distance_km ? `${longestDist.distance_km.toFixed(2)} km` : '–', longestDist.date],
-    ['⏱️ Plus longue séance',   longestDur.duration_min ? fmt_dur(longestDur.duration_min) : '–', longestDur.date],
-  ];
+  const fmt = (d) => d ? new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: '2-digit' }) : '–';
+  const cards = [
+    ['🏆', 'Meilleure allure', bestPace ? `${bestPace.pace_per_100m}/100m` : '–', bestPace],
+    ['🏆', 'Meilleur SWOLF',   bestSwolf ? bestSwolf.swolf : '–', bestSwolf],
+    ['📏', 'Plus longue distance', longestDist.distance_km ? `${longestDist.distance_km.toFixed(2)} km` : '–', longestDist],
+    ['⏱️', 'Plus longue séance',   longestDur.duration_min ? fmt_dur(longestDur.duration_min) : '–', longestDur],
+  ].filter(([, , , act]) => act);
 
-  el.innerHTML = `<div class="detail-training-rows">${rows.map(([l, v, d]) => `
-    <div class="detail-row">
-      <span class="detail-row-label">${l}</span>
-      <span class="detail-row-value">${v}${d ? ` <span style="color:var(--muted);font-size:11px">(${fmt(d)})</span>` : ''}</span>
+  el.innerHTML = `<div class="pr-grid">${cards.map(([icon, label, val, act]) => `
+    <div class="pr-card" style="cursor:pointer" onclick="openDetail(${act.id})">
+      <div class="pr-badge">${icon}</div>
+      <div class="pr-category">${label}</div>
+      <div class="pr-pace">${val}</div>
+      <div class="pr-meta">${fmt(act.date)}${act.name ? `<br><span style="opacity:.7">${act.name}</span>` : ''}</div>
     </div>`).join('')}</div>`;
 }
 
@@ -112,12 +138,22 @@ function _renderSwimCharts(swims) {
   const sorted = swims.filter(a => a.pace_per_100m || a.swolf > 0).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   const labels = sorted.map(a => new Date(a.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
 
+  const onChartClick = (evt, chart) => {
+    const points = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, true);
+    if (points.length) {
+      const act = sorted[points[0].index];
+      if (act) openDetail(act.id);
+    }
+  };
+
   const paceData = sorted.map(a => a.pace_per_100m ? _swimPaceToSec(a.pace_per_100m) : null);
   _swimChartInstances.pace = new Chart(canvasPace, {
     type: 'line',
     data: { labels, datasets: [{ label: 'Allure (/100m)', data: paceData, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.3, spanGaps: true }] },
     options: {
       responsive: true, maintainAspectRatio: false,
+      onClick(evt) { onChartClick(evt, this); },
+      onHover(evt, els) { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
       plugins: { legend: { display: false }, title: { display: true, text: 'Allure /100m', color: '#9ca3af' } },
       scales: {
         y: { reverse: true, ticks: { color: '#9ca3af', callback: v => _swimSecToPace(v) }, grid: { color: 'rgba(255,255,255,0.05)' } },
@@ -132,6 +168,8 @@ function _renderSwimCharts(swims) {
     data: { labels, datasets: [{ label: 'SWOLF', data: swolfData, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.1)', fill: true, tension: 0.3, spanGaps: true }] },
     options: {
       responsive: true, maintainAspectRatio: false,
+      onClick(evt) { onChartClick(evt, this); },
+      onHover(evt, els) { evt.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
       plugins: { legend: { display: false }, title: { display: true, text: 'SWOLF (plus bas = mieux)', color: '#9ca3af' } },
       scales: {
         y: { ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255,255,255,0.05)' } },
@@ -212,69 +250,10 @@ function _renderSwimDrift(swims) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   CALENDRIER
-   ══════════════════════════════════════════════════════════ */
-const MONTHS_LONG_SWIM = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-
-function _renderSwimCalendar(swims) {
-  const el = document.getElementById('swim-calendar');
-  if (!el) return;
-  if (!swims.length) { el.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:13px">Aucune séance.</div>'; return; }
-
-  if (window._swimCalMonth === undefined) {
-    const last = swims[0];
-    const d = new Date((last.date || TODAY_ISO) + 'T12:00:00');
-    window._swimCalMonth = d.getMonth();
-    window._swimCalYear = d.getFullYear();
-  }
-
-  const byDate = {};
-  swims.forEach(a => { (byDate[a.date] = byDate[a.date] || []).push(a); });
-
-  const monthStart = new Date(window._swimCalYear, window._swimCalMonth, 1);
-  const monthEnd = new Date(window._swimCalYear, window._swimCalMonth + 1, 0);
-  const startOffset = (monthStart.getDay() + 6) % 7; // lundi = 0
-
-  let html = `
-    <div class="calendar-header-nav">
-      <button onclick="_swimCalNav(-1)" class="cal-nav-btn">← Préc.</button>
-      <div class="calendar-month-title">
-        <div style="font-size:24px;font-weight:800">${MONTHS_LONG_SWIM[window._swimCalMonth]}</div>
-        <div style="font-size:14px;color:var(--muted);font-weight:600">${window._swimCalYear}</div>
-      </div>
-      <button onclick="_swimCalNav(1)" class="cal-nav-btn">Suiv. →</button>
-    </div>
-    <div class="calendar-grid">
-      ${['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].map(d => `<div class="calendar-header">${d}</div>`).join('')}
-      ${Array(startOffset).fill('<div class="calendar-day calendar-day-other-month"></div>').join('')}`;
-
-  for (let d = 1; d <= monthEnd.getDate(); d++) {
-    const dateStr = `${window._swimCalYear}-${String(window._swimCalMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const acts = byDate[dateStr] || [];
-    const isToday = dateStr === TODAY_ISO;
-    const cellClass = acts.length ? 'calendar-day-active' : 'calendar-day-empty';
-    html += `<div class="calendar-day ${cellClass}${isToday ? ' calendar-day-today' : ''}" style="${acts.length ? 'cursor:pointer' : ''}"
-                  onclick="${acts.length ? `openDetail(${acts[0].id})` : ''}">
-      <div class="calendar-day-num">${d}</div>
-      ${acts.length ? `<div class="calendar-day-acts"><div class="cal-act-icons"><div class="cal-act-icon" style="background:${TYPE_COLOR?.swim||'#3b82f6'};color:white;font-size:11px">🏊</div></div></div>` : ''}
-    </div>`;
-  }
-  html += '</div>';
-  el.innerHTML = html;
-}
-
-function _swimCalNav(dir) {
-  window._swimCalMonth += dir;
-  if (window._swimCalMonth > 11) { window._swimCalMonth = 0; window._swimCalYear++; }
-  else if (window._swimCalMonth < 0) { window._swimCalMonth = 11; window._swimCalYear--; }
-  renderSwimPage();
-}
-
-/* ══════════════════════════════════════════════════════════
    COMPARER DEUX SÉANCES
    ══════════════════════════════════════════════════════════ */
 function populateSwimCompareSelectors() {
-  const swims = getSwims()
+  const swims = getSwimsByPeriod()
     .sort((a, b) => (b.start_time || b.date || '').localeCompare(a.start_time || a.date || ''));
   const opts = swims.map(s => {
     const dateStr = s.date || (s.start_time || '').slice(0, 10);
@@ -311,7 +290,7 @@ function updateSwimCompare() {
     return;
   }
 
-  const swims = getSwims();
+  const swims = getSwimsByPeriod();
   const a = swims.find(s => String(s.id) === String(idA));
   const b = swims.find(s => String(s.id) === String(idB));
   if (!a || !b) return;

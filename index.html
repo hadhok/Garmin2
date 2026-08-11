@@ -445,6 +445,14 @@
       ════════════════════════════════════════════════ -->
       <div id="view-swim" class="view">
 
+        <!-- Filtre période -->
+        <div style="display:flex;gap:4px;margin-bottom:16px">
+          <button class="hpb swim-period-btn active" data-period="all"   onclick="setSwimPeriod('all',this)">Tout</button>
+          <button class="hpb swim-period-btn" data-period="week"  onclick="setSwimPeriod('week',this)">7 jours</button>
+          <button class="hpb swim-period-btn" data-period="month" onclick="setSwimPeriod('month',this)">Ce mois</button>
+          <button class="hpb swim-period-btn" data-period="year"  onclick="setSwimPeriod('year',this)">Cette année</button>
+        </div>
+
         <!-- KPI strip -->
         <div class="kpi-grid" id="swim-kpi-strip" style="margin-bottom:20px"></div>
 
@@ -475,12 +483,6 @@
         <div id="ssh-drift" class="section-header collapsible" onclick="toggleSection(this)">Dérive intra-séance &amp; style de nage <span class="chev">▾</span></div>
         <div class="section-body">
           <div class="card" id="swim-drift"></div>
-        </div>
-
-        <!-- Calendrier -->
-        <div id="ssh-calendar" class="section-header collapsible" onclick="toggleSection(this)">Calendrier <span class="chev">▾</span></div>
-        <div class="section-body">
-          <div class="card" id="swim-calendar"></div>
         </div>
 
         <!-- Comparer deux séances -->

@@ -722,7 +722,7 @@ function showHrrInfo() {
       ${rows.map(([color,range,label]) => `
         <div style="display:flex;align-items:center;gap:10px;padding:6px 0">
           <span style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0"></span>
-          <span style="font-size:13px;flex:1">${label}</span>
+          <span style="font-size:13px;flex:1;color:var(--text,#e5e7eb)">${label}</span>
           <span style="font-size:13px;color:var(--muted,#9ca3af)">${range}</span>
         </div>`).join('')}
       <button onclick="this.closest('.hrr-info-modal').remove()"
@@ -755,7 +755,7 @@ function showSwolfInfo() {
       ${rows.map(([color,range,label]) => `
         <div style="display:flex;align-items:center;gap:10px;padding:6px 0">
           <span style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0"></span>
-          <span style="font-size:13px;flex:1">${label}</span>
+          <span style="font-size:13px;flex:1;color:var(--text,#e5e7eb)">${label}</span>
           <span style="font-size:13px;color:var(--muted,#9ca3af)">${range}</span>
         </div>`).join('')}
       <button onclick="this.closest('.swolf-info-modal').remove()"
