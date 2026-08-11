@@ -446,44 +446,56 @@
       ════════════════════════════════════════════════ -->
       <div id="view-swim" class="view">
 
-        <!-- Filtre période -->
-        <div style="display:flex;gap:4px;margin-bottom:16px">
-          <button class="hpb swim-period-btn active" data-period="all"   onclick="setSwimPeriod('all',this)">Tout</button>
-          <button class="hpb swim-period-btn" data-period="week"  onclick="setSwimPeriod('week',this)">7 jours</button>
-          <button class="hpb swim-period-btn" data-period="month" onclick="setSwimPeriod('month',this)">Ce mois</button>
-          <button class="hpb swim-period-btn" data-period="year"  onclick="setSwimPeriod('year',this)">Cette année</button>
+        <!-- Filtres -->
+        <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
+          <div style="display:flex;gap:4px">
+            <button class="hpb swim-period-btn active" data-period="all"   onclick="setSwimPeriod('all',this)">Tout</button>
+            <button class="hpb swim-period-btn" data-period="week"  onclick="setSwimPeriod('week',this)">7 jours</button>
+            <button class="hpb swim-period-btn" data-period="month" onclick="setSwimPeriod('month',this)">Ce mois</button>
+            <button class="hpb swim-period-btn" data-period="year"  onclick="setSwimPeriod('year',this)">Cette année</button>
+          </div>
+          <select id="swim-filter-effort" class="compare-select" style="max-width:160px" onchange="setSwimFilters()">
+            <option value="">Tous les efforts</option>
+          </select>
+          <select id="swim-filter-stroke" class="compare-select" style="max-width:160px" onchange="setSwimFilters()">
+            <option value="">Toutes les nages</option>
+          </select>
         </div>
 
-        <!-- KPI strip -->
-        <div class="kpi-grid" id="swim-kpi-strip" style="margin-bottom:20px"></div>
+        <!-- KPI cards -->
+        <div class="swim-kpi-row" id="swim-kpi-strip"></div>
 
-        <!-- Records personnels -->
-        <div id="ssh-prs" class="section-header collapsible" onclick="toggleSection(this)">Records personnels <span class="chev">▾</span></div>
-        <div class="section-body">
-          <div class="card" id="swim-prs"></div>
-        </div>
-
-        <!-- Tendance -->
-        <div id="ssh-trend" class="section-header collapsible" onclick="toggleSection(this)">Tendance dans le temps <span class="chev">▾</span></div>
-        <div class="section-body">
+        <!-- Tendance & Matrice -->
+        <div class="swim-chart-row">
           <div class="card">
-            <div style="height:220px"><canvas id="swim-chart-pace"></canvas></div>
+            <div class="swim-card-title">Tendance de Performance et Volume</div>
+            <div style="height:240px"><canvas id="swim-chart-trend"></canvas></div>
           </div>
-          <div class="card" style="margin-top:12px">
-            <div style="height:220px"><canvas id="swim-chart-swolf"></canvas></div>
+          <div class="card">
+            <div class="swim-card-title">Matrice d'Efficacité : SWOLF vs Allure</div>
+            <div style="height:240px"><canvas id="swim-chart-matrix"></canvas></div>
           </div>
         </div>
 
-        <!-- Zones cardio -->
-        <div id="ssh-zones" class="section-header collapsible" onclick="toggleSection(this)">Zones cardio moyennes <span class="chev">▾</span></div>
-        <div class="section-body">
-          <div class="card" id="swim-zones"></div>
-        </div>
+        <!-- Historique + Détail séance -->
+        <div class="swim-detail-row">
+          <div class="card" style="padding:0;overflow:hidden">
+            <div class="swim-card-title" style="padding:14px 16px 0">Historique des Séances</div>
+            <table class="acts-table">
+              <thead><tr>
+                <th class="th-sort" onclick="sortSwimTable('date')">Date</th>
+                <th>Nom</th>
+                <th class="th-sort" onclick="sortSwimTable('distance_km')">Dist.</th>
+                <th>Allure</th>
+                <th class="th-sort" onclick="sortSwimTable('swolf')">SWOLF</th>
+                <th>FC moy.</th>
+                <th class="th-sort" onclick="sortSwimTable('training_load')">Charge</th>
+              </tr></thead>
+              <tbody id="swim-table-body"></tbody>
+            </table>
+          </div>
 
-        <!-- Dérive intra-séance & style de nage -->
-        <div id="ssh-drift" class="section-header collapsible" onclick="toggleSection(this)">Dérive intra-séance &amp; style de nage <span class="chev">▾</span></div>
-        <div class="section-body">
-          <div class="card" id="swim-drift"></div>
+          <div class="card" id="swim-detail-panel"></div>
         </div>
 
         <!-- Comparer deux séances -->
@@ -506,19 +518,6 @@
               </div>
             </div>
             <div id="swim-compare-result"></div>
-          </div>
-        </div>
-
-        <!-- Historique -->
-        <div id="ssh-history" class="section-header collapsible" onclick="toggleSection(this)">Historique des séances <span class="chev">▾</span></div>
-        <div class="section-body">
-          <div class="card" style="padding:0;overflow:hidden">
-            <table class="acts-table">
-              <thead><tr>
-                <th>Date</th><th>Nom</th><th>Distance</th><th>Durée</th><th>Allure</th><th>SWOLF</th><th>FC moy.</th>
-              </tr></thead>
-              <tbody id="swim-table-body"></tbody>
-            </table>
           </div>
         </div>
 
