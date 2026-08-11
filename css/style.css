@@ -636,6 +636,45 @@ body.loading main::before {
   gap: 12px;
   margin-bottom: 20px;
 }
+
+/* ── Page Natation ── */
+.swim-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.swim-kpi-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.swim-kpi-card-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+.swim-kpi-card-value { font-size: 22px; font-weight: 700; }
+.swim-kpi-card-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.swim-kpi-spark { flex-shrink: 0; }
+.swim-chart-row {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.swim-detail-row {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 14px;
+  margin-bottom: 16px;
+  align-items: start;
+}
+.swim-card-title { font-size: 13px; font-weight: 700; margin-bottom: 10px; color: var(--text); }
+.swim-table-row-selected { background: var(--accent-bg) !important; }
+.swim-detail-empty { padding: 32px 16px; text-align: center; color: var(--muted); font-size: 13px; }
+.swim-detail-metric { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.swim-detail-metric:last-child { border-bottom: none; }
+.swim-detail-metric-label { color: var(--muted); }
+.swim-detail-metric-value { font-weight: 700; }
+@media (max-width: 860px) {
+  .swim-chart-row, .swim-detail-row { grid-template-columns: 1fr; }
+}
 .kpi-card {
   background: var(--surface);
   border: 1px solid var(--border);
