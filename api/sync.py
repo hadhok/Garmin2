@@ -187,6 +187,45 @@ def _compute_hrr(client, activity_id):
 HRR_TYPES = {'run', 'hiit', 'cardio', 'bike', 'rowing', 'hike'}
 
 
+def _compute_swim_drift(client, activity_id):
+    """Dérive intra-séance (dernier tiers - premier tiers) + répartition par style de nage."""
+    try:
+        splits = client.get_activity_splits(activity_id)
+    except Exception:
+        return None, None, None
+
+    lengths = []
+    for lap in splits.get('lapDTOs', []):
+        for length in lap.get('lengthDTOs', []):
+            if length.get('distance'):
+                lengths.append(length)
+
+    if len(lengths) < 6:
+        return None, None, None
+
+    third = max(1, len(lengths) // 3)
+    first, last = lengths[:third], lengths[-third:]
+
+    def avg(key, arr):
+        vals = [x.get(key) for x in arr if x.get(key) is not None]
+        return sum(vals) / len(vals) if vals else None
+
+    swolf_first, swolf_last = avg('averageSWOLF', first), avg('averageSWOLF', last)
+    hr_first, hr_last = avg('averageHR', first), avg('averageHR', last)
+    drift_swolf = round(swolf_last - swolf_first, 1) if swolf_first is not None and swolf_last is not None else None
+    drift_hr = round(hr_last - hr_first, 1) if hr_first is not None and hr_last is not None else None
+
+    stroke_dur, total_dur = {}, 0
+    for l in lengths:
+        st = l.get('swimStroke') or 'UNKNOWN'
+        d = l.get('duration', 0) or 0
+        stroke_dur[st] = stroke_dur.get(st, 0) + d
+        total_dur += d
+    stroke_pct = {k: round(v / total_dur * 100) for k, v in stroke_dur.items()} if total_dur > 0 else None
+
+    return drift_swolf, drift_hr, stroke_pct
+
+
 def _run_sync():
     from supabase import create_client
     from garminconnect import Garmin
@@ -226,6 +265,11 @@ def _run_sync():
             hrr_60, hrr_120 = _compute_hrr(client, act['id'])
             act['hrr_60s'] = hrr_60
             act['hrr_120s'] = hrr_120
+        if act['type'] == 'swim' and act.get('hr_avg'):
+            drift_swolf, drift_hr, stroke_pct = _compute_swim_drift(client, act['id'])
+            act['swim_drift_swolf'] = drift_swolf
+            act['swim_drift_hr'] = drift_hr
+            act['swim_stroke_pct'] = stroke_pct
 
     if normalized:
         # Upsert par batch de 50 — fallback sans avg_cadence si colonne absente
@@ -237,7 +281,7 @@ def _run_sync():
                 msg = str(e)
                 drop_cols = [c for c in ('avg_cadence', 'hrr_60s', 'hrr_120s',
                                           'pace_per_100m', 'swolf', 'swim_cadence', 'pool_lengths',
-                                          'rest_min') if c in msg]
+                                          'rest_min', 'swim_drift_swolf', 'swim_drift_hr', 'swim_stroke_pct') if c in msg]
                 if drop_cols:
                     stripped = [{k: v for k, v in row.items() if k not in drop_cols} for row in batch]
                     sb.table('activities').upsert(stripped).execute()
