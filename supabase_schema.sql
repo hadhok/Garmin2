@@ -34,7 +34,10 @@ CREATE TABLE IF NOT EXISTS activities (
   swolf           FLOAT,         -- natation : indice d'efficacité de nage
   swim_cadence    INTEGER,       -- natation : cadence de bras (coups/min)
   pool_lengths    INTEGER,       -- natation : nombre de longueurs
-  rest_min        FLOAT          -- temps de pause cumulé (durée totale - durée en mouvement)
+  rest_min        FLOAT,         -- temps de pause cumulé (durée totale - durée en mouvement)
+  swim_drift_swolf FLOAT,        -- natation : dérive SWOLF (dernier tiers - premier tiers de la séance)
+  swim_drift_hr    FLOAT,        -- natation : dérive FC (dernier tiers - premier tiers de la séance)
+  swim_stroke_pct  JSONB         -- natation : % de temps par style {"FREESTYLE": 92, "BREASTSTROKE": 8}
 );
 
 -- Migration additive si la table existe déjà :
@@ -46,6 +49,9 @@ ALTER TABLE activities ADD COLUMN IF NOT EXISTS swolf         FLOAT;
 ALTER TABLE activities ADD COLUMN IF NOT EXISTS rest_min      FLOAT;
 ALTER TABLE activities ADD COLUMN IF NOT EXISTS swim_cadence  INTEGER;
 ALTER TABLE activities ADD COLUMN IF NOT EXISTS pool_lengths  INTEGER;
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS swim_drift_swolf FLOAT;
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS swim_drift_hr    FLOAT;
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS swim_stroke_pct  JSONB;
 
 CREATE INDEX IF NOT EXISTS idx_activities_date ON activities(date DESC);
 CREATE INDEX IF NOT EXISTS idx_activities_type ON activities(type);

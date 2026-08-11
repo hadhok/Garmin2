@@ -1,4 +1,4 @@
-const CACHE = 'garmin-v13';
+const CACHE = 'garmin-v14';
 const ASSETS = [
   '/',
   '/index.html',
@@ -9,6 +9,7 @@ const ASSETS = [
   '/js/health.js',
   '/js/profile.js',
   '/js/running.js',
+  '/js/swim.js',
   '/js/xplor.js',
   '/js/detail_charts.js',
   '/js/poc.js',

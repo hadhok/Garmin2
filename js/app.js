@@ -900,6 +900,7 @@ function switchView(view, swipeDir) {
     training: 'Entraînement',
     recovery: 'Récupération',
     history:  'Historique',
+    swim:     'Natation',
     profile:  'Profil',
     poc:      '🔬 Science',
     /* legacy aliases */
@@ -1085,6 +1086,7 @@ function renderAll() {
     return;
   }
   if (state.view === 'history')  { renderActivities(); return; }
+  if (state.view === 'swim')     { if (typeof renderSwimPage === 'function') renderSwimPage(); return; }
   /* Aliases legacy */
   if (state.view === 'health')     { renderHealth();     return; }
   if (state.view === 'profile')    { renderProfile();    return; }
