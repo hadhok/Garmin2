@@ -65,6 +65,13 @@ def _format_pace(speed_ms):
     return f"{int(secs // 60)}:{int(secs % 60):02d}"
 
 
+def _format_swim_pace(speed_ms):
+    if not speed_ms or speed_ms <= 0:
+        return None
+    secs = 100 / speed_ms
+    return f"{int(secs // 60)}:{int(secs % 60):02d}"
+
+
 def _normalize(raw):
     type_key = raw.get('activityType', {}).get('typeKey', 'other')
     act_type = TYPE_MAP.get(type_key, 'other')
@@ -80,6 +87,7 @@ def _normalize(raw):
     speed_ms = raw.get('averageSpeed', 0) or 0
     is_run   = act_type in ('run', 'hike', 'walk')
     is_bike  = act_type == 'bike'
+    is_swim  = act_type == 'swim'
 
     zones_s     = [raw.get(f'hrTimeInZone_{i}', 0) or 0 for i in range(1, 6)]
     zones_total = sum(zones_s)
@@ -117,6 +125,11 @@ def _normalize(raw):
         'vo2max':        raw.get('vO2MaxValue'),
         'avg_cadence':   int(raw.get('averageRunningCadenceInStepsPerMinute') or 0) if is_run else None,
         'hr_zones_pct':  hr_zones,
+        # ── Natation ──────────────────────────────────────────────────────
+        'pace_per_100m': _format_swim_pace(speed_ms) if is_swim else None,
+        'swolf':         round(raw.get('averageSwolf')) if is_swim and raw.get('averageSwolf') else None,
+        'swim_cadence':  round(raw.get('averageSwimCadenceInStrokesPerMinute')) if is_swim and raw.get('averageSwimCadenceInStrokesPerMinute') else None,
+        'pool_lengths':  int(raw.get('activeLengths')) if is_swim and raw.get('activeLengths') else None,
     }
 
 
@@ -219,7 +232,8 @@ def _run_sync():
                 sb.table('activities').upsert(batch).execute()
             except Exception as e:
                 msg = str(e)
-                drop_cols = [c for c in ('avg_cadence', 'hrr_60s', 'hrr_120s') if c in msg]
+                drop_cols = [c for c in ('avg_cadence', 'hrr_60s', 'hrr_120s',
+                                          'pace_per_100m', 'swolf', 'swim_cadence', 'pool_lengths') if c in msg]
                 if drop_cols:
                     stripped = [{k: v for k, v in row.items() if k not in drop_cols} for row in batch]
                     sb.table('activities').upsert(stripped).execute()

@@ -618,6 +618,10 @@ function openDetail(id) {
       u: pct!=null ? `bpm (${pct}%)` : 'bpm',
     });
   }
+  if (a.pace_per_100m)  stats.push({l:'Allure',      v: a.pace_per_100m,        u:'/100m'});
+  if (a.swolf)          stats.push({l:'SWOLF',       v: a.swolf,                u:''});
+  if (a.swim_cadence)   stats.push({l:'Cadence',     v: a.swim_cadence,         u:'coups/min'});
+  if (a.pool_lengths)   stats.push({l:'Longueurs',   v: a.pool_lengths,         u:''});
 
   document.getElementById('detail-stats').innerHTML = stats.map(s =>
     `<div class="detail-stat">

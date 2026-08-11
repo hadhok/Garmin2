@@ -29,13 +29,21 @@ CREATE TABLE IF NOT EXISTS activities (
   hr_zones_pct    JSONB,         -- [z1%, z2%, z3%, z4%, z5%]
   avg_cadence     INTEGER,
   hrr_60s         FLOAT,         -- récupération cardiaque à 60s (bpm perdus depuis le pic)
-  hrr_120s        FLOAT          -- récupération cardiaque à 120s (bpm perdus depuis le pic)
+  hrr_120s        FLOAT,         -- récupération cardiaque à 120s (bpm perdus depuis le pic)
+  pace_per_100m   TEXT,          -- natation : allure "M:SS" / 100m
+  swolf           FLOAT,         -- natation : indice d'efficacité de nage
+  swim_cadence    INTEGER,       -- natation : cadence de bras (coups/min)
+  pool_lengths    INTEGER        -- natation : nombre de longueurs
 );
 
 -- Migration additive si la table existe déjà :
-ALTER TABLE activities ADD COLUMN IF NOT EXISTS avg_cadence INTEGER;
-ALTER TABLE activities ADD COLUMN IF NOT EXISTS hrr_60s     FLOAT;
-ALTER TABLE activities ADD COLUMN IF NOT EXISTS hrr_120s    FLOAT;
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS avg_cadence   INTEGER;
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS hrr_60s       FLOAT;
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS hrr_120s      FLOAT;
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS pace_per_100m TEXT;
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS swolf         FLOAT;
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS swim_cadence  INTEGER;
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS pool_lengths  INTEGER;
 
 CREATE INDEX IF NOT EXISTS idx_activities_date ON activities(date DESC);
 CREATE INDEX IF NOT EXISTS idx_activities_type ON activities(type);
