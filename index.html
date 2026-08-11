@@ -433,6 +433,28 @@
           </table>
         </div>
 
+        <!-- Comparer deux séances de natation -->
+        <div id="ash-swim-compare" class="section-header collapsible" onclick="toggleSection(this)">Comparer deux séances de natation <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="card" id="swim-compare-card">
+            <div class="compare-selectors">
+              <div class="compare-sel-wrap">
+                <div class="compare-sel-label compare-label-a">Session A</div>
+                <select id="swim-compare-sel-a" onchange="updateSwimCompare()" class="compare-select">
+                  <option value="">— Choisir une séance —</option>
+                </select>
+              </div>
+              <div class="compare-vs">VS</div>
+              <div class="compare-sel-wrap">
+                <div class="compare-sel-label compare-label-b">Session B</div>
+                <select id="swim-compare-sel-b" onchange="updateSwimCompare()" class="compare-select">
+                  <option value="">— Choisir une séance —</option>
+                </select>
+              </div>
+            </div>
+            <div id="swim-compare-result"></div>
+          </div>
+        </div>
 
       </div><!-- /view-history -->
 
