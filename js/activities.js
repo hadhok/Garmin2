@@ -272,6 +272,8 @@ function updateSwimCompare() {
     ['SWOLF',         a.swolf,         b.swolf,         '', '', true],
     ['Cadence',       a.swim_cadence,  b.swim_cadence,  'coups/min', 'coups/min', null],
     ['Longueurs',     a.pool_lengths,  b.pool_lengths,  '', '', null],
+    ['Pause',         a.rest_min>0 ? (typeof fmt_dur==='function'?fmt_dur(a.rest_min):`${Math.round(a.rest_min)}min`) : null,
+                       b.rest_min>0 ? (typeof fmt_dur==='function'?fmt_dur(b.rest_min):`${Math.round(b.rest_min)}min`) : null, '', '', true],
     ['FC moy.',       a.hr_avg,        b.hr_avg,        'bpm', 'bpm', true],
     ['FC max',        a.hr_max,        b.hr_max,        'bpm', 'bpm', true],
     ['Charge',        a.training_load ? Math.round(a.training_load) : null, b.training_load ? Math.round(b.training_load) : null, 'pts', 'pts', null],

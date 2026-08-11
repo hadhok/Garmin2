@@ -777,6 +777,7 @@ function openDetail(id) {
   if (a.swolf)          stats.push({l:'SWOLF',       v: a.swolf,                u:''});
   if (a.swim_cadence)   stats.push({l:'Cadence',     v: a.swim_cadence,         u:'coups/min'});
   if (a.pool_lengths)   stats.push({l:'Longueurs',   v: a.pool_lengths,         u:''});
+  if (a.rest_min > 0)   stats.push({l:'Pause',       v: fmt_dur(a.rest_min),    u:''});
 
   document.getElementById('detail-stats').innerHTML = stats.map(s =>
     `<div class="detail-stat">

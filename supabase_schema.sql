@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS activities (
   pace_per_100m   TEXT,          -- natation : allure "M:SS" / 100m
   swolf           FLOAT,         -- natation : indice d'efficacité de nage
   swim_cadence    INTEGER,       -- natation : cadence de bras (coups/min)
-  pool_lengths    INTEGER        -- natation : nombre de longueurs
+  pool_lengths    INTEGER,       -- natation : nombre de longueurs
+  rest_min        FLOAT          -- temps de pause cumulé (durée totale - durée en mouvement)
 );
 
 -- Migration additive si la table existe déjà :
@@ -42,6 +43,7 @@ ALTER TABLE activities ADD COLUMN IF NOT EXISTS hrr_60s       FLOAT;
 ALTER TABLE activities ADD COLUMN IF NOT EXISTS hrr_120s      FLOAT;
 ALTER TABLE activities ADD COLUMN IF NOT EXISTS pace_per_100m TEXT;
 ALTER TABLE activities ADD COLUMN IF NOT EXISTS swolf         FLOAT;
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS rest_min      FLOAT;
 ALTER TABLE activities ADD COLUMN IF NOT EXISTS swim_cadence  INTEGER;
 ALTER TABLE activities ADD COLUMN IF NOT EXISTS pool_lengths  INTEGER;
 
