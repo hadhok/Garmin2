@@ -669,6 +669,17 @@ function openDetail(id) {
 
 function closeDetail() {
   document.getElementById('detail-modal').classList.remove('open');
+  document.querySelector('#detail-modal .detail-modal')?.classList.remove('detail-modal--expanded');
+  const btn = document.getElementById('detail-expand-btn');
+  if (btn) btn.textContent = '⤢';
+}
+
+function toggleDetailExpand() {
+  const modal = document.querySelector('#detail-modal .detail-modal');
+  const btn = document.getElementById('detail-expand-btn');
+  if (!modal) return;
+  const expanded = modal.classList.toggle('detail-modal--expanded');
+  if (btn) btn.textContent = expanded ? '⤡' : '⤢';
 }
 
 /* ══════════════════════════════════════════════════════════
