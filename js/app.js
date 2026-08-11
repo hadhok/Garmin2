@@ -733,6 +733,39 @@ function showHrrInfo() {
   document.body.appendChild(modal);
 }
 
+function showSwolfInfo() {
+  const rows = [
+    ['#22c55e', '< 35–40', 'Très efficace'],
+    ['#84cc16', '40 – 50', 'Correct'],
+    ['#f59e0b', '50 – 60', 'Perfectible'],
+    ['#ef4444', '> 60–70', 'Peu efficace'],
+  ];
+  const modal = document.createElement('div');
+  modal.className = 'swolf-info-modal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1100;display:flex;align-items:center;justify-content:center;padding:16px;animation:fadeIn .2s';
+  modal.onclick = (e) => e.target === modal && modal.remove();
+  modal.innerHTML = `
+    <div style="background:var(--card,#1a1a1e);border-radius:16px;padding:20px;max-width:340px;width:100%;animation:slideUp .2s">
+      <div style="font-weight:700;font-size:15px;margin-bottom:4px">SWOLF (Swim + Golf)</div>
+      <div style="font-size:12px;color:var(--muted,#9ca3af);margin-bottom:14px">
+        Indice d'efficacité de nage — comme au golf, plus bas = mieux.<br>
+        SWOLF = temps (s) + nombre de coups de bras, sur une longueur.<br>
+        Ex : 45s + 18 coups = SWOLF 63.
+      </div>
+      ${rows.map(([color,range,label]) => `
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 0">
+          <span style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0"></span>
+          <span style="font-size:13px;flex:1">${label}</span>
+          <span style="font-size:13px;color:var(--muted,#9ca3af)">${range}</span>
+        </div>`).join('')}
+      <button onclick="this.closest('.swolf-info-modal').remove()"
+              style="margin-top:14px;width:100%;padding:10px;border-radius:10px;border:none;background:var(--accent,#3b82f6);color:#fff;font-weight:600;font-size:13px">
+        Fermer
+      </button>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
 /* ══════════════════════════════════════════════════════════
    ACTIVITY DETAIL MODAL
    ══════════════════════════════════════════════════════════ */
@@ -774,7 +807,7 @@ function openDetail(id) {
     });
   }
   if (a.pace_per_100m)  stats.push({l:'Allure',      v: a.pace_per_100m,        u:'/100m'});
-  if (a.swolf)          stats.push({l:'SWOLF',       v: a.swolf,                u:''});
+  if (a.swolf)          stats.push({l:'SWOLF <span onclick="showSwolfInfo()" style="cursor:pointer;opacity:.6">ⓘ</span>', v: a.swolf, u:''});
   if (a.swim_cadence)   stats.push({l:'Cadence',     v: a.swim_cadence,         u:'coups/min'});
   if (a.pool_lengths)   stats.push({l:'Longueurs',   v: a.pool_lengths,         u:''});
   if (a.rest_min > 0)   stats.push({l:'Pause',       v: fmt_dur(a.rest_min),    u:''});
