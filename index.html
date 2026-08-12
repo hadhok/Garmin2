@@ -557,6 +557,7 @@
                 <th class="th-sort" onclick="sortSwimTable('swolf')">SWOLF</th>
                 <th>FC moy.</th>
                 <th class="th-sort" onclick="sortSwimTable('training_load')">Charge</th>
+                <th></th>
               </tr></thead>
               <tbody id="swim-table-body"></tbody>
             </table>
@@ -1405,6 +1406,36 @@
       </div>
       <div id="detail-charts-wrap" style="display:none">
         <div class="detail-section">Analyse détaillée</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════
+     MODALE DÉTAIL SÉANCE NATATION (onglets)
+════════════════════════════════════════════════ -->
+<div class="detail-bg" id="swim-detail-modal" onclick="if(event.target===this)closeSwimDetail()">
+  <div class="detail-modal">
+    <div class="detail-header">
+      <div class="detail-icon" id="swim-detail-icon">🏊</div>
+      <div class="detail-title">
+        <div class="detail-name" id="swim-detail-name"></div>
+        <div class="detail-meta" id="swim-detail-meta"></div>
+      </div>
+      <button class="detail-close" onclick="closeSwimDetail()">✕</button>
+    </div>
+    <div style="display:flex;gap:4px;padding:10px 20px 0;border-bottom:1px solid var(--border);overflow-x:auto">
+      <button class="swim-detail-tab active" data-tab="resume" onclick="switchSwimDetailTab('resume')">Résumé</button>
+      <button class="swim-detail-tab" data-tab="tours" onclick="switchSwimDetailTab('tours')">Tours</button>
+      <button class="swim-detail-tab" data-tab="zones" onclick="switchSwimDetailTab('zones')">Zones FC</button>
+      <button class="swim-detail-tab" data-tab="graphiques" onclick="switchSwimDetailTab('graphiques')">Graphiques</button>
+    </div>
+    <div class="detail-body">
+      <div id="swim-detail-tab-resume"></div>
+      <div id="swim-detail-tab-tours" style="display:none"></div>
+      <div id="swim-detail-tab-zones" style="display:none"></div>
+      <div id="swim-detail-tab-graphiques" style="display:none">
+        <div id="swim-detail-charts-wrap"></div>
       </div>
     </div>
   </div>

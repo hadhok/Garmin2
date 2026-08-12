@@ -630,6 +630,13 @@ body.loading main::before {
 .swim-detail-metric:last-child { border-bottom: none; }
 .swim-detail-metric-label { color: var(--muted); }
 .swim-detail-metric-value { font-weight: 700; }
+.swim-detail-tab {
+  background: none; border: none; border-bottom: 2px solid transparent;
+  color: var(--muted); font-size: 13px; font-weight: 600; padding: 8px 10px;
+  cursor: pointer; white-space: nowrap; transition: color .15s, border-color .15s;
+}
+.swim-detail-tab:hover { color: var(--text); }
+.swim-detail-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 .swim-quad-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

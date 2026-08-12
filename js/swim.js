@@ -316,7 +316,7 @@ function _renderSwimPRs(swims) {
   ].filter(([, , , act]) => act);
 
   el.innerHTML = `<div class="pr-grid">${cards.map(([icon, label, val, act]) => `
-    <div class="pr-card" style="cursor:pointer" onclick="openDetail(${act.id})">
+    <div class="pr-card" style="cursor:pointer" onclick="openSwimDetail(${act.id})">
       <div class="pr-badge">${icon}</div>
       <div class="pr-category">${label}</div>
       <div class="pr-pace">${val}</div>
@@ -333,7 +333,7 @@ function _swimOpenOnClick(chart, evt, list, mode) {
   const pts = chart.getElementsAtEventForMode(evt, mode || 'nearest', { intersect: mode === 'point' }, true);
   if (pts.length) {
     const act = list[pts[0].index];
-    if (act) openDetail(act.id);
+    if (act) openSwimDetail(act.id);
   }
 }
 
@@ -746,7 +746,7 @@ function _renderSwimTable(swims) {
   const tbody = document.getElementById('swim-table-body');
   if (!tbody) return;
   if (!swims.length) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted)">Aucune séance</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--muted)">Aucune séance</td></tr>`;
     return;
   }
 
@@ -772,6 +772,10 @@ function _renderSwimTable(swims) {
       <td class="td-num">${a.swolf || '–'}</td>
       <td class="td-num col-hr">${a.hr_avg ? a.hr_avg + ' bpm' : '–'}</td>
       <td class="td-num">${a.training_load ? Math.round(a.training_load) : '–'}</td>
+      <td class="td-num" style="width:24px">
+        <button onclick="event.stopPropagation();openSwimDetail(${a.id})" title="Voir le détail"
+                style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 4px">›</button>
+      </td>
     </tr>`;
   }).join('');
 
@@ -807,7 +811,7 @@ function _renderSwimDetailPanel(act) {
 
   el.innerHTML = `
     <div style="margin-bottom:12px">
-      <div class="swim-card-title" style="margin-bottom:2px">${act.name || 'Natation'}</div>
+      <div class="swim-card-title" style="margin-bottom:2px">${_swimNameWithTime(act)}</div>
       <div style="font-size:12px;color:var(--muted)">${dateStr}</div>
     </div>
     ${stats.map(([l, v]) => `
@@ -817,28 +821,26 @@ function _renderSwimDetailPanel(act) {
       </div>`).join('')}
     <div style="font-size:11px;color:var(--muted);margin-top:10px">Zones, TE, nages, dérive et HRR de cette séance sont affichés dans les 4 quadrants ci-dessus.</div>
 
-    <div class="swim-subtitle" style="margin-top:14px">Analyse longueur par longueur</div>
-    <div id="swim-length-analysis"><div style="color:var(--muted);font-size:12px">Chargement…</div></div>
-
-    <button onclick="openDetail(${act.id})"
+    <button onclick="openSwimDetail(${act.id})"
             style="margin-top:12px;width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-weight:600;font-size:13px;cursor:pointer">
       Voir le détail complet →
     </button>`;
-
-  _loadSwimLengthAnalysis(act);
 }
 
+/* ══════════════════════════════════════════════════════════
+   ANALYSE LONGUEUR PAR LONGUEUR (partagée : onglet "Tours")
+   ══════════════════════════════════════════════════════════ */
 let _swimLengthAnalysisReqId = 0;
-async function _loadSwimLengthAnalysis(act) {
-  const el = document.getElementById('swim-length-analysis');
+async function _loadSwimLengthAnalysis(act, containerId) {
+  const el = document.getElementById(containerId);
   if (!el) return;
   const reqId = ++_swimLengthAnalysisReqId;
-  const stillCurrent = () => reqId === _swimLengthAnalysisReqId && String(swimState.selectedId) === String(act.id);
+  const stillCurrent = () => reqId === _swimLengthAnalysisReqId;
 
   const renderBuckets = (data) => {
     if (!stillCurrent()) return;
     if (!data?.buckets?.length) {
-      el.innerHTML = '<div style="color:var(--muted);font-size:12px">Pas de données de longueurs disponibles pour cette séance.</div>';
+      el.innerHTML = '<div style="color:var(--muted);font-size:13px">Pas de données de longueurs disponibles pour cette séance.</div>';
       return;
     }
     el.innerHTML = `
@@ -854,6 +856,7 @@ async function _loadSwimLengthAnalysis(act) {
       </tbody></table>`;
   };
 
+  el.innerHTML = '<div style="color:var(--muted);font-size:13px">Chargement…</div>';
   try {
     const r = await fetch(`/api/activity_details?id=${act.id}`);
     if (r.ok) {
@@ -863,7 +866,7 @@ async function _loadSwimLengthAnalysis(act) {
       throw new Error('fetch failed');
     }
 
-    if (stillCurrent()) el.innerHTML = '<div style="color:var(--muted);font-size:12px">Récupération depuis Garmin…</div>';
+    if (stillCurrent()) el.innerHTML = '<div style="color:var(--muted);font-size:13px">Récupération depuis Garmin…</div>';
     const r2 = await fetch('/api/activity_details', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -873,8 +876,95 @@ async function _loadSwimLengthAnalysis(act) {
     const data2 = await r2.json();
     renderBuckets(data2.swim_length_buckets);
   } catch {
-    if (stillCurrent()) el.innerHTML = '<div style="color:var(--muted);font-size:12px">Analyse indisponible pour le moment.</div>';
+    if (stillCurrent()) el.innerHTML = '<div style="color:var(--muted);font-size:13px">Analyse indisponible pour le moment.</div>';
   }
+}
+
+/* ══════════════════════════════════════════════════════════
+   MODALE DÉTAIL SÉANCE (onglets : Résumé / Tours / Zones FC / Graphiques)
+   ══════════════════════════════════════════════════════════ */
+let _swimDetailAct = null;
+
+function openSwimDetail(id) {
+  const act = ACT_MAP[id] || ACT_MAP[String(id)];
+  if (!act) return;
+  _swimDetailAct = act;
+
+  const dateStr = new Date(act.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const time = (act.start_time || '').slice(11, 16);
+  document.getElementById('swim-detail-name').textContent = act.name || 'Natation';
+  document.getElementById('swim-detail-meta').textContent = `${dateStr}${time ? ' à ' + time : ''}`;
+  document.getElementById('swim-detail-modal').classList.add('open');
+  switchSwimDetailTab('resume');
+}
+
+function closeSwimDetail() {
+  document.getElementById('swim-detail-modal').classList.remove('open');
+}
+
+function switchSwimDetailTab(tab) {
+  document.querySelectorAll('.swim-detail-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  ['resume', 'tours', 'zones', 'graphiques'].forEach(t => {
+    const el = document.getElementById(`swim-detail-tab-${t}`);
+    if (el) el.style.display = t === tab ? '' : 'none';
+  });
+
+  const act = _swimDetailAct;
+  if (!act) return;
+  if (tab === 'resume') _renderSwimDetailResumeTab(act);
+  else if (tab === 'zones') _renderSwimDetailZonesTab(act);
+  else if (tab === 'tours') _loadSwimLengthAnalysis(act, 'swim-detail-tab-tours');
+  else if (tab === 'graphiques' && typeof loadActivityDetails === 'function') loadActivityDetails(act.id, 'swim-detail-charts-wrap');
+}
+
+function _renderSwimDetailResumeTab(act) {
+  const el = document.getElementById('swim-detail-tab-resume');
+  if (!el) return;
+
+  const stats = [
+    ['Distance', act.distance_km ? `${act.distance_km.toFixed(2)} km` : '–'],
+    ['Durée', fmt_dur(act.duration_min)],
+    ['Allure', act.pace_per_100m ? `${act.pace_per_100m}/100m` : '–'],
+    ['SWOLF', act.swolf || '–'],
+    ['FC moy.', act.hr_avg ? `${act.hr_avg} bpm` : '–'],
+    ['FC max', act.hr_max ? `${act.hr_max} bpm` : '–'],
+    ['Calories', act.calories ? `${Math.round(act.calories)} kcal` : '–'],
+    ['Cadence', act.swim_cadence ? `${act.swim_cadence} cps/min` : '–'],
+    ['Longueurs', act.pool_lengths || '–'],
+    ['Temps de repos', act.rest_min != null ? fmt_dur(act.rest_min) : '–'],
+  ];
+  const rows2 = [
+    ['Charge', act.training_load ? Math.round(act.training_load) : '–'],
+    ['TE aérobie', act.aerobic_te != null ? act.aerobic_te.toFixed(1) : '–'],
+    ['TE anaérobie', act.anaerobic_te != null ? (act.anaerobic_te || 0).toFixed(1) : '–'],
+    ['Catégorie', act.te_label || '–'],
+    ['Dérive SWOLF', act.swim_drift_swolf != null ? `${act.swim_drift_swolf > 0 ? '+' : ''}${act.swim_drift_swolf}` : '–'],
+    ['Dérive FC', act.swim_drift_hr != null ? `${act.swim_drift_hr > 0 ? '+' : ''}${act.swim_drift_hr} bpm` : '–'],
+  ];
+
+  el.innerHTML = `
+    <div class="detail-stats">
+      ${stats.map(([l, v]) => `<div class="detail-stat"><div class="detail-stat-label">${l}</div><div class="detail-stat-value">${v}</div></div>`).join('')}
+    </div>
+    <div class="detail-section" style="margin-top:16px">Entraînement</div>
+    <div>${rows2.map(([l, v]) => `<div class="detail-row"><span class="detail-row-label">${l}</span><span class="detail-row-value">${v}</span></div>`).join('')}</div>`;
+}
+
+function _renderSwimDetailZonesTab(act) {
+  const el = document.getElementById('swim-detail-tab-zones');
+  if (!el) return;
+  if (!act.hr_zones_pct || act.hr_zones_pct.length !== 5) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px">Pas de données de zones cardio.</div>';
+    return;
+  }
+  const colors = ['#3b82f6', '#22c55e', '#f59e0b', '#f97316', '#ef4444'];
+  const labels = ['Z1 Récupération', 'Z2 Endurance', 'Z3 Aérobie', 'Z4 Seuil', 'Z5 Maxi'];
+  el.innerHTML = act.hr_zones_pct.map((p, i) => `
+    <div class="zone-row">
+      <div class="zone-label">${labels[i]}</div>
+      <div class="zone-bar-bg"><div class="zone-bar-fill" style="width:${p}%;background:${colors[i]}"></div></div>
+      <div class="zone-pct">${p}% <span style="color:var(--muted);font-size:11px">(${fmt_dur(p / 100 * (act.duration_min || 0))})</span></div>
+    </div>`).join('');
 }
 
 function _swimDriftColor(v) {
