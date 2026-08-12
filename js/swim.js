@@ -119,8 +119,14 @@ function _renderSwimSelectionBar() {
   el.style.display = 'flex';
   const dateStr = new Date(act.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
   el.innerHTML = `
-    <span>🔎 Vue centrée sur : <strong>${act.name || 'Natation'}</strong> — ${dateStr}</span>
+    <span>🔎 Vue centrée sur : <strong>${_swimNameWithTime(act)}</strong> — ${dateStr}</span>
     <button onclick="clearSwimSelection()" class="hpb">✕ Réinitialiser</button>`;
+}
+
+function _swimNameWithTime(a) {
+  const base = a.name || 'Natation';
+  const time = (a.start_time || '').slice(11, 16); // HH:MM
+  return time ? `${base} (${time})` : base;
 }
 
 function _swimPaceToSec(p) {
@@ -237,7 +243,7 @@ function _renderSwimPRs(swims) {
       <div class="pr-badge">${icon}</div>
       <div class="pr-category">${label}</div>
       <div class="pr-pace">${val}</div>
-      <div class="pr-meta">${fmt(act.date)}${act.name ? `<br><span style="opacity:.7">${act.name}</span>` : ''}</div>
+      <div class="pr-meta">${fmt(act.date)}<br><span style="opacity:.7">${_swimNameWithTime(act)}</span></div>
     </div>`).join('')}</div>`;
 }
 
@@ -657,7 +663,7 @@ function _renderSwimTable(swims) {
     const selected = String(a.id) === String(swimState.selectedId);
     return `<tr onclick="selectSwimRow(${a.id})" class="${selected ? 'swim-table-row-selected' : ''}" style="cursor:pointer">
       <td class="td-date">${dateStr}</td>
-      <td class="td-name">${a.name || 'Natation'}</td>
+      <td class="td-name">${_swimNameWithTime(a)}</td>
       <td class="td-num">${a.distance_km ? a.distance_km.toFixed(1) + ' km' : '–'}</td>
       <td class="td-num">${a.pace_per_100m ? a.pace_per_100m : '–'}</td>
       <td class="td-num">${a.swolf || '–'}</td>
@@ -785,10 +791,11 @@ function populateSwimCompareSelectors() {
   const opts = swims.map(s => {
     const dateStr = s.date || (s.start_time || '').slice(0, 10);
     const date = dateStr ? new Date(dateStr + 'T12:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: '2-digit' }) : '–';
+    const time = (s.start_time || '').slice(11, 16);
     const dist = s.distance_km ? `${s.distance_km.toFixed(2)} km` : '';
     const pace = s.pace_per_100m ? ` · ${s.pace_per_100m}/100m` : '';
     const name = s.name ? ` — ${s.name.slice(0, 28)}` : '';
-    return `<option value="${s.id}">${date} ${dist}${pace}${name}</option>`;
+    return `<option value="${s.id}">${date}${time ? ' ' + time : ''} ${dist}${pace}${name}</option>`;
   }).join('');
 
   ['swim-compare-sel-a', 'swim-compare-sel-b'].forEach((id, idx) => {
@@ -915,7 +922,7 @@ function updateSwimCompare() {
     <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">
       <div style="flex:1;min-width:140px;padding:10px 12px;border-radius:8px;background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.2)">
         <div style="font-size:10px;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">A</div>
-        <div style="font-size:13px;font-weight:600">${a.name || 'Natation'}</div>
+        <div style="font-size:13px;font-weight:600">${_swimNameWithTime(a)}</div>
         <div style="font-size:11px;color:var(--muted)">${dateA}</div>
       </div>
       <div style="flex:1;min-width:140px;padding:10px 12px;border-radius:8px;background:rgba(249,115,22,0.07);border:1px solid rgba(249,115,22,0.2)">
