@@ -7,6 +7,7 @@ let _detailActivityId     = null;
 let _detailSamples        = null;
 let _detailSplits         = null;
 let _detailActiveMetrics  = ['pace', 'hr'];  // métriques affichées
+let _detailContainerId    = 'detail-charts-wrap';
 
 const _METRIC_CFG = {
   pace:    { label: 'Allure',          unit: '/km',  color: '#3b82f6', yInvert: true,  fmt: v => { const m=Math.floor(v); return `${m}:${String(Math.round((v-m)*60)).padStart(2,'0')}`; } },
@@ -21,13 +22,21 @@ const _METRIC_CFG = {
 };
 
 /* ── Charge les détails depuis l'API ──────────────────────────────────────── */
-async function loadActivityDetails(activityId) {
-  if (_detailActivityId === activityId) return;  // déjà chargé
+async function loadActivityDetails(activityId, containerId) {
+  containerId = containerId || 'detail-charts-wrap';
+  if (_detailActivityId === activityId && _detailContainerId === containerId) return;  // déjà chargé et affiché ici
+  if (_detailActivityId === activityId && _detailSamples) {
+    // Déjà en mémoire (juste un autre conteneur) : ré-affiche sans re-fetch
+    _detailContainerId = containerId;
+    renderDetailCharts();
+    return;
+  }
+  _detailContainerId = containerId;
   _detailActivityId = activityId;
   _detailSamples    = null;
   _detailSplits     = null;
 
-  const el = document.getElementById('detail-charts-wrap');
+  const el = document.getElementById(_detailContainerId);
   if (!el) return;
   el.innerHTML = `<div class="detail-charts-loading">⏳ Chargement des données…</div>`;
 
@@ -66,7 +75,7 @@ async function loadActivityDetails(activityId) {
 
 /* ── Render principal ─────────────────────────────────────────────────────── */
 function renderDetailCharts() {
-  const el = document.getElementById('detail-charts-wrap');
+  const el = document.getElementById(_detailContainerId);
   if (!el || !_detailSamples?.length) return;
 
   // Détecte les métriques disponibles
@@ -95,7 +104,7 @@ function renderDetailCharts() {
       </div>
     </div>
     <div class="detail-chart-container">
-      <canvas id="detail-ts-chart"></canvas>
+      <canvas id="${_detailContainerId}-ts-chart"></canvas>
     </div>
     ${_detailSplits?.length ? `
     <div class="detail-section" style="margin-top:16px">Splits / Laps</div>
@@ -133,7 +142,7 @@ function _buildDetailChart() {
   Object.values(_detailChartInstances).forEach(c => { try { c.destroy(); } catch {} });
   _detailChartInstances = {};
 
-  const canvas = document.getElementById('detail-ts-chart');
+  const canvas = document.getElementById(`${_detailContainerId}-ts-chart`);
   if (!canvas || !_detailSamples?.length) return;
 
   const samples = _detailSamples;
