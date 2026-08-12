@@ -6,13 +6,17 @@ POST /api/activity_details {"activity_id": X}  → fetch Garmin + stockage Supab
 POST /api/activity_details {"action": "backfill", "type": "run", "limit": 20}
      → backfill des N dernières activités sans details
 
+Pour les activités de natation, la réponse inclut aussi `swim_length_buckets`
+(analyse longueur par longueur découpée en 5 tranches : SWOLF/FC/durée moyens).
+
 Table Supabase requise (à créer une seule fois) :
   CREATE TABLE IF NOT EXISTS activity_details (
-    activity_id   BIGINT PRIMARY KEY,
-    samples       JSONB,   -- [{t, hr, pace, cadence, power, vos, gct, stride, vr, alt}]
-    splits        JSONB,   -- [{lap, distance_km, duration_min, hr_avg, pace}]
-    sample_rate_s INTEGER, -- intervalle entre samples (secondes)
-    fetched_at    TIMESTAMPTZ DEFAULT NOW()
+    activity_id         BIGINT PRIMARY KEY,
+    samples             JSONB,   -- [{t, hr, pace, cadence, power, vos, gct, stride, vr, alt}]
+    splits              JSONB,   -- [{lap, distance_km, duration_min, hr_avg, pace}]
+    sample_rate_s       INTEGER, -- intervalle entre samples (secondes)
+    swim_length_buckets JSONB,   -- natation : {total_lengths, buckets:[{range, swolf_avg, hr_avg, duration_avg_s}]}
+    fetched_at          TIMESTAMPTZ DEFAULT NOW()
   );
 """
 
@@ -137,16 +141,57 @@ def _normalize_splits(splits_data: dict) -> list:
     return result
 
 
+# ── Analyse natation : longueur par longueur, découpée en 5 tranches ─────────
+def _compute_swim_buckets(splits_data: dict, n_buckets: int = 5) -> dict:
+    lengths = []
+    for lap in (splits_data or {}).get('lapDTOs', []):
+        for length in lap.get('lengthDTOs', []):
+            if length.get('distance'):
+                lengths.append(length)
+
+    if not lengths:
+        return {'total_lengths': 0, 'buckets': []}
+
+    n = len(lengths)
+    bucket_size = max(1, -(-n // n_buckets))  # ceil
+    buckets = []
+    for i in range(0, n, bucket_size):
+        chunk = lengths[i:i + bucket_size]
+        swolf_vals = [c.get('averageSWOLF') for c in chunk if c.get('averageSWOLF')]
+        hr_vals    = [c.get('averageHR') for c in chunk if c.get('averageHR')]
+        dur_vals   = [c.get('duration') for c in chunk if c.get('duration')]
+        first_idx  = chunk[0].get('lengthIndex', i + 1)
+        last_idx   = chunk[-1].get('lengthIndex', i + len(chunk))
+        buckets.append({
+            'range':          f"L{first_idx}–{last_idx}" if first_idx != last_idx else f"L{first_idx}",
+            'swolf_avg':      round(sum(swolf_vals) / len(swolf_vals), 1) if swolf_vals else None,
+            'hr_avg':         round(sum(hr_vals) / len(hr_vals)) if hr_vals else None,
+            'duration_avg_s': round(sum(dur_vals) / len(dur_vals), 1) if dur_vals else None,
+        })
+
+    return {'total_lengths': n, 'buckets': buckets}
+
+
 # ── Fetch depuis Garmin + stockage ────────────────────────────────────────────
 def _fetch_and_store(activity_id: int, sb, client) -> dict:
-    # Vérifie si déjà en base
-    existing = sb.table('activity_details').select('activity_id').eq('activity_id', activity_id).limit(1).execute()
-    if existing.data:
-        return {'ok': True, 'activity_id': activity_id, 'status': 'already_stored'}
-
     # Récupère le type depuis activities
     act_row = sb.table('activities').select('type').eq('id', activity_id).limit(1).execute()
     act_type = (act_row.data[0].get('type') if act_row.data else None) or 'run'
+
+    # Vérifie si déjà en base
+    existing = sb.table('activity_details').select('*').eq('activity_id', activity_id).limit(1).execute()
+    if existing.data:
+        row = existing.data[0]
+        if act_type != 'swim' or row.get('swim_length_buckets'):
+            return {'ok': True, 'activity_id': activity_id, 'status': 'already_stored', **row}
+        # Séance de natation déjà stockée mais sans analyse par longueur : on la complète
+        try:
+            splits_raw = client.get_activity_splits(activity_id)
+        except Exception as e:
+            return {'error': f'Garmin API splits: {e}', 'activity_id': activity_id}
+        swim_buckets = _compute_swim_buckets(splits_raw)
+        sb.table('activity_details').update({'swim_length_buckets': swim_buckets}).eq('activity_id', activity_id).execute()
+        return {'ok': True, 'activity_id': activity_id, 'status': 'buckets_added', 'swim_length_buckets': swim_buckets}
 
     # Fetch details
     try:
@@ -156,6 +201,7 @@ def _fetch_and_store(activity_id: int, sb, client) -> dict:
 
     # Fetch splits
     splits = []
+    splits_raw = None
     try:
         splits_raw = client.get_activity_splits(activity_id)
         splits = _normalize_splits(splits_raw)
@@ -163,17 +209,23 @@ def _fetch_and_store(activity_id: int, sb, client) -> dict:
         pass
 
     samples, rate = _normalize_samples(detail, act_type)
-    if not samples:
+
+    swim_buckets = _compute_swim_buckets(splits_raw) if (act_type == 'swim' and splits_raw) else None
+
+    if not samples and not swim_buckets:
         return {'ok': True, 'activity_id': activity_id, 'status': 'no_samples'}
 
-    sb.table('activity_details').upsert({
+    row = {
         'activity_id':   activity_id,
         'samples':       samples,
         'splits':        splits,
         'sample_rate_s': rate,
-    }).execute()
+    }
+    if swim_buckets:
+        row['swim_length_buckets'] = swim_buckets
+    sb.table('activity_details').upsert(row).execute()
 
-    return {'ok': True, 'activity_id': activity_id, 'samples': len(samples), 'splits': len(splits)}
+    return {'ok': True, 'activity_id': activity_id, 'samples': len(samples), 'splits': len(splits), 'swim_length_buckets': swim_buckets}
 
 
 def _get_garmin_client(sb):
