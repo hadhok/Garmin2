@@ -46,6 +46,48 @@ function getSwimsByPeriod() {
   });
 }
 
+/* Séances de la période comparable précédente (même durée, juste avant), pour calculer les deltas. */
+function getSwimsPreviousPeriod() {
+  if (swimState.period === 'all') return null;
+  const all = getSwims();
+  const now = new Date(TODAY_ISO + 'T12:00:00');
+  let start, end;
+  if (swimState.period === 'week') {
+    end = new Date(now); end.setDate(now.getDate() - 7);
+    start = new Date(now); start.setDate(now.getDate() - 14);
+  } else if (swimState.period === 'month') {
+    end = new Date(now.getFullYear(), now.getMonth(), 1);
+    start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  } else if (swimState.period === 'year') {
+    end = new Date(now.getFullYear(), 0, 1);
+    start = new Date(now.getFullYear() - 1, 0, 1);
+  } else {
+    return null;
+  }
+  return all.filter(a => {
+    const d = new Date((a.date || '1970-01-01') + 'T12:00:00');
+    if (d < start || d >= end) return false;
+    if (swimState.effort && a.te_label !== swimState.effort) return false;
+    if (swimState.stroke && _swimDominantStroke(a) !== swimState.stroke) return false;
+    return true;
+  });
+}
+
+function _swimDelta(current, previous, lowerIsBetter) {
+  if (current == null || previous == null || previous === 0) return null;
+  const pct = (current - previous) / Math.abs(previous) * 100;
+  const good = lowerIsBetter ? pct < 0 : pct > 0;
+  const arrow = pct > 0 ? '↗' : pct < 0 ? '↘' : '→';
+  return { pct: Math.abs(pct), arrow, good, raw: pct };
+}
+
+function _swimDeltaHtml(delta, opts = {}) {
+  if (!delta) return '';
+  const color = delta.good ? '#22c55e' : '#ef4444';
+  const suffix = opts.suffix || ` vs période préc.`;
+  return `<span style="color:${color};font-weight:600">${delta.arrow} ${delta.pct.toFixed(0)}%</span><span style="color:var(--muted)">${suffix}</span>`;
+}
+
 function setSwimPeriod(p, btn) {
   swimState.period = p;
   document.querySelectorAll('.swim-period-btn').forEach(b => b.classList.remove('active'));
@@ -175,44 +217,79 @@ function _sparklinePath(values, w, h) {
   return values.map((v, i) => `${i === 0 ? 'M' : 'L'}${(i * step).toFixed(1)},${(h - ((v - min) / range) * h).toFixed(1)}`).join(' ');
 }
 
+function _swimAvg(list, key) {
+  const vals = list.map(a => a[key]).filter(v => v != null && v !== 0 && !Number.isNaN(v));
+  return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
+}
+
 function _renderSwimKpis(swims) {
   const el = document.getElementById('swim-kpi-strip');
   if (!el) return;
 
-  const totalDist = swims.reduce((s, a) => s + (a.distance_km || 0), 0);
-  const withPace  = swims.filter(a => a.pace_per_100m).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-  const avgPaceSec = withPace.length
-    ? withPace.reduce((s, a) => s + _swimPaceToSec(a.pace_per_100m), 0) / withPace.length
-    : null;
-  const withSwolf = swims.filter(a => a.swolf > 0);
-  const avgSwolf  = withSwolf.length ? withSwolf.reduce((s, a) => s + a.swolf, 0) / withSwolf.length : null;
-  const bestSwolf = withSwolf.length ? Math.min(...withSwolf.map(a => a.swolf)) : null;
+  const prevSwims = getSwimsPreviousPeriod();
 
-  const sparkVals = withPace.slice(-15).map(a => _swimPaceToSec(a.pace_per_100m));
-  const sparkPath = _sparklinePath(sparkVals, 80, 30);
+  const totalDist  = swims.reduce((s, a) => s + (a.distance_km || 0), 0);
+  const totalDur   = swims.reduce((s, a) => s + (a.duration_min || 0), 0);
+  const totalLoad  = swims.reduce((s, a) => s + (a.training_load || 0), 0);
+  const withPace   = swims.filter(a => a.pace_per_100m).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const avgPaceSec = withPace.length ? withPace.reduce((s, a) => s + _swimPaceToSec(a.pace_per_100m), 0) / withPace.length : null;
+  const withSwolf  = swims.filter(a => a.swolf > 0).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const avgSwolf   = _swimAvg(withSwolf, 'swolf');
 
-  el.innerHTML = `
+  let prevDist = null, prevDur = null, prevLoad = null, prevPaceSec = null, prevSwolf = null;
+  if (prevSwims) {
+    prevDist = prevSwims.reduce((s, a) => s + (a.distance_km || 0), 0);
+    prevDur  = prevSwims.reduce((s, a) => s + (a.duration_min || 0), 0);
+    prevLoad = prevSwims.reduce((s, a) => s + (a.training_load || 0), 0);
+    const prevWithPace = prevSwims.filter(a => a.pace_per_100m);
+    prevPaceSec = prevWithPace.length ? prevWithPace.reduce((s, a) => s + _swimPaceToSec(a.pace_per_100m), 0) / prevWithPace.length : null;
+    prevSwolf = _swimAvg(prevSwims.filter(a => a.swolf > 0), 'swolf');
+  }
+
+  const sparkPace  = _sparklinePath(withPace.slice(-15).map(a => _swimPaceToSec(a.pace_per_100m)), 70, 26);
+  const sparkSwolf = _sparklinePath(withSwolf.slice(-15).map(a => a.swolf), 70, 26);
+  const sparkLoad  = _sparklinePath(swims.slice().sort((a, b) => (a.date || '').localeCompare(b.date || '')).map(a => a.training_load || 0), 70, 26);
+
+  const spark = (path, color) => path ? `<svg class="swim-kpi-spark" width="70" height="26" viewBox="0 0 70 26"><path d="${path}" fill="none" stroke="${color}" stroke-width="2"/></svg>` : '';
+
+  const cards = [
+    {
+      label: 'Distance totale', value: totalDist.toFixed(2), unit: 'km',
+      sub: `${swims.length} séance${swims.length > 1 ? 's' : ''}`,
+      delta: _swimDelta(totalDist, prevDist, false),
+    },
+    {
+      label: 'Temps total', value: fmt_dur(totalDur), unit: '',
+      sub: swims.length ? `Durée moy. ${fmt_dur(totalDur / swims.length)}` : '',
+      delta: _swimDelta(totalDur, prevDur, false),
+    },
+    {
+      label: 'Allure moyenne', value: avgPaceSec ? _swimSecToPace(avgPaceSec) : '–', unit: '/100m',
+      delta: _swimDelta(avgPaceSec, prevPaceSec, true),
+      spark: spark(sparkPace, '#f97316'),
+    },
+    {
+      label: 'SWOLF moyen', value: avgSwolf ? Math.round(avgSwolf) : '–', unit: '',
+      delta: _swimDelta(avgSwolf, prevSwolf, true),
+      spark: spark(sparkSwolf, '#22c55e'),
+    },
+    {
+      label: 'Charge totale', value: totalLoad ? Math.round(totalLoad) : '–', unit: 'pts',
+      sub: swims.length ? `Charge moy. ${Math.round(totalLoad / swims.length)}` : '',
+      delta: _swimDelta(totalLoad, prevLoad, false),
+      spark: spark(sparkLoad, '#3b82f6'),
+    },
+  ];
+
+  el.innerHTML = cards.map(c => `
     <div class="swim-kpi-card">
-      <div>
-        <div class="swim-kpi-card-label">Allure Moyenne</div>
-        <div class="swim-kpi-card-value">${avgPaceSec ? _swimSecToPace(avgPaceSec) : '–'}<span style="font-size:12px;font-weight:400;color:var(--muted)"> /100m</span></div>
+      <div style="flex:1;min-width:0">
+        <div class="swim-kpi-card-label">${c.label}</div>
+        <div class="swim-kpi-card-value">${c.value}${c.unit ? `<span style="font-size:12px;font-weight:400;color:var(--muted)"> ${c.unit}</span>` : ''}</div>
+        ${c.delta ? `<div style="font-size:11px;margin-top:2px">${_swimDeltaHtml(c.delta)}</div>` : c.sub ? `<div class="swim-kpi-card-sub">${c.sub}</div>` : ''}
       </div>
-      ${sparkPath ? `<svg class="swim-kpi-spark" width="80" height="30" viewBox="0 0 80 30"><path d="${sparkPath}" fill="none" stroke="#f97316" stroke-width="2"/></svg>` : ''}
-    </div>
-    <div class="swim-kpi-card">
-      <div>
-        <div class="swim-kpi-card-label">SWOLF Moyen</div>
-        <div class="swim-kpi-card-value">${avgSwolf ? Math.round(avgSwolf) : '–'}</div>
-        ${bestSwolf != null ? `<div class="swim-kpi-card-sub">Record : ${bestSwolf}</div>` : ''}
-      </div>
-    </div>
-    <div class="swim-kpi-card">
-      <div>
-        <div class="swim-kpi-card-label">Volume Total</div>
-        <div class="swim-kpi-card-value">${totalDist.toFixed(1)}<span style="font-size:12px;font-weight:400;color:var(--muted)"> km</span></div>
-        <div class="swim-kpi-card-sub">${swims.length} séance${swims.length > 1 ? 's' : ''}</div>
-      </div>
-    </div>`;
+      ${c.spark || ''}
+    </div>`).join('');
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -487,21 +564,34 @@ function _renderSwimActivePause(swims) {
 /* ── Quadrant 3a : Répartition des nages (agrégée) ── */
 function _renderSwimStrokeChart(swims) {
   const canvas = document.getElementById('swim-q-stroke-chart');
+  const legendEl = document.getElementById('swim-q-stroke-legend');
   if (!canvas) return;
 
+  canvas.style.display = '';
   const selected = _swimSelected(swims);
   const palette = ['#14b8a6', '#f97316', '#3b82f6', '#a855f7', '#94a3b8'];
-  let entries;
+  let entries, kmByStroke;
 
   if (selected?.swim_stroke_pct) {
     entries = Object.entries(selected.swim_stroke_pct).sort((a, b) => b[1] - a[1]);
+    kmByStroke = Object.fromEntries(entries.map(([k, v]) => [k, (v / 100) * (selected.distance_km || 0)]));
   } else {
     const withStroke = swims.filter(a => a.swim_stroke_pct);
-    if (!withStroke.length) { canvas.parentElement.innerHTML = '<div style="color:var(--muted);font-size:12px">Pas de données.</div>'; return; }
-    const agg = {};
-    withStroke.forEach(a => Object.entries(a.swim_stroke_pct).forEach(([k, v]) => { agg[k] = (agg[k] || 0) + v; }));
+    if (!withStroke.length) {
+      canvas.style.display = 'none';
+      if (legendEl) legendEl.innerHTML = '<div style="color:var(--muted);font-size:12px">Pas de données.</div>';
+      return;
+    }
+    const agg = {}, km = {};
+    withStroke.forEach(a => Object.entries(a.swim_stroke_pct).forEach(([k, v]) => {
+      agg[k] = (agg[k] || 0) + v;
+      km[k] = (km[k] || 0) + (v / 100) * (a.distance_km || 0);
+    }));
     entries = Object.entries(agg).sort((a, b) => b[1] - a[1]);
+    kmByStroke = km;
   }
+
+  const total = entries.reduce((s, [, v]) => s + v, 0);
 
   _swimChartInstances.stroke = new Chart(canvas, {
     type: 'doughnut',
@@ -511,9 +601,22 @@ function _renderSwimStrokeChart(swims) {
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af', boxWidth: 10, font: { size: 11 } } } },
+      plugins: { legend: { display: false } },
     },
   });
+
+  if (legendEl) {
+    legendEl.innerHTML = entries.map(([k, v], i) => {
+      const pct = total > 0 ? Math.round(v / total * 100) : 0;
+      const km = kmByStroke[k] || 0;
+      return `<div style="display:flex;align-items:center;gap:6px;font-size:12px;padding:2px 0">
+        <span style="width:8px;height:8px;border-radius:50%;background:${palette[i % palette.length]};flex-shrink:0"></span>
+        <span style="flex:1">${STROKE_LABELS[k] || k}</span>
+        <span style="font-weight:600">${pct}%</span>
+        <span style="color:var(--muted);min-width:52px;text-align:right">${km.toFixed(2)} km</span>
+      </div>`;
+    }).join('');
+  }
 }
 
 /* ── Quadrant 3b : Type de séance (te_label) ── */
