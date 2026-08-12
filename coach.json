@@ -1,38 +1,38 @@
 {
-  "updated_at": "2026-08-11T10:01:44",
+  "updated_at": "2026-08-12T10:05:54",
   "coach": "Claude",
   "stats_snapshot": {
-    "phase": "vigilance",
+    "phase": "maintien",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 48.4,
-    "atl": 42.6,
-    "tsb": 5.8,
-    "effort_idx": 1.2,
-    "body_battery": 91,
+    "ctl": 51.9,
+    "atl": 61.1,
+    "tsb": -9.1,
+    "effort_idx": 1.35,
+    "body_battery": 61,
     "training_readiness": null,
     "niveau": "Sportif",
-    "total_activites": 272,
-    "total_km": 674
+    "total_activites": 273,
+    "total_km": 677
   },
   "items": [
     {
       "type": "warning",
       "icon": "🟡",
       "title": "Sous tension",
-      "text": "Effort pondéré 7j : 1.2× (1.0 = charge de base, >2 = intense). TSB +6 pts (CTL 48.4 / ATL 42.6). • HRV 42.2 ms (-4 ms vs S-1) • Sommeil 8.7h/nuit • Body Battery : 91%"
+      "text": "Effort pondéré 7j : 1.4× (1.0 = charge de base, >2 = intense). TSB -9 pts (CTL 51.9 / ATL 61.1). • HRV 42.6 ms (-1 ms vs S-1) • Sommeil 8.6h/nuit • Body Battery : 61%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "📊 manque de Zone 1-2 (33% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (26%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (41%) — surveille la fatigue accumulée\n🏃 Course : allure en régression (0.2 min/km plus lent — peut indiquer fatigue)\n⚖️ Poids -1.7 kg — apport protéiné : 127g/j"
+      "text": "📊 manque de Zone 1-2 (28% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (28%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (44%) — surveille la fatigue accumulée\n🏃 Course : allure en régression (0.2 min/km plus lent — peut indiquer fatigue)\n⚖️ Poids -1.7 kg — apport protéiné : 127g/j"
     },
     {
       "type": "goal",
       "icon": "📋",
-      "title": "Prescription : Séance longue — Endurance fondamentale",
-      "text": "Hier : Aerobic Base (swim). [Body Battery 91% · TSB +6] Bonne forme, mise sur le volume. 60-90 min à allure modérée. (note : perte de poids rapide — veille à l'apport calorique autour de la séance) — Z2 — 65-75% FCmax"
+      "title": "Prescription : Séance légère — Zone 2",
+      "text": "Hier : Tempo (swim). [Body Battery 61% · TSB -9] Fatigue accumulée malgré une BB correcte. 45-60 min à allure conversationnelle. (note : perte de poids rapide — veille à l'apport calorique autour de la séance) — Z2 — 60-70% FCmax"
     }
   ]
 }
