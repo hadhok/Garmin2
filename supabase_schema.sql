@@ -127,3 +127,13 @@ CREATE TABLE IF NOT EXISTS race_goal (
 );
 
 ALTER TABLE race_goal DISABLE ROW LEVEL SECURITY;
+
+-- ── Analyse longueur par longueur d'une séance de natation (à la demande) ──
+CREATE TABLE IF NOT EXISTS swim_length_analysis (
+  activity_id   BIGINT PRIMARY KEY,
+  total_lengths INTEGER,
+  buckets       JSONB,   -- [{range, swolf_avg, hr_avg, duration_avg_s}]
+  fetched_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE swim_length_analysis DISABLE ROW LEVEL SECURITY;
