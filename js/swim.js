@@ -746,18 +746,23 @@ async function _loadSwimLengthAnalysis(act) {
   };
 
   try {
-    const r = await fetch(`/api/swim_splits?id=${act.id}`);
-    if (r.ok) { renderBuckets(await r.json()); return; }
-    if (r.status !== 404) throw new Error('fetch failed');
+    const r = await fetch(`/api/activity_details?id=${act.id}`);
+    if (r.ok) {
+      const data = await r.json();
+      if (data.swim_length_buckets) { renderBuckets(data.swim_length_buckets); return; }
+    } else if (r.status !== 404) {
+      throw new Error('fetch failed');
+    }
 
     if (stillCurrent()) el.innerHTML = '<div style="color:var(--muted);font-size:12px">Récupération depuis Garmin…</div>';
-    const r2 = await fetch('/api/swim_splits', {
+    const r2 = await fetch('/api/activity_details', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ activity_id: act.id }),
     });
     if (!r2.ok) throw new Error('post failed');
-    renderBuckets(await r2.json());
+    const data2 = await r2.json();
+    renderBuckets(data2.swim_length_buckets);
   } catch {
     if (stillCurrent()) el.innerHTML = '<div style="color:var(--muted);font-size:12px">Analyse indisponible pour le moment.</div>';
   }
