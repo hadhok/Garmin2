@@ -138,6 +138,7 @@ function selectSwimRow(id) {
   const act = _swimLastFiltered.find(a => String(a.id) === String(swimState.selectedId));
   _renderSwimDetailPanel(act);
   _renderSwimCharts(_swimLastFiltered);
+  _renderSwimCoach(_swimLastFiltered);
 }
 
 function clearSwimSelection() {
@@ -146,6 +147,7 @@ function clearSwimSelection() {
   _renderSwimSelectionBar();
   _renderSwimDetailPanel(null);
   _renderSwimCharts(_swimLastFiltered);
+  _renderSwimCoach(_swimLastFiltered);
 }
 
 function toggleSwimTableExpand() {
@@ -196,6 +198,7 @@ function renderSwimPage() {
   if (!swims.find(a => String(a.id) === String(swimState.selectedId))) swimState.selectedId = null;
 
   _renderSwimKpis(swims);
+  _renderSwimCoach(swims);
   _renderSwimPRs(swims);
   _renderSwimCharts(swims);
   _renderSwimTable(swims);
@@ -290,6 +293,124 @@ function _renderSwimKpis(swims) {
       </div>
       ${c.spark || ''}
     </div>`).join('');
+}
+
+/* ══════════════════════════════════════════════════════════
+   COACH NATATION (analyse à base de règles)
+   ══════════════════════════════════════════════════════════ */
+function _renderSwimCoach(swims) {
+  const el = document.getElementById('swim-coach-card');
+  if (!el) return;
+
+  const target = _swimSelected(swims) || swims.slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
+  if (!target) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:13px">Aucune séance à analyser sur cette période.</div>`;
+    return;
+  }
+
+  // Historique récent (hors séance cible) pour comparer
+  const history = swims.filter(a => a.id !== target.id).sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 8);
+  const histAvgPace  = _swimAvg(history.filter(a => a.pace_per_100m).map(a => ({ pace: _swimPaceToSec(a.pace_per_100m) })), 'pace');
+  const histAvgSwolf = _swimAvg(history, 'swolf');
+  const histAvgCadence = _swimAvg(history, 'swim_cadence');
+  const targetPaceSec = target.pace_per_100m ? _swimPaceToSec(target.pace_per_100m) : null;
+
+  // Zone dominante
+  const zLabels = ['Z1 (récup)', 'Z2 (endurance)', 'Z3 (aérobie)', 'Z4 (seuil)', 'Z5 (maxi)'];
+  let dominantZoneIdx = -1, dominantZonePct = 0;
+  (target.hr_zones_pct || []).forEach((p, i) => { if (p > dominantZonePct) { dominantZonePct = p; dominantZoneIdx = i; } });
+  const z12pct = (target.hr_zones_pct?.[0] || 0) + (target.hr_zones_pct?.[1] || 0);
+  const z45pct = (target.hr_zones_pct?.[3] || 0) + (target.hr_zones_pct?.[4] || 0);
+
+  // ── Analyse ──
+  const paceGood = targetPaceSec != null && histAvgPace != null ? targetPaceSec < histAvgPace : null;
+  const swolfGood = target.swolf != null && histAvgSwolf != null ? target.swolf < histAvgSwolf : null;
+  const analysisBits = [];
+  if (target.te_label) analysisBits.push(`Séance "${target.te_label}"`);
+  if (paceGood === true) analysisBits.push(`allure plus rapide que d'habitude (${target.pace_per_100m}/100m)`);
+  else if (paceGood === false) analysisBits.push(`allure plus lente que ta moyenne récente (${target.pace_per_100m}/100m)`);
+  if (swolfGood === true) analysisBits.push(`SWOLF efficace (${target.swolf})`);
+  else if (swolfGood === false) analysisBits.push(`SWOLF plus élevé que d'habitude (${target.swolf})`);
+  if (dominantZoneIdx >= 0) analysisBits.push(`${dominantZonePct}% du temps en ${zLabels[dominantZoneIdx]}`);
+  const analysisText = analysisBits.length ? analysisBits.join(', ') + '.' : 'Pas assez de données pour analyser cette séance.';
+
+  // ── À surveiller ──
+  const watch = [];
+  if (target.swim_drift_hr != null && target.swim_drift_hr > 15) watch.push(`Dérive FC élevée (+${Math.round(target.swim_drift_hr)} bpm) — fatigue en cours de séance`);
+  if (target.swim_drift_swolf != null && target.swim_drift_swolf > 3) watch.push(`Dérive SWOLF +${target.swim_drift_swolf} — la technique se dégrade en fin de séance`);
+  if (z12pct < 20 && z45pct > 20) watch.push(`Peu de Zone 1-2 (${z12pct}%) — manque de vraie récupération`);
+  if ((target.hr_zones_pct?.[2] || 0) > 55) watch.push(`Zone 3 dominante (${target.hr_zones_pct[2]}%) — zone piège, ni vraie récup ni vrai travail`);
+  if (histAvgCadence != null && target.swim_cadence != null && Math.abs(target.swim_cadence - histAvgCadence) < 1) {
+    watch.push(`Cadence stable à ${target.swim_cadence} cps/min mais peu variable selon l'intensité`);
+  }
+  if (target.rest_min != null && target.duration_min > 0 && (target.rest_min / target.duration_min) < 0.05) {
+    watch.push(`Très peu de pauses (${fmt_dur(target.rest_min)}) — pense à la respiration entre les séries`);
+  }
+
+  // ── Conseil (priorité au signal le plus important) ──
+  let conseil;
+  if (target.swim_drift_hr != null && target.swim_drift_hr > 15) {
+    conseil = `La dérive FC est le signal le plus net ici : ta prochaine séance devrait être plus courte ou plus facile pour laisser retomber la fatigue avant de repousser l'intensité.`;
+  } else if (z12pct < 20 && z45pct > 20) {
+    conseil = `Programme une vraie séance Zone 1-2 : allure "je pourrais discuter", sans bloc Tempo/Seuil, pour construire ta base aérobie sans accumuler de fatigue.`;
+  } else if (target.swim_drift_swolf != null && target.swim_drift_swolf > 3) {
+    conseil = `Travaille l'endurance de technique : quelques longueurs à faible intensité en fin de séance pour apprendre à garder une nage propre quand la fatigue arrive.`;
+  } else if (histAvgCadence != null && target.swim_cadence != null && Math.abs(target.swim_cadence - histAvgCadence) < 1) {
+    conseil = `Essaie une séance dédiée à la variabilité de cadence : quelques longueurs à cadence volontairement plus élevée pour sortir de ta zone de confort technique.`;
+  } else {
+    conseil = `Séance cohérente, continue sur cette lancée en gardant un œil sur l'équilibre des zones cardio.`;
+  }
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-size:13px;font-weight:700">🏊 Coach Natation</div>
+      <span class="swim-coach-badge">${target.te_label || 'Séance libre'}</span>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">${_swimNameWithTime(target)} · ${new Date(target.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</div>
+
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em">Analyse</div>
+    <div style="font-size:13px;margin-top:4px">${analysisText}</div>
+
+    ${watch.length ? `
+      <div style="font-size:11px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:.03em;margin-top:12px">⚠️ À surveiller</div>
+      <ul class="swim-coach-list">${watch.map(w => `<li>${w}</li>`).join('')}</ul>` : ''}
+
+    <div style="font-size:11px;font-weight:700;color:#22c55e;text-transform:uppercase;letter-spacing:.03em;margin-top:12px">💡 Conseil</div>
+    <div style="font-size:13px;margin-top:4px">${conseil}</div>
+
+    <button onclick="showSwimCoachTips()"
+            style="margin-top:12px;width:100%;padding:9px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-weight:600;font-size:12px;cursor:pointer">
+      Voir plus de conseils →
+    </button>`;
+}
+
+function showSwimCoachTips() {
+  const tips = [
+    ['🫁 Respiration', 'Expire complètement sous l\'eau, de façon continue, pour éviter l\'essoufflement — inspire vite et fort dès que la bouche sort de l\'eau.'],
+    ['🎯 Technique avant vitesse', 'Un SWOLF qui baisse durablement compte plus qu\'une allure ponctuellement rapide : privilégie la glisse et l\'amplitude avant de forcer.'],
+    ['🔄 Cadence variable', 'Fais varier volontairement ta cadence de bras selon l\'objectif de la séance : plus élevée en Tempo/Seuil, plus longue et posée en endurance.'],
+    ['📊 Zones cardio', 'Vise au moins 70-80% du volume hebdomadaire en Z1-Z2 (allure conversationnelle) pour construire ta base aérobie sans t\'épuiser.'],
+    ['🧊 Récupération', 'Une dérive FC ou SWOLF élevée en fin de séance est normale de temps en temps, mais si c\'est systématique, réduis le volume avant d\'augmenter l\'intensité.'],
+    ['🏊 Pauses actives', 'Des pauses courtes et régulières entre les séries valent mieux qu\'une nage continue si ta technique se dégrade — mieux vaut nager propre par intervalles.'],
+  ];
+  const modal = document.createElement('div');
+  modal.className = 'swim-coach-tips-modal';
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1100;display:flex;align-items:center;justify-content:center;padding:16px;animation:fadeIn .2s';
+  modal.onclick = (e) => e.target === modal && modal.remove();
+  modal.innerHTML = `
+    <div style="background:var(--card,#1a1a1e);border-radius:16px;padding:20px;max-width:380px;width:100%;max-height:80vh;overflow-y:auto;animation:slideUp .2s">
+      <div style="font-weight:700;font-size:15px;margin-bottom:12px">🏊 Conseils Coach Natation</div>
+      ${tips.map(([title, text]) => `
+        <div style="margin-bottom:12px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:2px">${title}</div>
+          <div style="font-size:12px;color:var(--muted)">${text}</div>
+        </div>`).join('')}
+      <button onclick="this.closest('.swim-coach-tips-modal').remove()"
+              style="margin-top:6px;width:100%;padding:10px;border-radius:10px;border:none;background:var(--accent,#3b82f6);color:#fff;font-weight:600;font-size:13px">
+        Fermer
+      </button>
+    </div>`;
+  document.body.appendChild(modal);
 }
 
 /* ══════════════════════════════════════════════════════════
