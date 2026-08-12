@@ -707,10 +707,60 @@ function _renderSwimDetailPanel(act) {
         <span class="swim-detail-metric-value">${v}</span>
       </div>`).join('')}
     <div style="font-size:11px;color:var(--muted);margin-top:10px">Zones, TE, nages, dérive et HRR de cette séance sont affichés dans les 4 quadrants ci-dessus.</div>
+
+    <div class="swim-subtitle" style="margin-top:14px">Analyse longueur par longueur</div>
+    <div id="swim-length-analysis"><div style="color:var(--muted);font-size:12px">Chargement…</div></div>
+
     <button onclick="openDetail(${act.id})"
             style="margin-top:12px;width:100%;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-weight:600;font-size:13px;cursor:pointer">
       Voir le détail complet →
     </button>`;
+
+  _loadSwimLengthAnalysis(act);
+}
+
+let _swimLengthAnalysisReqId = 0;
+async function _loadSwimLengthAnalysis(act) {
+  const el = document.getElementById('swim-length-analysis');
+  if (!el) return;
+  const reqId = ++_swimLengthAnalysisReqId;
+  const stillCurrent = () => reqId === _swimLengthAnalysisReqId && String(swimState.selectedId) === String(act.id);
+
+  const renderBuckets = (data) => {
+    if (!stillCurrent()) return;
+    if (!data?.buckets?.length) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:12px">Pas de données de longueurs disponibles pour cette séance.</div>';
+      return;
+    }
+    el.innerHTML = `
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">${data.total_lengths} longueurs au total</div>
+      <table class="compare-table"><tbody>
+        <tr><td class="compare-metric" style="text-align:left;font-weight:700">Longueurs</td><td class="td-num" style="font-weight:700">SWOLF</td><td class="td-num" style="font-weight:700">FC</td><td class="td-num" style="font-weight:700">Durée/25m</td></tr>
+        ${data.buckets.map(b => `<tr>
+          <td class="compare-metric" style="text-align:left">${b.range}</td>
+          <td class="td-num">${b.swolf_avg ?? '–'}</td>
+          <td class="td-num">${b.hr_avg ? b.hr_avg + ' bpm' : '–'}</td>
+          <td class="td-num">${b.duration_avg_s ? b.duration_avg_s.toFixed(1) + 's' : '–'}</td>
+        </tr>`).join('')}
+      </tbody></table>`;
+  };
+
+  try {
+    const r = await fetch(`/api/swim_splits?id=${act.id}`);
+    if (r.ok) { renderBuckets(await r.json()); return; }
+    if (r.status !== 404) throw new Error('fetch failed');
+
+    if (stillCurrent()) el.innerHTML = '<div style="color:var(--muted);font-size:12px">Récupération depuis Garmin…</div>';
+    const r2 = await fetch('/api/swim_splits', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ activity_id: act.id }),
+    });
+    if (!r2.ok) throw new Error('post failed');
+    renderBuckets(await r2.json());
+  } catch {
+    if (stillCurrent()) el.innerHTML = '<div style="color:var(--muted);font-size:12px">Analyse indisponible pour le moment.</div>';
+  }
 }
 
 function _swimDriftColor(v) {

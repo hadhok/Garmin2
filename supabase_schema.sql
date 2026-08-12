@@ -95,9 +95,18 @@ CREATE TABLE IF NOT EXISTS body_metrics (
 
 CREATE INDEX IF NOT EXISTS idx_body_metrics_date ON body_metrics(date DESC);
 
+-- ── Analyse longueur par longueur d'une séance de natation (à la demande) ──
+CREATE TABLE IF NOT EXISTS swim_length_analysis (
+  activity_id   BIGINT PRIMARY KEY,
+  total_lengths INTEGER,
+  buckets       JSONB,   -- [{range, swolf_avg, hr_avg, duration_avg_s}]
+  fetched_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ── Désactiver RLS (données privées, accès via service key) ─
-ALTER TABLE activities    DISABLE ROW LEVEL SECURITY;
-ALTER TABLE wellness_days DISABLE ROW LEVEL SECURITY;
-ALTER TABLE garmin_tokens DISABLE ROW LEVEL SECURITY;
-ALTER TABLE sync_meta     DISABLE ROW LEVEL SECURITY;
-ALTER TABLE body_metrics  DISABLE ROW LEVEL SECURITY;
+ALTER TABLE activities             DISABLE ROW LEVEL SECURITY;
+ALTER TABLE wellness_days          DISABLE ROW LEVEL SECURITY;
+ALTER TABLE garmin_tokens          DISABLE ROW LEVEL SECURITY;
+ALTER TABLE sync_meta              DISABLE ROW LEVEL SECURITY;
+ALTER TABLE body_metrics           DISABLE ROW LEVEL SECURITY;
+ALTER TABLE swim_length_analysis   DISABLE ROW LEVEL SECURITY;
