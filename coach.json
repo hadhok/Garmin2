@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-08-14T10:03:00",
+  "updated_at": "2026-08-15T09:26:26",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "progression",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 51.5,
-    "atl": 54.3,
-    "tsb": -2.8,
+    "ctl": 50.2,
+    "atl": 46.5,
+    "tsb": 3.7,
     "effort_idx": 1.55,
-    "body_battery": 82,
+    "body_battery": 10,
     "training_readiness": null,
     "niveau": "Sportif",
     "total_activites": 273,
@@ -20,7 +20,7 @@
       "type": "warning",
       "icon": "🟡",
       "title": "Sous tension",
-      "text": "Effort pondéré 7j : 1.6× (1.0 = charge de base, >2 = intense). TSB -3 pts (CTL 51.5 / ATL 54.3). • HRV 46.2 ms (+6 ms vs S-1) • Sommeil 8.4h/nuit • Body Battery : 82%"
+      "text": "Effort pondéré 7j : 1.6× (1.0 = charge de base, >2 = intense). TSB +4 pts (CTL 50.2 / ATL 46.5). • HRV 45.9 ms (+4 ms vs S-1) • Sommeil 8.2h/nuit • Body Battery : 10%"
     },
     {
       "type": "tip",
@@ -31,8 +31,8 @@
     {
       "type": "goal",
       "icon": "📋",
-      "title": "Prescription : Séance longue — Endurance fondamentale",
-      "text": "[Body Battery 82% · TSB -3] Bonne forme, mise sur le volume. 60-90 min à allure modérée. — Z2 — 65-75% FCmax"
+      "title": "Prescription : Récupération active",
+      "text": "[Body Battery 10% · TSB +4] Réserves très basses. 20-30 min marche, mobilité ou yoga uniquement. — Z1 — FC < 120 bpm"
     }
   ]
 }
