@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-08-22T09:27:02",
+  "updated_at": "2026-08-23T09:28:18",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "pic_de_forme",
     "fatigue_level": "balanced",
     "garmin_status": null,
-    "ctl": 42.3,
-    "atl": 15.8,
-    "tsb": 26.5,
+    "ctl": 41.3,
+    "atl": 13.6,
+    "tsb": 27.8,
     "effort_idx": 0.0,
-    "body_battery": 99,
+    "body_battery": 100,
     "training_readiness": null,
     "niveau": "Sportif",
     "total_activites": 273,
@@ -20,7 +20,7 @@
       "type": "tip",
       "icon": "🚀",
       "title": "Pic de forme",
-      "text": "Effort pondéré 7j : 0.0× (1.0 = charge de base, >2 = intense). TSB +26 pts (CTL 42.3 / ATL 15.8). • HRV 47.5 ms (+2 ms vs S-1) • Sommeil 8.3h/nuit • Body Battery : 99%"
+      "text": "Effort pondéré 7j : 0.0× (1.0 = charge de base, >2 = intense). TSB +28 pts (CTL 41.3 / ATL 13.6). • HRV 48.5 ms (+2 ms vs S-1) • Sommeil 8.5h/nuit • Body Battery : 100%"
     },
     {
       "type": "tip",
@@ -32,7 +32,7 @@
       "type": "goal",
       "icon": "📋",
       "title": "Prescription : Séance longue — Endurance fondamentale",
-      "text": "[Body Battery 99% · TSB +26] Bonne forme, mise sur le volume. 60-90 min à allure modérée. (note : perte de poids rapide — veille à l'apport calorique autour de la séance) — Z2 — 65-75% FCmax"
+      "text": "[Body Battery 100% · TSB +28] Bonne forme, mise sur le volume. 60-90 min à allure modérée. (note : perte de poids rapide — veille à l'apport calorique autour de la séance) — Z2 — 65-75% FCmax"
     }
   ]
 }
