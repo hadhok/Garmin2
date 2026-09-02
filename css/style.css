@@ -533,6 +533,20 @@ body.loading main::before {
 }
 
 /* ── Sub-tab bar (Day/Week/Month/Year within Dashboard) ── */
+/* Sélecteur segmenté (Vue d'ensemble / Course à pied) — voir maquette de refonte */
+.seg-control {
+  display: flex; gap: 2px; background: var(--surface2); border-radius: 12px;
+  padding: 3px; width: fit-content; margin-bottom: 20px; max-width: 100%;
+}
+.seg-btn {
+  border: 0; background: transparent; padding: 9px 18px; border-radius: 9px;
+  font-family: inherit; font-size: 13px; font-weight: 700; color: var(--muted);
+  cursor: pointer; white-space: nowrap;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px; -webkit-tap-highlight-color: transparent;
+}
+.seg-btn.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+
 .subtab-bar {
   display: flex;
   gap: 6px;
@@ -1468,41 +1482,6 @@ body.loading main::before {
   .bottom-nav-item svg { width: 18px; height: 18px; }
 }
 
-/* ── Menu "Plus" (bottom nav) ── */
-.more-menu {
-  display: none;
-  position: fixed;
-  bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 8px);
-  right: 8px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
-  z-index: 210;
-  padding: 6px;
-  min-width: 170px;
-  flex-direction: column;
-}
-.more-menu.open { display: flex; }
-.more-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 14px;
-  border: none;
-  background: transparent;
-  color: var(--text);
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  text-align: left;
-  border-radius: 9px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.more-menu-item:hover { background: var(--surface2); }
-.more-menu-item svg { width: 18px; height: 18px; flex-shrink: 0; }
-
 /* Indicateur de position swipe — barre active en haut de l'onglet sélectionné */
 .bottom-nav-item.active::before {
   content: '';
@@ -2281,9 +2260,15 @@ body.loading main::before {
    RUNNING VIEW — mini-nav + sections avancées
    ══════════════════════════════════════════════════════════ */
 
-/* Sections secondaires cachées par défaut */
-#view-running:not(.run-advanced) .section-body[data-secondary] { display: none; }
-#view-running:not(.run-advanced) .section-header:has(+ .section-body[data-secondary]) { display: none; }
+/* Sections secondaires ("Analyses avancées") : repliées par défaut sur mobile
+   (bouton "+ Avancé"), toujours visibles sur grand écran — pas de geste caché. */
+@media (max-width: 768px) {
+  #view-running:not(.run-advanced) .section-body[data-secondary] { display: none; }
+  #view-running:not(.run-advanced) .section-header:has(+ .section-body[data-secondary]) { display: none; }
+}
+@media (min-width: 769px) {
+  #btn-run-advanced { display: none; }
+}
 
 /* Mini-nav horizontale sticky */
 .run-mini-nav {

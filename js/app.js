@@ -54,7 +54,8 @@ window.fetch = (url, opts = {}) => {
 /* ── Application state ── */
 const state = {
   view:               'today',      // today | training | recovery | history | profile
-  tab:                'week',       // day | week | month | year | course (within training)
+  tab:                'week',       // day | week | month | year (within training, vue d'ensemble)
+  trainingTab:        'overview',   // overview | running — segment actif dans Entraînement
   offset:             0,
   filter:             'all',
   data:               null,
@@ -580,6 +581,150 @@ function computeDailyReco() {
 }
 
 /* ══════════════════════════════════════════════════════════
+   TRAINING READINESS (0–100) — algorithme maison, 6 facteurs
+   Inspiré du "Training Readiness" Garmin/Firstbeat, dont le score
+   natif n'est pas exposé par l'API publique (training_readiness_score
+   reste null pour la plupart des comptes).
+   Poids : sommeil nuit 30% · récup. restante 25% · VRC 20% ·
+           charge aiguë 10% · sommeil 3j 10% · stress 3j 5%
+   Garde-fous : un signal très défavorable plafonne le score global
+   même si les autres facteurs compensent statistiquement (mêmes
+   seuils qu'un score Garmin natif ne laisserait jamais "moyen" avec
+   un sommeil catastrophique par ex.).
+   Retourne null si aucune donnée wellness n'est disponible.
+   ══════════════════════════════════════════════════════════ */
+function computeTrainingReadiness() {
+  const well = state.wellness?.days;
+  if (!well) return null;
+  const wDays = Object.values(well).filter(d => d.date).sort((a,b) => a.date.localeCompare(b.date));
+  if (!wDays.length) return null;
+  const today = wDays[wDays.length - 1];
+  const factors = [];
+
+  /* 1. Sommeil de la nuit dernière (30%) — score officiel Garmin si dispo,
+     sinon estimation depuis la durée (7.5h = référence). */
+  let sleepScore = today.sleep_score;
+  if (sleepScore == null && today.sleep_total_min) {
+    sleepScore = Math.round(Math.min(100, Math.max(0, 50 + (today.sleep_total_min / 60 - 7.5) / 1.5 * 50)));
+  }
+  if (sleepScore != null) {
+    factors.push({ key: 'sleep_last_night', label: 'Sommeil (nuit)', score: sleepScore, weight: 0.30, val: `${sleepScore}/100` });
+  }
+
+  /* 2. Temps de récupération restant (25%) — utilise le champ natif Garmin
+     recovery_time_min (recoveryTime de l'activité, en minutes) quand il est
+     synchronisé ; sinon retombe sur une estimation via training_load. Le
+     sous-score se lit sur 72h fixe (100 → 0 sur 3 jours), quelle que soit
+     la source. */
+  const acts = getAll();
+  const nowMs = Date.now();
+  let recoveryHours = 0;
+  let hasNative = false;
+  acts.forEach(a => {
+    if (!a.start_time) return;
+    const endMs = new Date(a.start_time.replace(' ', 'T')).getTime() + (a.duration_min || 0) * 60000;
+    const hoursSince = (nowMs - endMs) / 3600000;
+    if (isNaN(hoursSince) || hoursSince < 0 || hoursSince > 168) return;
+    if (a.recovery_time_min != null) {
+      hasNative = true;
+      const remain = Math.max(0, a.recovery_time_min / 60 - hoursSince);
+      if (remain > recoveryHours) recoveryHours = remain;
+    }
+  });
+  if (!hasNative) {
+    // Fallback : aucune activité récente n'a le champ natif synchronisé.
+    acts.forEach(a => {
+      if (!a.start_time || !a.training_load) return;
+      const endMs = new Date(a.start_time.replace(' ', 'T')).getTime() + (a.duration_min || 0) * 60000;
+      const hoursSince = (nowMs - endMs) / 3600000;
+      if (isNaN(hoursSince) || hoursSince < 0 || hoursSince > 72) return;
+      const neededH = Math.min(48, a.training_load * 0.15);
+      const remain = Math.max(0, neededH - hoursSince);
+      if (remain > recoveryHours) recoveryHours = remain;
+    });
+  }
+  const recoveryTimeScore = Math.round(Math.max(0, 100 - (recoveryHours / 72) * 100));
+  factors.push({
+    key: 'recovery_time', label: 'Récupération restante', score: recoveryTimeScore, weight: 0.25,
+    val: recoveryHours > 0.5 ? `~${Math.round(recoveryHours)}h restantes` : 'Récupéré',
+  });
+
+  /* 3. Statut VRC (20%) — délègue à computeDailyReco() pour la même
+     baseline HRV 28j que le reste de l'app (une seule source de vérité). */
+  const dr = computeDailyReco();
+  let hrvScore = null;
+  if (dr.hrvDetail) {
+    hrvScore = dr.hrvSignal === 'green' ? 85 : dr.hrvSignal === 'red' ? 25 : 55;
+    const hrvLabel = { green: 'Équilibré', red: 'Bas', orange: 'Normal' }[dr.hrvSignal] || '–';
+    factors.push({ key: 'hrv_status', label: 'Statut VRC', score: hrvScore, weight: 0.20, val: `${hrvLabel} (${dr.hrvDetail.r7} ms)` });
+  } else if (today.hrv_status) {
+    const map = { BALANCED: 85, UNBALANCED: 40, LOW: 20 };
+    hrvScore = map[today.hrv_status] ?? 55;
+    factors.push({ key: 'hrv_status', label: 'Statut VRC', score: hrvScore, weight: 0.20, val: today.hrv_status });
+  }
+
+  /* 4. Charge aiguë / ACWR (10%) — basé sur training_load (activityTrainingLoad
+     Garmin, dérivé de l'EPOC) plutôt que le TRIMP maison utilisé par
+     computeDailyReco(), pour rester sur la même métrique que Garmin calcule
+     réellement en interne. Fallback sur l'ACWR TRIMP si training_load est
+     insuffisamment renseigné sur la fenêtre récente (activités anciennes,
+     types sans charge calculée...). Zone optimale neutre, hors zone pénalisant. */
+  const loadByDay = {};
+  acts.forEach(a => {
+    if (!a.date || a.training_load == null) return;
+    loadByDay[a.date] = (loadByDay[a.date] || 0) + a.training_load;
+  });
+  const sumWindow = days => {
+    let sum = 0, has = false;
+    for (let i = 0; i < days; i++) {
+      const d = new Date(TODAY); d.setDate(d.getDate() - i);
+      const v = loadByDay[localIso(d)];
+      if (v != null) { sum += v; has = true; }
+    }
+    return { sum, has };
+  };
+  const acute7 = sumWindow(7), chronic28 = sumWindow(28);
+  let epocAcwr = null;
+  if (acute7.has && chronic28.sum > 0) {
+    const al = acute7.sum / 7, cl = chronic28.sum / 28;
+    if (cl > 0.5) epocAcwr = +(al / cl).toFixed(2);
+  }
+  const acwrVal = epocAcwr != null ? epocAcwr : dr.acwrVal;
+  if (acwrVal != null) {
+    const loadScore = acwrVal <= 1.3 ? 80 : acwrVal <= 1.5 ? 55 : acwrVal <= 1.8 ? 30 : 15;
+    factors.push({ key: 'acute_load', label: 'Charge aiguë (ACWR)', score: loadScore, weight: 0.10, val: `${acwrVal}` });
+  }
+
+  /* 5. Historique sommeil 3j (10%) — dette cumulée vs 7.5h/nuit de référence. */
+  const last3 = wDays.slice(-3).filter(d => d.sleep_total_min != null);
+  if (last3.length) {
+    const avgH = last3.reduce((s, d) => s + d.sleep_total_min, 0) / last3.length / 60;
+    const s3 = Math.round(Math.min(100, Math.max(0, 50 + (avgH - 7.5) / 1.5 * 50)));
+    factors.push({ key: 'sleep_3d', label: 'Sommeil (3j)', score: s3, weight: 0.10, val: `${avgH.toFixed(1)}h/nuit moy.` });
+  }
+
+  /* 6. Historique stress 3j (5%) — stress_avg Garmin (0–100, bas = mieux). */
+  const last3s = wDays.slice(-3).filter(d => d.stress_avg != null);
+  if (last3s.length) {
+    const avgStress = last3s.reduce((s, d) => s + d.stress_avg, 0) / last3s.length;
+    const s6 = Math.round(Math.min(100, Math.max(0, 100 - avgStress)));
+    factors.push({ key: 'stress_3d', label: 'Stress (3j)', score: s6, weight: 0.05, val: `${Math.round(avgStress)}/100` });
+  }
+
+  if (!factors.length) return null;
+  const totalW = factors.reduce((s, f) => s + f.weight, 0);
+  let score = Math.round(factors.reduce((s, f) => s + f.score * f.weight, 0) / totalW);
+
+  /* Garde-fous : plafonnent le score global si un signal isolé est très
+     défavorable, même si la moyenne pondérée le compense statistiquement. */
+  if (sleepScore != null && sleepScore < 50) score = Math.min(score, 49);
+  if (recoveryHours > 36) score = Math.min(score, 50);
+  if (hrvScore != null && hrvScore < 30) score = Math.min(score, 39);
+
+  return { score, factors };
+}
+
+/* ══════════════════════════════════════════════════════════
    KPI COMPUTATION
    ══════════════════════════════════════════════════════════ */
 function computeKPIs(acts) {
@@ -852,6 +997,11 @@ function openDetail(id) {
     if (typeof loadActivityDetails === 'function') loadActivityDetails(a.id);
   }
 
+  // Notes de séance (texte libre, ou déchiffré depuis une photo)
+  _detailModalActivityId = a.id;
+  document.getElementById('detail-notes').value = a.notes || '';
+  document.getElementById('detail-notes-status').textContent = '';
+
   document.getElementById('detail-modal').classList.add('open');
 }
 
@@ -868,6 +1018,33 @@ function toggleDetailExpand() {
   if (!modal) return;
   const expanded = modal.classList.toggle('detail-modal--expanded');
   if (btn) btn.textContent = expanded ? '⤡' : '⤢';
+}
+
+let _detailModalActivityId = null;
+
+async function saveDetailNotes() {
+  if (!_detailModalActivityId) return;
+  const btn = document.getElementById('detail-notes-save');
+  const statusEl = document.getElementById('detail-notes-status');
+  const notes = document.getElementById('detail-notes').value;
+  btn.disabled = true;
+  statusEl.textContent = 'Enregistrement…';
+  try {
+    const r = await fetch('/api/activity_details', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save_note', activity_id: _detailModalActivityId, notes }),
+    });
+    const d = await r.json();
+    if (!r.ok || d.error) throw new Error(d.error || 'Erreur inconnue');
+    const a = ACT_MAP[_detailModalActivityId] || ACT_MAP[String(_detailModalActivityId)];
+    if (a) a.notes = notes;
+    statusEl.textContent = '✓ Enregistré';
+  } catch (e) {
+    statusEl.textContent = `Erreur : ${e.message}`;
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1056,6 +1233,15 @@ ${morningHtml ? `<div class="morning"><div class="morning-title">☀️ Résumé
 const TAB_ORDER = ['today', 'training', 'recovery', 'history', 'profile'];
 
 function switchView(view, swipeDir) {
+  /* "running" (Course), "swim" (Natation) et "poc" (Science) ont fusionné
+     dans "training" (Entraînement) — un lien ou un appel historique
+     redirige vers le bon segment. */
+  if (view === 'running' || view === 'poc' || view === 'swim') {
+    state.trainingTab = view === 'swim' ? 'swim' : 'running';
+    view = 'training';
+  }
+  /* "runalyze" a fusionné dans "profile" (section Paramètres). */
+  if (view === 'runalyze') view = 'profile';
   const prev = state.view;
   state.view = view;
 
@@ -1084,11 +1270,9 @@ function switchView(view, swipeDir) {
     history:  'Historique',
     swim:     'Natation',
     profile:  'Profil',
-    runalyze: 'Runalyze',
-    poc:      '🔬 Science',
     /* legacy aliases */
     dashboard: 'Dashboard', activities: 'Activités', health: 'Santé',
-    running: 'Running', poc: 'Science du sport', help: 'Aide',
+    running: 'Running', help: 'Aide',
   };
   const titleEl = document.getElementById('topbar-title');
   if (titleEl) titleEl.textContent = titles[view] || view;
@@ -1097,39 +1281,24 @@ function switchView(view, swipeDir) {
 }
 
 function switchSubTab(tab) {
-  /* Sous-onglet course : switche vers la vue running SANS toucher
-     state.tab, sinon le retour sur Entraînement calcule sur l'année */
-  if (tab === 'course') {
-    switchView('running');
-    return;
-  }
   state.tab = tab;
   state.offset = 0;
   document.querySelectorAll('.subtab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
   renderAll();
 }
 
-/* ── Menu "Plus" (bottom nav mobile) ── */
-function toggleMoreMenu(e) {
-  if (e) e.stopPropagation();
-  const menu = document.getElementById('more-menu');
-  if (!menu) return;
-  const open = menu.classList.toggle('open');
-  if (open) {
-    const close = (ev) => {
-      if (!menu.contains(ev.target)) { menu.classList.remove('open'); document.removeEventListener('click', close); }
-    };
-    setTimeout(() => document.addEventListener('click', close), 0);
-  }
-}
-
-function switchViewFromMore(view) {
-  const menu = document.getElementById('more-menu');
-  if (menu) menu.classList.remove('open');
-  switchView(view);
-  /* Highlight du bouton "Plus" quand une vue du menu est active */
-  const moreBtn = document.querySelector('.bottom-nav-item[data-view="__more"]');
-  if (moreBtn) moreBtn.classList.add('active');
+/* ── Segment Entraînement : Vue d'ensemble / Course à pied / Natation ── */
+function setTrainingTab(tab) {
+  state.trainingTab = tab;
+  document.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('on', b.dataset.seg === tab));
+  const overviewPanel = document.getElementById('training-overview-panel');
+  const runningPanel  = document.getElementById('view-running');
+  const swimPanel     = document.getElementById('view-swim');
+  if (overviewPanel) overviewPanel.style.display = tab === 'overview' ? '' : 'none';
+  if (runningPanel)  runningPanel.style.display  = tab === 'running'  ? '' : 'none';
+  if (swimPanel)     swimPanel.style.display     = tab === 'swim'     ? '' : 'none';
+  _lastRenderKey = ''; // force le rendu du segment nouvellement affiché
+  renderAll();
 }
 
 function movePeriod(dir) { state.offset += dir; renderAll(); }
@@ -1240,6 +1409,9 @@ function renderTodayHero() {
 /* ── Wrappers pour la nouvelle navigation ── */
 function renderToday() {
   renderTodayHero();
+  if (typeof renderTrainingReadiness === 'function') {
+    try { renderTrainingReadiness(); } catch (e) { console.warn('[today] training readiness', e); }
+  }
   /* Forcé en mode "day" pour la vue Aujourd'hui */
   const savedTab = state.tab;
   state.tab = 'day';
@@ -1271,11 +1443,11 @@ const _viewDirty = new Set();
 let   _lastRenderKey = '';
 
 function _renderKey() {
-  return `${state.view}|${state.tab}|${state.offset}|${state.filter}|${state.healthDays}`;
+  return `${state.view}|${state.tab}|${state.trainingTab}|${state.offset}|${state.filter}|${state.healthDays}`;
 }
 
 function markAllDirty() {
-  ['today','training','recovery','history','profile','runalyze','running','poc','help'].forEach(v => _viewDirty.add(v));
+  ['today','training','recovery','history','profile','running','help'].forEach(v => _viewDirty.add(v));
   _lastRenderKey = '';
 }
 
@@ -1287,7 +1459,19 @@ function renderAll() {
 
   /* Nouveaux noms de vue */
   if (state.view === 'today')    { renderToday();      return; }
-  if (state.view === 'training') { renderTraining();   return; }
+  if (state.view === 'training') {
+    if (state.trainingTab === 'running') {
+      if (typeof renderRunning === 'function') renderRunning();
+      if (typeof renderPocLongRatio   === 'function') try { renderPocLongRatio();   } catch(e) { console.warn('[training] longratio', e); }
+      if (typeof renderPocPhase       === 'function') try { renderPocPhase();       } catch(e) { console.warn('[training] phase', e); }
+      if (typeof renderPocPaceReserve === 'function') try { renderPocPaceReserve(); } catch(e) { console.warn('[training] pacereserve', e); }
+    }
+    else if (state.trainingTab === 'swim') {
+      if (typeof renderSwimPage === 'function') renderSwimPage();
+    }
+    else { renderTraining(); }
+    return;
+  }
   if (state.view === 'recovery') {
     renderHealth();
     if (typeof renderPocSynthesis === 'function') { try { renderPocSynthesis(); } catch(e) { console.warn('[recovery] poc synthesis', e); } }
@@ -1299,14 +1483,11 @@ function renderAll() {
     return;
   }
   if (state.view === 'history')  { renderActivities(); return; }
-  if (state.view === 'swim')     { if (typeof renderSwimPage === 'function') renderSwimPage(); return; }
-  if (state.view === 'runalyze') { if (typeof onSwitchToRunalyze === 'function') onSwitchToRunalyze(); return; }
   /* Aliases legacy */
   if (state.view === 'health')     { renderHealth();     return; }
   if (state.view === 'profile')    { renderProfile();    return; }
   if (state.view === 'activities') { renderActivities(); return; }
   if (state.view === 'running')    { renderRunning();    return; }
-  if (state.view === 'poc')        { renderPOC();        return; }
   if (state.view === 'help')       { renderHelp();       return; }
 
   /* Dashboard (fallback) */

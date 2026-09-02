@@ -133,6 +133,9 @@ def _normalize(raw):
         'pool_lengths':  int(raw.get('activeLengths')) if is_swim and raw.get('activeLengths') else None,
         # ── Temps de pause cumulé (durée totale - durée en mouvement) ──────
         'rest_min':      round((dur_s - moving_s) / 60, 1) if moving_s and dur_s > moving_s else None,
+        # Temps de récupération natif Garmin (minutes) — utilisé par le
+        # Training Readiness du dashboard au lieu d'une estimation maison.
+        'recovery_time_min': raw.get('recoveryTime'),
     }
 
 
@@ -272,21 +275,39 @@ def _run_sync():
             act['swim_stroke_pct'] = stroke_pct
 
     if normalized:
-        # Upsert par batch de 50 — fallback sans avg_cadence si colonne absente
+        # Upsert par batch de 50 — fallback sans colonnes optionnelles absentes
+        OPTIONAL_COLS = ('avg_cadence', 'recovery_time_min', 'hrr_60s', 'hrr_120s',
+                          'pace_per_100m', 'swolf', 'swim_cadence', 'pool_lengths',
+                          'rest_min', 'swim_drift_swolf', 'swim_drift_hr', 'swim_stroke_pct')
         for i in range(0, len(normalized), 50):
             batch = normalized[i:i+50]
             try:
                 sb.table('activities').upsert(batch).execute()
             except Exception as e:
-                msg = str(e)
-                drop_cols = [c for c in ('avg_cadence', 'hrr_60s', 'hrr_120s',
-                                          'pace_per_100m', 'swolf', 'swim_cadence', 'pool_lengths',
-                                          'rest_min', 'swim_drift_swolf', 'swim_drift_hr', 'swim_stroke_pct') if c in msg]
-                if drop_cols:
-                    stripped = [{k: v for k, v in row.items() if k not in drop_cols} for row in batch]
+                missing = [c for c in OPTIONAL_COLS if c in str(e)]
+                if missing:
+                    stripped = [{k: v for k, v in row.items() if k not in missing} for row in batch]
                     sb.table('activities').upsert(stripped).execute()
                 else:
                     raise
+
+    # ── Diagnostic ponctuel : capture le JSON brut Garmin de la dernière
+    # séance de rameur (une seule fois, tant que raw_debug est vide) pour
+    # identifier les champs non exploités (cadence rameur, puissance...).
+    try:
+        last_row = (sb.table('activities').select('id,raw_debug')
+                    .eq('type', 'rowing').order('date', desc=True).limit(1).execute())
+        if last_row.data and not last_row.data[0].get('raw_debug'):
+            rid = last_row.data[0]['id']
+            try:
+                raw = client.get_activity(rid)
+                sb.table('activities').update({'raw_debug': raw}).eq('id', rid).execute()
+            except Exception as e:
+                # Stocke l'erreur elle-même : visible au prochain export,
+                # au lieu d'échouer silencieusement sans aucune trace.
+                sb.table('activities').update({'raw_debug': {'_error': str(e)}}).eq('id', rid).execute()
+    except Exception:
+        pass  # colonne raw_debug absente de la table → ignoré
 
     # ── Poids / composition corporelle : 90 derniers jours (1 seul appel) ──────
     today = now.date()
@@ -327,11 +348,24 @@ def _run_sync():
             wdata = weight_by_date.get(date_str, {})
             # Training status & readiness (jour courant seulement)
             tr_status = {}; tr_readiness = {}
+            fitness_age = None; chronological_age = None; achievable_fitness_age = None
             if i == 0:
                 try: tr_status   = client.get_training_status(date_str) or {}
                 except Exception: pass
                 try: tr_readiness = client.get_training_readiness(date_str) or {}
                 except Exception: pass
+                # Fitness Age Garmin : confirmé disponible et bien renseigné
+                # (sondé via feature_probe) — hill/endurance score et running
+                # tolerance renvoyaient vide pour ce compte, abandonnés.
+                try:
+                    fa = client.get_fitnessage_data(date_str) or {}
+                    if fa.get('fitnessAge') is not None:
+                        fitness_age = round(fa['fitnessAge'], 1)
+                    chronological_age = fa.get('chronologicalAge')
+                    if fa.get('achievableFitnessAge') is not None:
+                        achievable_fitness_age = round(fa['achievableFitnessAge'], 1)
+                except Exception:
+                    pass
             day = {
                 'date': date_str,
                 'sleep_total_min':        round((dto.get('sleepTimeSeconds') or 0) / 60),
@@ -371,6 +405,10 @@ def _run_sync():
                 'training_readiness_score': (tr_readiness.get('score')
                                              or tr_readiness.get('trainingReadinessScore')),
                 'training_readiness_level': tr_readiness.get('level'),
+                # ── Fitness Age Garmin ─────────────────────────────────────────
+                'fitness_age':             fitness_age,
+                'chronological_age':       chronological_age,
+                'achievable_fitness_age':  achievable_fitness_age,
             }
             wellness_records.append({'date': date_str, 'data': day})
         except Exception:

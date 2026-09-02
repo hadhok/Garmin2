@@ -5,6 +5,13 @@ GET  /api/activity_details?id={activity_id}   → retourne les samples stockés
 POST /api/activity_details {"activity_id": X}  → fetch Garmin + stockage Supabase
 POST /api/activity_details {"action": "backfill", "type": "run", "limit": 20}
      → backfill des N dernières activités sans details
+POST /api/activity_details {"action": "upload_photo", "image_base64": "..."}
+     → stocke une photo de séance (tableau blanc) en attente de déchiffrage
+POST /api/activity_details {"action": "pending_photos"}
+     → liste les photos en attente (utilisé par la Routine quotidienne)
+POST /api/activity_details {"action": "save_note", "activity_id": X,
+                             "notes": "...", "photo_id": Y}
+     → enregistre la note sur l'activité et supprime la photo (photo_id optionnel)
 
 Pour les activités de natation, la réponse inclut aussi `swim_length_buckets`
 (analyse longueur par longueur découpée en 5 tranches : SWOLF/FC/durée moyens).
@@ -226,7 +233,7 @@ def _fetch_and_store(activity_id: int, sb, client) -> dict:
         row['swim_length_buckets'] = swim_buckets
     sb.table('activity_details').upsert(row).execute()
 
-    return {'ok': True, 'activity_id': activity_id, 'samples': len(samples), 'splits': len(splits), 'swim_length_buckets': swim_buckets}
+    return {'ok': True, 'activity_id': activity_id, 'samples': samples, 'splits': splits, 'swim_length_buckets': swim_buckets}
 
 
 def _get_garmin_client(sb):
@@ -314,10 +321,43 @@ class handler(BaseHTTPRequestHandler):
                 results = []
                 for act in to_fetch:
                     r = _fetch_and_store(act['id'], sb, client)
-                    results.append(r)
+                    # Résumé du backfill : compte les points plutôt que de
+                    # renvoyer les tableaux complets pour chaque activité.
+                    n_samples = len(r.get('samples') or [])
+                    n_splits  = len(r.get('splits') or [])
+                    trimmed = {k: v for k, v in r.items() if k not in ('samples', 'splits')}
+                    trimmed.update({'n_samples': n_samples, 'n_splits': n_splits})
+                    results.append(trimmed)
 
-                synced = sum(1 for r in results if r.get('ok') and r.get('samples', 0) > 0)
+                synced = sum(1 for r in results if r.get('ok') and r['n_samples'] > 0)
                 self._reply(200, {'ok': True, 'synced': synced, 'total': len(to_fetch), 'results': results})
+
+            # ── Upload d'une photo de séance (tableau blanc) en attente ────────
+            elif body.get('action') == 'upload_photo':
+                image_b64 = body.get('image_base64')
+                if not image_b64:
+                    self._reply(400, {'error': 'image_base64 requis'})
+                    return
+                row = sb.table('pending_whiteboard_photos').insert({'image_b64': image_b64}).execute()
+                self._reply(200, {'ok': True, 'id': row.data[0]['id'] if row.data else None})
+
+            # ── Liste des photos en attente de déchiffrage ─────────────────────
+            elif body.get('action') == 'pending_photos':
+                rows = sb.table('pending_whiteboard_photos').select('*').order('uploaded_at').execute()
+                self._reply(200, {'ok': True, 'photos': rows.data or []})
+
+            # ── Enregistre la note déchiffrée sur l'activité + nettoie la photo ─
+            elif body.get('action') == 'save_note':
+                activity_id = body.get('activity_id')
+                notes       = body.get('notes')
+                photo_id    = body.get('photo_id')
+                if not activity_id or notes is None:
+                    self._reply(400, {'error': 'activity_id et notes requis'})
+                    return
+                sb.table('activities').update({'notes': notes}).eq('id', int(activity_id)).execute()
+                if photo_id:
+                    sb.table('pending_whiteboard_photos').delete().eq('id', int(photo_id)).execute()
+                self._reply(200, {'ok': True})
 
             # ── Fetch une activité spécifique ─────────────────────────────────
             elif body.get('activity_id'):

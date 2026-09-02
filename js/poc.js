@@ -71,6 +71,15 @@ const INFO_CONTENT = {
       { color: '#ef4444', label: 'Masse grasse > 28%',   desc: 'Élevée — impact sur performance' },
     ]
   },
+  'training-readiness': {
+    title: 'Training Readiness',
+    text: 'Score 0–100 recalculé en continu, inspiré de l\'algorithme Garmin/Firstbeat (non exposé par l\'API publique — recalculé ici à partir des mêmes données synchronisées, y compris le temps de récupération natif Garmin par activité). Combine 6 facteurs : sommeil de la nuit (30%), récupération restante (25%), statut VRC (20%), charge aiguë/ACWR (10%), historique sommeil 3j (10%), historique stress 3j (5%). La charge aiguë utilise training_load (activityTrainingLoad Garmin, dérivé de l\'EPOC) plutôt qu\'un TRIMP maison, pour rester sur la même métrique que Garmin calcule réellement. Trois garde-fous plafonnent le score si un signal isolé est très défavorable : sommeil < 50/100 → max 49, récupération restante > 36h → max 50, VRC dégradée → max 39 — même si la moyenne pondérée le compenserait. Une séance intense fait chuter le score aussitôt enregistrée ; il remonte au fil des heures de repos.',
+    levels: [
+      { color: '#22c55e', label: '≥ 70 — Bonne préparation',        desc: 'Séance intense possible' },
+      { color: '#f97316', label: '40–69 — Préparation limitée',      desc: 'Endurance fondamentale conseillée' },
+      { color: '#ef4444', label: '< 40 — Récupération prioritaire', desc: 'Repos ou séance très légère' },
+    ]
+  },
 };
 
 function showInfoModal(key) {
@@ -183,6 +192,44 @@ function renderPocSynthesis() {
           hrvSignal === 'green' ? '↑ au-dessus baseline' : hrvSignal === 'red' ? '↓ sous baseline' : hrvSignal === 'orange' ? 'Zone normale' : 'Données insuf.')}
       ${sigBadge('Score récupération', recovScore !== null ? recovScore + '/100' : '–', recovColor,
           recovScore !== null ? (recovScore >= 70 ? 'Bonne' : recovScore >= 40 ? 'Partielle' : 'Insuffisante') : 'Données insuf.')}
+    </div>`;
+}
+
+/* ──────────────────────────────────────────────────────────
+   TRAINING READINESS — écran Aujourd'hui
+   Formule canonique : computeTrainingReadiness() (app.js).
+   ────────────────────────────────────────────────────────── */
+function renderTrainingReadiness() {
+  const el = document.getElementById('training-readiness-card');
+  if (!el) return;
+  const tr = (typeof computeTrainingReadiness === 'function') ? computeTrainingReadiness() : null;
+  if (!tr) { el.style.display = 'none'; return; }
+  el.style.display = '';
+
+  const { score, factors } = tr;
+  const tier = score >= 70 ? { color: '#22c55e', bg: 'rgba(34,197,94,0.08)', label: 'Bonne préparation' }
+             : score >= 40 ? { color: '#f97316', bg: 'rgba(249,115,22,0.08)', label: 'Préparation limitée' }
+             : { color: '#ef4444', bg: 'rgba(239,68,68,0.08)', label: 'Récupération prioritaire' };
+
+  const factorCard = f => {
+    const c = f.score >= 70 ? '#22c55e' : f.score >= 40 ? '#f97316' : '#ef4444';
+    return `<div style="background:var(--surface2);border-left:3px solid ${c};border-radius:0 8px 8px 0;padding:8px 12px;font-size:12px">
+      <div style="color:var(--muted);font-size:10px;margin-bottom:2px">${f.label} <span style="opacity:.6">(${Math.round(f.weight * 100)}%)</span></div>
+      <div style="font-weight:700;color:${c}">${f.val}</div>
+    </div>`;
+  };
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Training Readiness</div>
+      <button class="info-btn" onclick="showInfoModal('training-readiness')" title="En savoir plus">i</button>
+    </div>
+    <div style="background:${tier.bg};border:2px solid ${tier.color};border-radius:14px;padding:14px 18px;margin-bottom:12px;display:flex;align-items:center;gap:16px">
+      <div style="font-size:32px;font-weight:800;color:${tier.color};min-width:56px;text-align:center">${score}</div>
+      <div style="font-size:14px;font-weight:700;color:${tier.color}">${tier.label}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px">
+      ${factors.map(factorCard).join('')}
     </div>`;
 }
 
@@ -834,18 +881,4 @@ function renderRHRTrend() {
         </div>
       </div>
     </div>`;
-}
-
-/* ──────────────────────────────────────────────────────────
-   ENTRY POINT
-   ────────────────────────────────────────────────────────── */
-function renderPOC() {
-  const safe = (fn) => { try { fn(); } catch(e) { console.error('[POC]', fn.name, e); } };
-  safe(renderPocSynthesis);
-  safe(renderPocRecovery);
-  safe(renderPocHRV);
-  safe(renderPocLongRatio);
-  safe(renderPocPhase);
-  safe(renderPocPaceReserve);
-  if (typeof renderBodyMetrics === 'function') safe(renderBodyMetrics);
 }

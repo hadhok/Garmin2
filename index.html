@@ -65,16 +65,6 @@
         <span class="nav-label">Entraînement</span>
         <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
-      <button class="nav-item" data-view="running" onclick="switchView('running')">
-        <span class="nav-icon">🏃</span>
-        <span class="nav-label">Course</span>
-        <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
-      <button class="nav-item" data-view="swim" onclick="switchView('swim')">
-        <span class="nav-icon">🏊</span>
-        <span class="nav-label">Natation</span>
-        <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
       <button class="nav-item" data-view="recovery" onclick="switchView('recovery')">
         <span class="nav-icon">💤</span>
         <span class="nav-label">Récupération</span>
@@ -88,16 +78,6 @@
       <button class="nav-item" data-view="profile" onclick="switchView('profile')">
         <span class="nav-icon">👤</span>
         <span class="nav-label">Profil</span>
-        <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
-      <button class="nav-item" data-view="poc" onclick="switchView('poc')">
-        <span class="nav-icon">🔬</span>
-        <span class="nav-label">Science</span>
-        <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
-      <button class="nav-item" data-view="runalyze" onclick="switchView('runalyze')">
-        <span class="nav-icon">🔗</span>
-        <span class="nav-label">Runalyze</span>
         <svg class="nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
     </div>
@@ -148,6 +128,9 @@
 
         <!-- Hero mobile : récupération + recommandation + wellness -->
         <div id="today-hero" class="today-hero" style="display:none"></div>
+
+        <!-- Training Readiness — algorithme maison, 6 facteurs -->
+        <div id="training-readiness-card" class="card" style="margin-bottom:16px;display:none"></div>
 
         <!-- Résumé matinal (desktop seulement — remplacé par today-hero sur mobile) -->
         <div id="morning-summary" style="display:none;margin-bottom:16px;padding:14px 16px;border-radius:12px;background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(59,130,246,0.06));border:1px solid rgba(99,102,241,0.2)">
@@ -231,13 +214,20 @@
            VIEW : ENTRAÎNEMENT
       ════════════════════════════════════════════════ -->
       <div id="view-training" class="view">
+        <!-- Sélecteur Vue d'ensemble / Course à pied / Natation -->
+        <div class="seg-control">
+          <button class="seg-btn on" data-seg="overview" onclick="setTrainingTab('overview')">Vue d'ensemble</button>
+          <button class="seg-btn" data-seg="running" onclick="setTrainingTab('running')">Course à pied</button>
+          <button class="seg-btn" data-seg="swim" onclick="setTrainingTab('swim')">Natation</button>
+        </div>
+
+        <div id="training-overview-panel">
 
         <!-- Sub-tab bar -->
         <div class="subtab-bar">
           <button class="subtab active" data-tab="week"  onclick="switchSubTab('week')">Semaine</button>
           <button class="subtab" data-tab="month" onclick="switchSubTab('month')">Mois</button>
           <button class="subtab" data-tab="year"  onclick="switchSubTab('year')">Année</button>
-          <button class="subtab" data-tab="course" onclick="switchSubTab('course')">Course</button>
         </div>
 
         <!-- Period navigation (shared semaine/mois/année) -->
@@ -376,669 +366,9 @@
           <div class="chart-wrap" style="height:280px"><canvas id="chart-forme-diagram"></canvas></div>
         </div>
 
-      </div><!-- /view-training -->
+        </div><!-- /training-overview-panel -->
 
-      <!-- ════════════════════════════════════════════════
-           VIEW : HISTORIQUE (table des activités)
-      ════════════════════════════════════════════════ -->
-      <div id="view-history" class="view">
-
-        <!-- Period selector + filter -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
-          <div style="display:flex;gap:4px">
-            <button class="hpb act-period-btn active" data-period="month" onclick="setActPeriod('month',this)">Ce mois</button>
-            <button class="hpb act-period-btn" data-period="week"  onclick="setActPeriod('week',this)">7 jours</button>
-            <button class="hpb act-period-btn" data-period="year"  onclick="setActPeriod('year',this)">Cette année</button>
-            <button class="hpb act-period-btn" data-period="all"   onclick="setActPeriod('all',this)">Tout</button>
-          </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div class="acts-search-wrap">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-              <input class="acts-search" id="acts-search" type="text" placeholder="Rechercher…" oninput="renderActivities()">
-            </div>
-            <button class="btn btn-ghost" onclick="exportActivitiesCSV()" title="Exporter la liste filtrée en CSV" style="font-size:12px;padding:6px 12px">⬇ CSV</button>
-          </div>
-        </div>
-
-        <!-- Filter bar -->
-        <div class="filter-bar" style="margin-bottom:16px">
-          <button class="filter-btn active" data-type="all"       onclick="setFilter('all')">Tous</button>
-          <button class="filter-btn" data-type="run"       onclick="setFilter('run')"><span class="filter-dot" style="background:var(--run)"></span>Course</button>
-          <button class="filter-btn" data-type="swim"      onclick="setFilter('swim')"><span class="filter-dot" style="background:var(--swim)"></span>Natation</button>
-          <button class="filter-btn" data-type="hiit"      onclick="setFilter('hiit')"><span class="filter-dot" style="background:var(--hiit)"></span>HIIT</button>
-          <button class="filter-btn" data-type="rowing"    onclick="setFilter('rowing')"><span class="filter-dot" style="background:var(--rowing)"></span>Rameur</button>
-          <button class="filter-btn" data-type="jump_rope" onclick="setFilter('jump_rope')"><span class="filter-dot" style="background:var(--jump_rope)"></span>Jump Rope</button>
-          <button class="filter-btn" data-type="strength"  onclick="setFilter('strength')"><span class="filter-dot" style="background:var(--strength)"></span>Muscu</button>
-          <button class="filter-btn" data-type="hockey"    onclick="setFilter('hockey')"><span class="filter-dot" style="background:var(--hockey)"></span>Hockey</button>
-          <button class="filter-btn" data-type="tennis"    onclick="setFilter('tennis')"><span class="filter-dot" style="background:var(--tennis)"></span>Tennis</button>
-          <button class="filter-btn" data-type="bike"      onclick="setFilter('bike')"><span class="filter-dot" style="background:var(--bike)"></span>Vélo</button>
-          <button class="filter-btn" data-type="walk"      onclick="setFilter('walk')"><span class="filter-dot" style="background:var(--walk)"></span>Marche</button>
-          <button class="filter-btn" data-type="pilates"   onclick="setFilter('pilates')"><span class="filter-dot" style="background:var(--pilates)"></span>Pilates</button>
-        </div>
-
-        <!-- KPI strip -->
-        <div class="kpi-grid" id="acts-kpi-strip" style="margin-bottom:20px"></div>
-
-        <!-- Table -->
-        <div class="table-container">
-          <table class="acts-table">
-            <thead>
-              <tr>
-                <th class="th-sort sort-desc" data-col="date"     onclick="sortActBy('date')">Date</th>
-                <th class="th-sort"           data-col="type"     onclick="sortActBy('type')">Type</th>
-                <th class="th-sort"           data-col="name"     onclick="sortActBy('name')">Nom</th>
-                <th class="th-sort"           data-col="duration" onclick="sortActBy('duration')">Durée</th>
-                <th class="th-sort"           data-col="distance" onclick="sortActBy('distance')">Distance</th>
-                <th class="th-sort col-hr"    data-col="hr"       onclick="sortActBy('hr')">FC moy.</th>
-                <th class="th-sort col-cal"   data-col="calories" onclick="sortActBy('calories')">Calories</th>
-                <th class="th-sort col-elev"  data-col="load"     onclick="sortActBy('load')">Charge</th>
-              </tr>
-            </thead>
-            <tbody id="acts-table-body"></tbody>
-          </table>
-        </div>
-
-      </div><!-- /view-history -->
-
-      <!-- ════════════════════════════════════════════════
-           VIEW : NATATION
-      ════════════════════════════════════════════════ -->
-      <div id="view-swim" class="view">
-
-        <!-- Filtres -->
-        <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
-          <div style="display:flex;gap:4px">
-            <button class="hpb swim-period-btn active" data-period="all"   onclick="setSwimPeriod('all',this)">Tout</button>
-            <button class="hpb swim-period-btn" data-period="week"  onclick="setSwimPeriod('week',this)">7 jours</button>
-            <button class="hpb swim-period-btn" data-period="month" onclick="setSwimPeriod('month',this)">Ce mois</button>
-            <button class="hpb swim-period-btn" data-period="year"  onclick="setSwimPeriod('year',this)">Cette année</button>
-          </div>
-          <select id="swim-filter-effort" class="compare-select" style="max-width:160px" onchange="setSwimFilters()">
-            <option value="">Tous les efforts</option>
-          </select>
-          <select id="swim-filter-stroke" class="compare-select" style="max-width:160px" onchange="setSwimFilters()">
-            <option value="">Toutes les nages</option>
-          </select>
-        </div>
-
-        <!-- KPI cards -->
-        <div class="swim-kpi-row" id="swim-kpi-strip"></div>
-
-        <!-- Coach Natation -->
-        <div class="card swim-coach-card" id="swim-coach-card" style="margin-bottom:16px"></div>
-
-        <!-- Records personnels -->
-        <div id="ssh-prs" class="section-header collapsible" onclick="toggleSection(this)">Records personnels <span class="chev">▾</span></div>
-        <div class="section-body">
-          <div class="card" id="swim-prs"></div>
-        </div>
-
-        <!-- Tendance globale (volume + allure) -->
-        <div class="card" style="margin-bottom:16px">
-          <div class="swim-card-title">Tendance de Performance et Volume</div>
-          <div style="height:220px"><canvas id="swim-chart-trend"></canvas></div>
-        </div>
-
-        <!-- Barre de sélection -->
-        <div id="swim-selection-bar" style="display:none;align-items:center;justify-content:space-between;gap:10px;background:var(--accent-bg);border:1px solid var(--accent-dim);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px"></div>
-
-        <!-- Grille d'analyse (4 quadrants) -->
-        <div class="swim-quad-grid">
-
-          <!-- 1. Zone cardiaque & Effet d'entraînement -->
-          <div class="card">
-            <div class="swim-card-title">1 · Zone Cardiaque &amp; Effet d'Entraînement</div>
-            <div class="swim-quad-sub">
-              <div>
-                <div class="swim-subtitle">Zones cardio</div>
-                <div style="height:150px"><canvas id="swim-q-zones-chart"></canvas></div>
-                <div id="swim-q-zones-table"></div>
-              </div>
-              <div>
-                <div class="swim-subtitle">Effet d'entraînement (TE)</div>
-                <div id="swim-q-te"></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 2. Efficacité & technique -->
-          <div class="card">
-            <div class="swim-card-title">2 · Efficacité &amp; Technique (SWOLF, cadence, pauses)</div>
-            <div class="swim-quad-sub">
-              <div>
-                <div class="swim-subtitle">Technique (SWOLF)</div>
-                <div style="height:150px"><canvas id="swim-q-technique-chart"></canvas></div>
-              </div>
-              <div>
-                <div class="swim-subtitle">Effort vs Efficacité</div>
-                <div style="height:150px"><canvas id="swim-q-cadence-chart"></canvas></div>
-              </div>
-            </div>
-            <div class="swim-subtitle" style="margin-top:12px">Temps actif / pause</div>
-            <div id="swim-q-activepause"></div>
-          </div>
-
-          <!-- 3. Nages & type de séance -->
-          <div class="card">
-            <div class="swim-card-title">3 · Nages &amp; Types de Séance</div>
-            <div class="swim-quad-sub">
-              <div>
-                <div class="swim-subtitle">Répartition des nages</div>
-                <div style="height:140px"><canvas id="swim-q-stroke-chart"></canvas></div>
-                <div id="swim-q-stroke-legend" style="margin-top:8px"></div>
-              </div>
-              <div>
-                <div class="swim-subtitle">Type de séance</div>
-                <div style="height:160px"><canvas id="swim-q-effort-chart"></canvas></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 4. Dérive & récupération -->
-          <div class="card">
-            <div class="swim-card-title">4 · Dérive &amp; Récupération</div>
-            <div class="swim-subtitle">Dérive intra-séance (SWOLF &amp; FC)</div>
-            <div style="height:150px"><canvas id="swim-q-drift-chart"></canvas></div>
-            <div id="swim-q-drift-table" style="margin-top:8px"></div>
-            <div class="swim-subtitle" style="margin-top:14px">Récupération cardiaque (HRR)</div>
-            <div id="swim-q-hrr"></div>
-          </div>
-
-        </div>
-
-        <!-- Historique + Détail séance -->
-        <div class="swim-detail-row">
-          <div class="card" style="padding:0;overflow:hidden">
-            <div class="swim-card-title" style="padding:14px 16px 0">Historique des Séances</div>
-            <table class="acts-table">
-              <thead><tr>
-                <th class="th-sort" onclick="sortSwimTable('date')">Date</th>
-                <th>Nom</th>
-                <th class="th-sort" onclick="sortSwimTable('distance_km')">Dist.</th>
-                <th>Allure</th>
-                <th class="th-sort" onclick="sortSwimTable('swolf')">SWOLF</th>
-                <th>FC moy.</th>
-                <th class="th-sort" onclick="sortSwimTable('training_load')">Charge</th>
-                <th></th>
-              </tr></thead>
-              <tbody id="swim-table-body"></tbody>
-            </table>
-            <div id="swim-table-footer" style="padding:10px 16px;display:none"></div>
-          </div>
-
-          <div class="card" id="swim-detail-panel"></div>
-        </div>
-
-        <!-- Comparer deux séances -->
-        <div id="ssh-compare" class="section-header collapsible" onclick="toggleSection(this)">Comparer deux séances <span class="chev">▾</span></div>
-        <div class="section-body">
-          <div class="card" id="swim-compare-card">
-            <div class="compare-selectors">
-              <div class="compare-sel-wrap">
-                <div class="compare-sel-label compare-label-a">Session A</div>
-                <select id="swim-compare-sel-a" onchange="updateSwimCompare()" class="compare-select">
-                  <option value="">— Choisir une séance —</option>
-                </select>
-              </div>
-              <div class="compare-vs">VS</div>
-              <div class="compare-sel-wrap">
-                <div class="compare-sel-label compare-label-b">Session B</div>
-                <select id="swim-compare-sel-b" onchange="updateSwimCompare()" class="compare-select">
-                  <option value="">— Choisir une séance —</option>
-                </select>
-              </div>
-            </div>
-            <div id="swim-compare-result"></div>
-          </div>
-        </div>
-
-      </div><!-- /view-swim -->
-
-      <!-- ════════════════════════════════════════════════
-           VIEW : RÉCUPÉRATION (ex-Santé + POC sections 0-2)
-      ════════════════════════════════════════════════ -->
-      <div id="view-recovery" class="view">
-
-        <!-- Recommandation du jour (unifiée — computeDailyReco) -->
-        <div class="card" style="margin-bottom:16px">
-          <div style="font-size:11px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">
-            🎯 Recommandation du jour — synthèse de tous les signaux
-          </div>
-          <div id="poc-synthesis"></div>
-        </div>
-
-        <!-- Score de récupération composite (POC section 1) -->
-        <div class="section-header collapsible" onclick="toggleSection(this)">Score de Récupération Composite <button class="info-btn" onclick="event.stopPropagation();showInfoModal('recovery-score')" title="En savoir plus">i</button> <span class="chev">▾</span></div>
-        <div class="section-body">
-          <div class="health-grid">
-            <div class="card">
-              <div class="section-header" style="margin:0 0 12px">Score du jour (0–100)</div>
-              <div id="poc-recovery-score"></div>
-            </div>
-            <div class="card health-full">
-              <div class="section-header" style="margin:0 0 12px">Évolution 30 jours</div>
-              <div class="chart-wrap" style="height:180px"><canvas id="chart-poc-recovery"></canvas></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- HRV-Guided Training (POC section 2) -->
-        <div class="section-header collapsible" onclick="toggleSection(this)">HRV-Guided Training <button class="info-btn" onclick="event.stopPropagation();showInfoModal('hrv')" title="En savoir plus">i</button> <span class="chev">▾</span></div>
-        <div class="section-body">
-          <div class="health-grid">
-            <div class="card">
-              <div class="section-header" style="margin:0 0 12px">Recommandation HRV du jour</div>
-              <div id="poc-hrv-reco"></div>
-            </div>
-            <div class="card health-full">
-              <div class="section-header" style="margin:0 0 12px">HRV 90j — trend vs baseline</div>
-              <div class="chart-wrap" style="height:180px"><canvas id="chart-poc-hrv"></canvas></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Tendance FC repos -->
-        <div class="section-header collapsible" onclick="toggleSection(this)">Tendance FC repos <button class="info-btn" onclick="event.stopPropagation();showInfoModal('rhr')" title="En savoir plus">i</button> <span class="chev">▾</span></div>
-        <div class="section-body">
-          <div class="card" id="poc-rhr-trend"></div>
-        </div>
-
-        <!-- Composition corporelle Renpho -->
-        <div class="section-header collapsible" onclick="toggleSection(this)">⚖️ Composition Corporelle <button class="info-btn" onclick="event.stopPropagation();showInfoModal('body-metrics')" title="En savoir plus">i</button> <span class="chev">▾</span></div>
-        <div class="section-body">
-          <div class="card" id="renpho-body-metrics"></div>
-        </div>
-
-        <!-- Period selector -->
-        <div class="health-period-bar">
-          <button class="hpb" data-days="7"  onclick="setHealthPeriod(7)">7 jours</button>
-          <button class="hpb active" data-days="30" onclick="setHealthPeriod(30)">30 jours</button>
-          <button class="hpb" data-days="90" onclick="setHealthPeriod(90)">90 jours</button>
-        </div>
-
-        <!-- KPIs -->
-        <div class="kpi-grid" id="kpi-health"></div>
-
-        <!-- Sleep -->
-        <div class="section-header">Sommeil</div>
-        <div class="health-grid">
-          <div class="card health-full">
-            <div class="card-header">
-              <span class="card-title">Durée &amp; phases <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">min</span></span>
-              <span id="badge-sleep" class="stat-badge"></span>
-            </div>
-            <div class="chart-wrap" style="height:220px"><canvas id="chart-sleep"></canvas></div>
-          </div>
-          <div class="card health-full" id="sleep-score-section" style="display:none">
-            <div class="card-header">
-              <span class="card-title">Score de sommeil <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">/100</span></span>
-              <span id="badge-sleep-score" class="stat-badge"></span>
-            </div>
-            <div class="chart-wrap" style="height:160px"><canvas id="chart-sleep-score"></canvas></div>
-          </div>
-          <div class="card" id="sleep-hr-section" style="display:none">
-            <div class="card-header">
-              <span class="card-title">FC nocturne <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">bpm</span></span>
-              <span id="badge-sleep-hr" class="stat-badge"></span>
-            </div>
-            <div class="chart-wrap"><canvas id="chart-sleep-hr"></canvas></div>
-          </div>
-          <div class="card" id="sleep-resp-section" style="display:none">
-            <div class="card-header">
-              <span class="card-title">Respiration nocturne <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">r/min</span></span>
-              <span id="badge-sleep-resp" class="stat-badge"></span>
-            </div>
-            <div class="chart-wrap"><canvas id="chart-sleep-resp"></canvas></div>
-          </div>
-          <div class="card health-full" id="sleep-stress-section" style="display:none">
-            <div class="card-header">
-              <span class="card-title">Stress nocturne</span>
-              <span id="badge-sleep-stress" class="stat-badge"></span>
-            </div>
-            <div class="chart-wrap" style="height:140px"><canvas id="chart-sleep-stress"></canvas></div>
-          </div>
-        </div>
-
-        <!-- HRV & HR -->
-        <div class="section-header">HRV &amp; Fréquence cardiaque</div>
-        <div class="health-grid">
-          <div class="card">
-            <div class="card-header">
-              <span class="card-title">HRV nocturne <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">ms</span></span>
-              <span id="badge-hrv" class="stat-badge"></span>
-            </div>
-            <div class="chart-wrap"><canvas id="chart-hrv"></canvas></div>
-          </div>
-          <div class="card">
-            <div class="card-header">
-              <span class="card-title">FC repos <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">bpm</span></span>
-              <span id="badge-hr" class="stat-badge"></span>
-            </div>
-            <div class="chart-wrap"><canvas id="chart-rhr"></canvas></div>
-          </div>
-          <div class="card health-full" id="hrv-status-section" style="display:none">
-            <div class="card-header"><span class="card-title">Statut HRV Garmin</span></div>
-            <div id="hrv-status-content" style="padding-top:6px"></div>
-          </div>
-        </div>
-
-        <!-- Body Battery -->
-        <div class="section-header">Body Battery</div>
-        <div class="health-grid">
-          <div class="card health-full">
-            <div class="card-header">
-              <span class="card-title">Plage quotidienne (min → max)</span>
-              <span id="badge-bb" class="stat-badge"></span>
-            </div>
-            <div class="chart-wrap" style="height:180px"><canvas id="chart-battery"></canvas></div>
-          </div>
-        </div>
-
-        <!-- Statut & Readiness -->
-        <div id="readiness-section" style="display:none">
-          <div class="section-header">Statut &amp; Readiness</div>
-          <div class="health-grid">
-            <div class="card health-full">
-              <div class="card-header">
-                <span class="card-title">Score de readiness <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">/100</span></span>
-                <span id="badge-readiness" class="stat-badge"></span>
-              </div>
-              <div id="training-status-banner" style="margin-bottom:12px"></div>
-              <div class="chart-wrap" style="height:180px"><canvas id="chart-readiness"></canvas></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Stress -->
-        <div class="section-header">Stress</div>
-        <div class="health-grid">
-          <div class="card">
-            <div class="card-header">
-              <span class="card-title">Niveau moyen</span>
-              <span id="badge-stress" class="stat-badge"></span>
-            </div>
-            <div class="chart-wrap"><canvas id="chart-stress-avg"></canvas></div>
-          </div>
-          <div class="card">
-            <div class="card-header">
-              <span class="card-title">Répartition <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">%</span></span>
-            </div>
-            <div class="chart-wrap"><canvas id="chart-stress-pct"></canvas></div>
-          </div>
-        </div>
-
-        <!-- Correlation -->
-        <div class="section-header" id="corr-section-header" style="display:none">Corrélation Sommeil ↔ Performance</div>
-        <div class="health-grid" id="corr-section" style="display:none">
-          <div class="card health-full">
-            <div class="card-header"><span class="card-title">Score sommeil (veille) vs Charge entraînement</span></div>
-            <div class="chart-wrap" style="height:220px"><canvas id="chart-sleep-perf"></canvas></div>
-          </div>
-        </div>
-
-        <!-- Weight -->
-        <div id="weight-section">
-          <div class="section-header">Poids &amp; Composition</div>
-          <div class="health-grid">
-            <div class="card health-full">
-              <div class="card-header">
-                <span class="card-title">Évolution du poids <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">kg</span></span>
-                <span id="badge-weight" class="stat-badge"></span>
-              </div>
-              <div class="chart-wrap" style="height:200px"><canvas id="chart-weight"></canvas></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Daily activity -->
-        <div class="section-header">Activité journalière</div>
-        <div class="health-grid">
-          <div class="card health-full">
-            <div class="card-header">
-              <span class="card-title">Pas quotidiens</span>
-              <span id="badge-steps" class="stat-badge"></span>
-            </div>
-            <div class="chart-wrap" style="height:180px"><canvas id="chart-steps"></canvas></div>
-          </div>
-          <div class="card">
-            <div class="card-header">
-              <span class="card-title">Calories actives <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">kcal</span></span>
-              <span id="badge-cal" class="stat-badge"></span>
-            </div>
-            <div class="chart-wrap"><canvas id="chart-cal-active"></canvas></div>
-          </div>
-          <div class="card">
-            <div class="card-header">
-              <span class="card-title">Minutes d'intensité</span>
-              <span id="badge-imin" class="stat-badge"></span>
-            </div>
-            <div class="chart-wrap"><canvas id="chart-intensity-min"></canvas></div>
-          </div>
-        </div>
-
-        <!-- Corrélations bien-être → performance -->
-        <div class="section-header collapsible" onclick="toggleSection(this)" style="margin-top:8px">Corrélations bien-être → performance <span class="chev">▾</span></div>
-        <div class="section-body">
-          <div class="health-grid">
-            <div class="card">
-              <div class="section-header" style="margin:0 0 4px">😴 Sommeil → Efficience du run</div>
-              <div id="corr-sleep-txt" style="font-size:11px;color:var(--muted);margin-bottom:8px"></div>
-              <div class="chart-wrap" style="height:200px"><canvas id="chart-corr-sleep"></canvas></div>
-            </div>
-            <div class="card">
-              <div class="section-header" style="margin:0 0 4px">⚡ Charge de la veille → HRV</div>
-              <div id="corr-load-txt" style="font-size:11px;color:var(--muted);margin-bottom:8px"></div>
-              <div class="chart-wrap" style="height:200px"><canvas id="chart-corr-load"></canvas></div>
-            </div>
-          </div>
-        </div>
-
-      </div><!-- /view-recovery -->
-
-      <!-- ════════════════════════════════════════════════
-           VIEW : RUNALYZE — CALIBRATION
-      ════════════════════════════════════════════════ -->
-      <div id="view-runalyze" class="view">
-        <div style="padding:16px">
-          <div class="section-header">🎯 Calibration Runalyze</div>
-
-          <div class="card" style="margin-bottom:16px">
-            <div style="font-size:12px;color:var(--muted);line-height:1.7">
-              L'API gratuite de Runalyze ne permet pas de lire les métriques calculées (écriture seule).
-              Les valeurs sont donc <strong>calculées localement</strong> puis calibrées sur celles de runalyze.com :
-              ouvre ton tableau de bord Runalyze, recopie les valeurs affichées ci-dessous, et enregistre.
-              Le facteur de correction (valeur Runalyze ÷ calcul local) est appliqué automatiquement
-              dans la section Calculations de l'onglet Course.
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="section-header" style="margin:0 0 12px;font-size:14px">Métriques</div>
-            <div id="rz-calibration"></div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
-              <button class="btn btn-primary" onclick="saveRunalyzeCalibration()" style="font-size:13px">💾 Enregistrer la calibration</button>
-              <button class="btn" onclick="resetRunalyzeCalibration()" style="font-size:13px">↺ Réinitialiser</button>
-            </div>
-            <div id="rz-status" style="display:none;font-size:12px;margin-top:8px;padding:8px;border-radius:4px;background:rgba(34,197,94,0.12);color:#16a34a"></div>
-          </div>
-        </div>
-      </div><!-- /view-runalyze -->
-
-      <!-- ════════════════════════════════════════════════
-           VIEW : PROFIL
-      ════════════════════════════════════════════════ -->
-      <div id="view-profile" class="view">
-
-        <!-- Coach -->
-        <div class="coach-section" id="coach-section" style="display:none">
-          <div class="coach-header">
-            <div class="coach-title">
-              <div class="coach-avatar">🤖</div>
-              Conseil du Coach
-            </div>
-            <div class="coach-meta">
-              <span class="coach-date" id="coach-date"></span>
-              <span class="coach-name"></span>
-            </div>
-          </div>
-          <div class="coach-snap" id="coach-snap" style="display:none"></div>
-          <div class="coach-items" id="coach-items"></div>
-        </div>
-
-        <!-- Granularity -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
-          <div class="pgran">
-            <button class="pgran-btn active" onclick="setProfileGranularity('month',this)">Mois</button>
-            <button class="pgran-btn" onclick="setProfileGranularity('quarter',this)">Trimestre</button>
-            <button class="pgran-btn" onclick="setProfileGranularity('semester',this)">Semestre</button>
-            <button class="pgran-btn" onclick="setProfileGranularity('year',this)">Année</button>
-          </div>
-        </div>
-
-        <!-- Hero -->
-        <div class="profile-hero">
-          <div class="card" style="text-align:center;padding:24px 16px">
-            <div class="profile-badge-icon" id="profile-main-icon">🏅</div>
-            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:6px">Niveau</div>
-            <div id="profile-level-name" style="font-size:18px;font-weight:800"></div>
-            <div class="level-bar" id="profile-level-pips"></div>
-            <div style="font-size:11px;color:var(--muted);margin-top:10px" id="profile-weekly-load"></div>
-          </div>
-          <div class="card" style="padding:16px 18px">
-            <div class="card-header"><span class="card-title">Sports pratiqués</span></div>
-            <div id="profile-sports-list"></div>
-          </div>
-          <div class="card">
-            <div class="card-header"><span class="card-title" id="profile-period-label">Depuis le début</span></div>
-            <div id="profile-totals" style="display:grid;grid-template-columns:1fr 1fr;gap:0"></div>
-          </div>
-        </div>
-
-        <!-- Records -->
-        <div class="section-header">Records personnels</div>
-        <div class="records-grid" id="profile-records"></div>
-
-        <!-- Charts -->
-        <div class="section-header">Évolution</div>
-        <div class="content-grid">
-          <div class="card">
-            <div class="card-header">
-              <span class="card-title">Charge d'entraînement</span>
-              <span style="font-size:11px;color:var(--muted)">pts</span>
-            </div>
-            <div class="chart-wrap" style="height:220px"><canvas id="chart-profile-load"></canvas></div>
-          </div>
-          <div class="card">
-            <div class="card-header"><span class="card-title">Nombre d'activités</span></div>
-            <div class="chart-wrap" style="height:220px"><canvas id="chart-profile-acts"></canvas></div>
-          </div>
-        </div>
-
-        <!-- Monthly table -->
-        <div class="section-header" style="margin-top:8px">Bilan détaillé</div>
-        <div class="card" style="padding:0;overflow:hidden">
-          <div style="overflow-x:auto">
-            <table class="profile-table">
-              <thead>
-                <tr>
-                  <th>Période</th>
-                  <th>Activités</th>
-                  <th>Durée</th>
-                  <th>Distance</th>
-                  <th>Charge</th>
-                  <th>Sport dominant</th>
-                  <th class="col-rhr">FC repos</th>
-                  <th class="col-sleep">Sommeil moy.</th>
-                </tr>
-              </thead>
-              <tbody id="profile-table-body"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Heatmap -->
-        <div class="section-header" style="margin-top:24px">Activité sur 12 mois</div>
-        <div class="card">
-          <div id="heatmap-container"></div>
-        </div>
-
-        <!-- Form & Fatigue -->
-        <div class="section-header" style="margin-top:24px">Forme &amp; Fatigue</div>
-        <div class="card">
-          <div class="form-legend">
-            <span class="fleg"><span class="fleg-line" style="background:#6366f1"></span>CTL — Forme (42j)</span>
-            <span class="fleg"><span class="fleg-line" style="background:#f97316"></span>ATL — Fatigue (7j)</span>
-            <span class="fleg"><span class="fleg-dash" style="border-color:#22c55e"></span>TSB — Fraîcheur</span>
-          </div>
-          <div class="chart-wrap" style="height:240px"><canvas id="chart-form"></canvas></div>
-        </div>
-
-        <!-- VO2max -->
-        <div class="section-header" id="vo2max-section-header" style="display:none;margin-top:24px">Évolution VO2max</div>
-        <div class="card" id="vo2max-section" style="display:none">
-          <div class="chart-wrap" style="height:200px"><canvas id="chart-vo2max"></canvas></div>
-        </div>
-
-        <!-- Trophées -->
-        <div class="section-header" style="margin-top:24px">Trophées</div>
-        <div class="badges-grid" id="profile-badges"></div>
-
-        <!-- Export rapport complet -->
-        <div class="section-header" style="margin-top:24px">Export rapport</div>
-        <div class="card" style="max-width:480px">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6">
-            Génère un fichier JSON avec toutes tes données (activités, bien-être, composition corporelle, calculs de forme, records, objectif de course). À partager avec Claude pour une analyse ou un rapport détaillé. Rien n'est envoyé automatiquement — le fichier est simplement téléchargé sur ton appareil.
-          </div>
-          <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
-            <div style="flex:1;min-width:140px">
-              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:6px">Période</label>
-              <select id="export-report-period" class="settings-input" style="width:100%"></select>
-            </div>
-            <button id="export-report-btn" class="btn btn-primary" onclick="exportFullReport()" style="font-size:13px;flex:1;min-width:160px">📄 Exporter le rapport</button>
-          </div>
-          <div style="font-size:10px;color:var(--muted);margin-top:6px">Les calculs de forme, records et objectif restent basés sur tout l'historique (nécessaire pour des valeurs correctes) — seules les listes d'activités et de bien-être sont limitées à la période choisie.</div>
-          <div id="export-report-status" style="display:none;font-size:12px;margin-top:8px"></div>
-        </div>
-
-        <!-- Paramètres -->
-        <div id="profile-settings" class="section-header" style="margin-top:24px">Paramètres</div>
-        <div class="card" style="max-width:480px">
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
-            <div>
-              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">FC Max (bpm)</label>
-              <input id="set-hr-max" type="number" min="140" max="220" class="settings-input" value="">
-              <div style="font-size:10px;color:var(--muted);margin-top:3px">Vide = auto (max observé sur 12 mois)</div>
-            </div>
-            <div>
-              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">FC Repos (bpm)</label>
-              <input id="set-hr-rest" type="number" min="30" max="90" class="settings-input" value="">
-              <div style="font-size:10px;color:var(--muted);margin-top:3px">Vide = auto (FC repos Garmin du jour)</div>
-            </div>
-            <div>
-              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Correction VO2max</label>
-              <input id="set-vo2-correction" type="number" min="0.8" max="1.5" step="0.01" class="settings-input" value="">
-            </div>
-          </div>
-          <div style="margin-bottom:16px">
-            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Notifications</label>
-            <button id="notif-toggle-btn" class="btn btn-primary" onclick="toggleNotifications()" style="font-size:13px">🔕 Activer les notifications</button>
-            <div style="font-size:11px;color:var(--muted);margin-top:4px">Conseil du matin (à l'ouverture de l'app) et alertes nouveaux records.</div>
-          </div>
-          <div style="margin-bottom:16px">
-            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Clé API (sécurité)</label>
-            <input id="set-api-key" type="password" class="settings-input" placeholder="Optionnel — doit correspondre à APP_API_KEY sur Vercel" autocomplete="off" style="width:100%">
-            <div style="font-size:11px;color:var(--muted);margin-top:4px">Protège tes données de santé : définis APP_API_KEY dans les variables d'environnement Vercel puis saisis la même clé ici.</div>
-          </div>
-          <button class="btn btn-primary" onclick="saveHRSettings()" style="font-size:13px">Enregistrer</button>
-          <div id="settings-saved" style="display:none;font-size:12px;color:#22c55e;margin-top:8px">✓ Paramètres enregistrés — les calculs sont mis à jour.</div>
-        </div>
-
-      </div><!-- /view-profile -->
-
-      <!-- ════════════════════════════════════════════════
-           VIEW : RUNNING
-      ════════════════════════════════════════════════ -->
-      <div id="view-running" class="view">
+      <div id="view-running" style="display:none">
 
         <!-- Slicer de période -->
         <div class="run-slicer" id="run-slicer">
@@ -1337,19 +667,9 @@
           <div class="card" id="run-race-predictor"></div>
         </div>
 
-      </div><!-- /view-running -->
-
-      <!-- ════════════════════════════════════════════════
-           VIEW : POC — sections 3-5 (dissolues dans Entraînement/Course)
-           Sections 0-2 déplacées dans view-recovery
-      ════════════════════════════════════════════════ -->
-      <div id="view-poc" class="view">
-
-        <!-- 3. Ratio longue sortie / volume -->
-        <div class="section-header collapsible" onclick="toggleSection(this)">
-          3. Ratio Longue Sortie / Volume Hebdomadaire <button class="info-btn" onclick="event.stopPropagation();showInfoModal('longratio')" title="En savoir plus">i</button> <span class="chev">▾</span>
-        </div>
-        <div class="section-body">
+        <!-- Ratio longue sortie / volume (ex-Science) -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">Ratio Longue Sortie / Volume Hebdomadaire <button class="info-btn" onclick="event.stopPropagation();showInfoModal('longratio')" title="En savoir plus">i</button> <span class="chev">▾</span></div>
+        <div class="section-body" data-secondary>
           <div class="card">
             <div class="section-header" style="margin:0 0 12px">% de la longue sortie dans le volume total — 16 semaines</div>
             <div id="poc-longratio-current"></div>
@@ -1362,11 +682,9 @@
           </div>
         </div>
 
-        <!-- 4. Détection de phase d'entraînement -->
-        <div class="section-header collapsible" onclick="toggleSection(this)">
-          4. Détection Automatique de Phase <button class="info-btn" onclick="event.stopPropagation();showInfoModal('phase')" title="En savoir plus">i</button> <span class="chev">▾</span>
-        </div>
-        <div class="section-body">
+        <!-- Détection de phase d'entraînement (ex-Science) -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">Détection Automatique de Phase <button class="info-btn" onclick="event.stopPropagation();showInfoModal('phase')" title="En savoir plus">i</button> <span class="chev">▾</span></div>
+        <div class="section-body" data-secondary>
           <div class="card">
             <div class="section-header" style="margin:0 0 12px">Phase détectée — 24 semaines</div>
             <div id="poc-phase-current"></div>
@@ -1379,11 +697,9 @@
           </div>
         </div>
 
-        <!-- 5. Pace Reserve -->
-        <div class="section-header collapsible" onclick="toggleSection(this)">
-          5. Pace Reserve (RP) <button class="info-btn" onclick="event.stopPropagation();showInfoModal('pacereserve')" title="En savoir plus">i</button> <span class="chev">▾</span>
-        </div>
-        <div class="section-body">
+        <!-- Pace Reserve (ex-Science) -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">Pace Reserve (RP) <button class="info-btn" onclick="event.stopPropagation();showInfoModal('pacereserve')" title="En savoir plus">i</button> <span class="chev">▾</span></div>
+        <div class="section-body" data-secondary>
           <div class="health-grid">
             <div class="card">
               <div class="section-header" style="margin:0 0 12px">Marge allure actuelle vs seuil</div>
@@ -1401,7 +717,680 @@
           </div>
         </div>
 
-      </div><!-- /view-poc -->
+      </div><!-- /view-running -->
+
+      <div id="view-swim" style="display:none">
+
+        <!-- Filtres -->
+        <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
+          <div style="display:flex;gap:4px">
+            <button class="hpb swim-period-btn active" data-period="all"   onclick="setSwimPeriod('all',this)">Tout</button>
+            <button class="hpb swim-period-btn" data-period="week"  onclick="setSwimPeriod('week',this)">7 jours</button>
+            <button class="hpb swim-period-btn" data-period="month" onclick="setSwimPeriod('month',this)">Ce mois</button>
+            <button class="hpb swim-period-btn" data-period="year"  onclick="setSwimPeriod('year',this)">Cette année</button>
+          </div>
+          <select id="swim-filter-effort" class="compare-select" style="max-width:160px" onchange="setSwimFilters()">
+            <option value="">Tous les efforts</option>
+          </select>
+          <select id="swim-filter-stroke" class="compare-select" style="max-width:160px" onchange="setSwimFilters()">
+            <option value="">Toutes les nages</option>
+          </select>
+        </div>
+
+        <!-- KPI cards -->
+        <div class="swim-kpi-row" id="swim-kpi-strip"></div>
+
+        <!-- Coach Natation -->
+        <div class="card swim-coach-card" id="swim-coach-card" style="margin-bottom:16px"></div>
+
+        <!-- Records personnels -->
+        <div id="ssh-prs" class="section-header collapsible" onclick="toggleSection(this)">Records personnels <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="card" id="swim-prs"></div>
+        </div>
+
+        <!-- Tendance globale (volume + allure) -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="swim-card-title">Tendance de Performance et Volume</div>
+          <div style="height:220px"><canvas id="swim-chart-trend"></canvas></div>
+        </div>
+
+        <!-- Barre de sélection -->
+        <div id="swim-selection-bar" style="display:none;align-items:center;justify-content:space-between;gap:10px;background:var(--accent-bg);border:1px solid var(--accent-dim);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px"></div>
+
+        <!-- Grille d'analyse (4 quadrants) -->
+        <div class="swim-quad-grid">
+
+          <!-- 1. Zone cardiaque & Effet d'entraînement -->
+          <div class="card">
+            <div class="swim-card-title">1 · Zone Cardiaque &amp; Effet d'Entraînement</div>
+            <div class="swim-quad-sub">
+              <div>
+                <div class="swim-subtitle">Zones cardio</div>
+                <div style="height:150px"><canvas id="swim-q-zones-chart"></canvas></div>
+                <div id="swim-q-zones-table"></div>
+              </div>
+              <div>
+                <div class="swim-subtitle">Effet d'entraînement (TE)</div>
+                <div id="swim-q-te"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Efficacité & technique -->
+          <div class="card">
+            <div class="swim-card-title">2 · Efficacité &amp; Technique (SWOLF, cadence, pauses)</div>
+            <div class="swim-quad-sub">
+              <div>
+                <div class="swim-subtitle">Technique (SWOLF)</div>
+                <div style="height:150px"><canvas id="swim-q-technique-chart"></canvas></div>
+              </div>
+              <div>
+                <div class="swim-subtitle">Effort vs Efficacité</div>
+                <div style="height:150px"><canvas id="swim-q-cadence-chart"></canvas></div>
+              </div>
+            </div>
+            <div class="swim-subtitle" style="margin-top:12px">Temps actif / pause</div>
+            <div id="swim-q-activepause"></div>
+          </div>
+
+          <!-- 3. Nages & type de séance -->
+          <div class="card">
+            <div class="swim-card-title">3 · Nages &amp; Types de Séance</div>
+            <div class="swim-quad-sub">
+              <div>
+                <div class="swim-subtitle">Répartition des nages</div>
+                <div style="height:140px"><canvas id="swim-q-stroke-chart"></canvas></div>
+                <div id="swim-q-stroke-legend" style="margin-top:8px"></div>
+              </div>
+              <div>
+                <div class="swim-subtitle">Type de séance</div>
+                <div style="height:160px"><canvas id="swim-q-effort-chart"></canvas></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. Dérive & récupération -->
+          <div class="card">
+            <div class="swim-card-title">4 · Dérive &amp; Récupération</div>
+            <div class="swim-subtitle">Dérive intra-séance (SWOLF &amp; FC)</div>
+            <div style="height:150px"><canvas id="swim-q-drift-chart"></canvas></div>
+            <div id="swim-q-drift-table" style="margin-top:8px"></div>
+            <div class="swim-subtitle" style="margin-top:14px">Récupération cardiaque (HRR)</div>
+            <div id="swim-q-hrr"></div>
+          </div>
+
+        </div>
+
+        <!-- Historique + Détail séance -->
+        <div class="swim-detail-row">
+          <div class="card" style="padding:0;overflow:hidden">
+            <div class="swim-card-title" style="padding:14px 16px 0">Historique des Séances</div>
+            <table class="acts-table">
+              <thead><tr>
+                <th class="th-sort" onclick="sortSwimTable('date')">Date</th>
+                <th>Nom</th>
+                <th class="th-sort" onclick="sortSwimTable('distance_km')">Dist.</th>
+                <th>Allure</th>
+                <th class="th-sort" onclick="sortSwimTable('swolf')">SWOLF</th>
+                <th>FC moy.</th>
+                <th class="th-sort" onclick="sortSwimTable('training_load')">Charge</th>
+                <th></th>
+              </tr></thead>
+              <tbody id="swim-table-body"></tbody>
+            </table>
+            <div id="swim-table-footer" style="padding:10px 16px;display:none"></div>
+          </div>
+
+          <div class="card" id="swim-detail-panel"></div>
+        </div>
+
+        <!-- Comparer deux séances -->
+        <div id="ssh-compare" class="section-header collapsible" onclick="toggleSection(this)">Comparer deux séances <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="card" id="swim-compare-card">
+            <div class="compare-selectors">
+              <div class="compare-sel-wrap">
+                <div class="compare-sel-label compare-label-a">Session A</div>
+                <select id="swim-compare-sel-a" onchange="updateSwimCompare()" class="compare-select">
+                  <option value="">— Choisir une séance —</option>
+                </select>
+              </div>
+              <div class="compare-vs">VS</div>
+              <div class="compare-sel-wrap">
+                <div class="compare-sel-label compare-label-b">Session B</div>
+                <select id="swim-compare-sel-b" onchange="updateSwimCompare()" class="compare-select">
+                  <option value="">— Choisir une séance —</option>
+                </select>
+              </div>
+            </div>
+            <div id="swim-compare-result"></div>
+          </div>
+        </div>
+
+      </div><!-- /view-swim (nested in view-training) -->
+      </div><!-- /view-training -->
+
+      <!-- ════════════════════════════════════════════════
+           VIEW : HISTORIQUE (table des activités)
+      ════════════════════════════════════════════════ -->
+      <div id="view-history" class="view">
+
+        <!-- Period selector + filter -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
+          <div style="display:flex;gap:4px">
+            <button class="hpb act-period-btn active" data-period="month" onclick="setActPeriod('month',this)">Ce mois</button>
+            <button class="hpb act-period-btn" data-period="week"  onclick="setActPeriod('week',this)">7 jours</button>
+            <button class="hpb act-period-btn" data-period="year"  onclick="setActPeriod('year',this)">Cette année</button>
+            <button class="hpb act-period-btn" data-period="all"   onclick="setActPeriod('all',this)">Tout</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="acts-search-wrap">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input class="acts-search" id="acts-search" type="text" placeholder="Rechercher…" oninput="renderActivities()">
+            </div>
+            <button class="btn btn-ghost" onclick="exportActivitiesCSV()" title="Exporter la liste filtrée en CSV" style="font-size:12px;padding:6px 12px">⬇ CSV</button>
+          </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="filter-bar" style="margin-bottom:16px">
+          <button class="filter-btn active" data-type="all"       onclick="setFilter('all')">Tous</button>
+          <button class="filter-btn" data-type="run"       onclick="setFilter('run')"><span class="filter-dot" style="background:var(--run)"></span>Course</button>
+          <button class="filter-btn" data-type="swim"      onclick="setFilter('swim')"><span class="filter-dot" style="background:var(--swim)"></span>Natation</button>
+          <button class="filter-btn" data-type="hiit"      onclick="setFilter('hiit')"><span class="filter-dot" style="background:var(--hiit)"></span>HIIT</button>
+          <button class="filter-btn" data-type="rowing"    onclick="setFilter('rowing')"><span class="filter-dot" style="background:var(--rowing)"></span>Rameur</button>
+          <button class="filter-btn" data-type="jump_rope" onclick="setFilter('jump_rope')"><span class="filter-dot" style="background:var(--jump_rope)"></span>Jump Rope</button>
+          <button class="filter-btn" data-type="strength"  onclick="setFilter('strength')"><span class="filter-dot" style="background:var(--strength)"></span>Muscu</button>
+          <button class="filter-btn" data-type="hockey"    onclick="setFilter('hockey')"><span class="filter-dot" style="background:var(--hockey)"></span>Hockey</button>
+          <button class="filter-btn" data-type="tennis"    onclick="setFilter('tennis')"><span class="filter-dot" style="background:var(--tennis)"></span>Tennis</button>
+          <button class="filter-btn" data-type="bike"      onclick="setFilter('bike')"><span class="filter-dot" style="background:var(--bike)"></span>Vélo</button>
+          <button class="filter-btn" data-type="walk"      onclick="setFilter('walk')"><span class="filter-dot" style="background:var(--walk)"></span>Marche</button>
+          <button class="filter-btn" data-type="pilates"   onclick="setFilter('pilates')"><span class="filter-dot" style="background:var(--pilates)"></span>Pilates</button>
+        </div>
+
+        <!-- KPI strip -->
+        <div class="kpi-grid" id="acts-kpi-strip" style="margin-bottom:20px"></div>
+
+        <!-- Table -->
+        <div class="table-container">
+          <table class="acts-table">
+            <thead>
+              <tr>
+                <th class="th-sort sort-desc" data-col="date"     onclick="sortActBy('date')">Date</th>
+                <th class="th-sort"           data-col="type"     onclick="sortActBy('type')">Type</th>
+                <th class="th-sort"           data-col="name"     onclick="sortActBy('name')">Nom</th>
+                <th class="th-sort"           data-col="duration" onclick="sortActBy('duration')">Durée</th>
+                <th class="th-sort"           data-col="distance" onclick="sortActBy('distance')">Distance</th>
+                <th class="th-sort col-hr"    data-col="hr"       onclick="sortActBy('hr')">FC moy.</th>
+                <th class="th-sort col-cal"   data-col="calories" onclick="sortActBy('calories')">Calories</th>
+                <th class="th-sort col-elev"  data-col="load"     onclick="sortActBy('load')">Charge</th>
+              </tr>
+            </thead>
+            <tbody id="acts-table-body"></tbody>
+          </table>
+        </div>
+
+      </div><!-- /view-history -->
+
+      <!-- ════════════════════════════════════════════════
+           VIEW : NATATION
+      ════════════════════════════════════════════════ -->
+
+      <!-- ════════════════════════════════════════════════
+           VIEW : RÉCUPÉRATION (ex-Santé + POC sections 0-2)
+      ════════════════════════════════════════════════ -->
+      <div id="view-recovery" class="view">
+
+        <!-- Recommandation du jour (unifiée — computeDailyReco) -->
+        <div class="card" style="margin-bottom:16px">
+          <div style="font-size:11px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">
+            🎯 Recommandation du jour — synthèse de tous les signaux
+          </div>
+          <div id="poc-synthesis"></div>
+        </div>
+
+        <!-- Score de récupération composite (POC section 1) -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">Score de Récupération Composite <button class="info-btn" onclick="event.stopPropagation();showInfoModal('recovery-score')" title="En savoir plus">i</button> <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="health-grid">
+            <div class="card">
+              <div class="section-header" style="margin:0 0 12px">Score du jour (0–100)</div>
+              <div id="poc-recovery-score"></div>
+            </div>
+            <div class="card health-full">
+              <div class="section-header" style="margin:0 0 12px">Évolution 30 jours</div>
+              <div class="chart-wrap" style="height:180px"><canvas id="chart-poc-recovery"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- HRV-Guided Training (POC section 2) -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">HRV-Guided Training <button class="info-btn" onclick="event.stopPropagation();showInfoModal('hrv')" title="En savoir plus">i</button> <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="health-grid">
+            <div class="card">
+              <div class="section-header" style="margin:0 0 12px">Recommandation HRV du jour</div>
+              <div id="poc-hrv-reco"></div>
+            </div>
+            <div class="card health-full">
+              <div class="section-header" style="margin:0 0 12px">HRV 90j — trend vs baseline</div>
+              <div class="chart-wrap" style="height:180px"><canvas id="chart-poc-hrv"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tendance FC repos -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">Tendance FC repos <button class="info-btn" onclick="event.stopPropagation();showInfoModal('rhr')" title="En savoir plus">i</button> <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="card" id="poc-rhr-trend"></div>
+        </div>
+
+        <!-- Composition corporelle Renpho -->
+        <div class="section-header collapsible" onclick="toggleSection(this)">⚖️ Composition Corporelle <button class="info-btn" onclick="event.stopPropagation();showInfoModal('body-metrics')" title="En savoir plus">i</button> <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="card" id="renpho-body-metrics"></div>
+        </div>
+
+        <!-- Period selector -->
+        <div class="health-period-bar">
+          <button class="hpb" data-days="7"  onclick="setHealthPeriod(7)">7 jours</button>
+          <button class="hpb active" data-days="30" onclick="setHealthPeriod(30)">30 jours</button>
+          <button class="hpb" data-days="90" onclick="setHealthPeriod(90)">90 jours</button>
+        </div>
+
+        <!-- KPIs -->
+        <div class="kpi-grid" id="kpi-health"></div>
+
+        <!-- Sleep -->
+        <div class="section-header">Sommeil</div>
+        <div class="health-grid">
+          <div class="card health-full">
+            <div class="card-header">
+              <span class="card-title">Durée &amp; phases <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">min</span></span>
+              <span id="badge-sleep" class="stat-badge"></span>
+            </div>
+            <div class="chart-wrap" style="height:220px"><canvas id="chart-sleep"></canvas></div>
+          </div>
+          <div class="card health-full" id="sleep-score-section" style="display:none">
+            <div class="card-header">
+              <span class="card-title">Score de sommeil <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">/100</span></span>
+              <span id="badge-sleep-score" class="stat-badge"></span>
+            </div>
+            <div class="chart-wrap" style="height:160px"><canvas id="chart-sleep-score"></canvas></div>
+          </div>
+          <div class="card" id="sleep-hr-section" style="display:none">
+            <div class="card-header">
+              <span class="card-title">FC nocturne <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">bpm</span></span>
+              <span id="badge-sleep-hr" class="stat-badge"></span>
+            </div>
+            <div class="chart-wrap"><canvas id="chart-sleep-hr"></canvas></div>
+          </div>
+          <div class="card" id="sleep-resp-section" style="display:none">
+            <div class="card-header">
+              <span class="card-title">Respiration nocturne <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">r/min</span></span>
+              <span id="badge-sleep-resp" class="stat-badge"></span>
+            </div>
+            <div class="chart-wrap"><canvas id="chart-sleep-resp"></canvas></div>
+          </div>
+          <div class="card health-full" id="sleep-stress-section" style="display:none">
+            <div class="card-header">
+              <span class="card-title">Stress nocturne</span>
+              <span id="badge-sleep-stress" class="stat-badge"></span>
+            </div>
+            <div class="chart-wrap" style="height:140px"><canvas id="chart-sleep-stress"></canvas></div>
+          </div>
+        </div>
+
+        <!-- HRV & HR -->
+        <div class="section-header">HRV &amp; Fréquence cardiaque</div>
+        <div class="health-grid">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">HRV nocturne <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">ms</span></span>
+              <span id="badge-hrv" class="stat-badge"></span>
+            </div>
+            <div class="chart-wrap"><canvas id="chart-hrv"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">FC repos <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">bpm</span></span>
+              <span id="badge-hr" class="stat-badge"></span>
+            </div>
+            <div class="chart-wrap"><canvas id="chart-rhr"></canvas></div>
+          </div>
+          <div class="card health-full" id="hrv-status-section" style="display:none">
+            <div class="card-header"><span class="card-title">Statut HRV Garmin</span></div>
+            <div id="hrv-status-content" style="padding-top:6px"></div>
+          </div>
+        </div>
+
+        <!-- Body Battery -->
+        <div class="section-header">Body Battery</div>
+        <div class="health-grid">
+          <div class="card health-full">
+            <div class="card-header">
+              <span class="card-title">Plage quotidienne (min → max)</span>
+              <span id="badge-bb" class="stat-badge"></span>
+            </div>
+            <div class="chart-wrap" style="height:180px"><canvas id="chart-battery"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Statut & Readiness -->
+        <div id="readiness-section" style="display:none">
+          <div class="section-header">Statut &amp; Readiness</div>
+          <div class="health-grid">
+            <div class="card health-full">
+              <div class="card-header">
+                <span class="card-title">Score de readiness <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">/100</span></span>
+                <span id="badge-readiness" class="stat-badge"></span>
+              </div>
+              <div id="training-status-banner" style="margin-bottom:12px"></div>
+              <div class="chart-wrap" style="height:180px"><canvas id="chart-readiness"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stress -->
+        <div class="section-header">Stress</div>
+        <div class="health-grid">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Niveau moyen</span>
+              <span id="badge-stress" class="stat-badge"></span>
+            </div>
+            <div class="chart-wrap"><canvas id="chart-stress-avg"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Répartition <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">%</span></span>
+            </div>
+            <div class="chart-wrap"><canvas id="chart-stress-pct"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Correlation -->
+        <div class="section-header" id="corr-section-header" style="display:none">Corrélation Sommeil ↔ Performance</div>
+        <div class="health-grid" id="corr-section" style="display:none">
+          <div class="card health-full">
+            <div class="card-header"><span class="card-title">Score sommeil (veille) vs Charge entraînement</span></div>
+            <div class="chart-wrap" style="height:220px"><canvas id="chart-sleep-perf"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Weight -->
+        <div id="weight-section">
+          <div class="section-header">Poids &amp; Composition</div>
+          <div class="health-grid">
+            <div class="card health-full">
+              <div class="card-header">
+                <span class="card-title">Évolution du poids <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">kg</span></span>
+                <span id="badge-weight" class="stat-badge"></span>
+              </div>
+              <div class="chart-wrap" style="height:200px"><canvas id="chart-weight"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Daily activity -->
+        <div class="section-header">Activité journalière</div>
+        <div class="health-grid">
+          <div class="card health-full">
+            <div class="card-header">
+              <span class="card-title">Pas quotidiens</span>
+              <span id="badge-steps" class="stat-badge"></span>
+            </div>
+            <div class="chart-wrap" style="height:180px"><canvas id="chart-steps"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Calories actives <span style="font-size:11px;text-transform:none;font-weight:400;color:var(--muted)">kcal</span></span>
+              <span id="badge-cal" class="stat-badge"></span>
+            </div>
+            <div class="chart-wrap"><canvas id="chart-cal-active"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Minutes d'intensité</span>
+              <span id="badge-imin" class="stat-badge"></span>
+            </div>
+            <div class="chart-wrap"><canvas id="chart-intensity-min"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Corrélations bien-être → performance -->
+        <div class="section-header collapsible" onclick="toggleSection(this)" style="margin-top:8px">Corrélations bien-être → performance <span class="chev">▾</span></div>
+        <div class="section-body">
+          <div class="health-grid">
+            <div class="card">
+              <div class="section-header" style="margin:0 0 4px">😴 Sommeil → Efficience du run</div>
+              <div id="corr-sleep-txt" style="font-size:11px;color:var(--muted);margin-bottom:8px"></div>
+              <div class="chart-wrap" style="height:200px"><canvas id="chart-corr-sleep"></canvas></div>
+            </div>
+            <div class="card">
+              <div class="section-header" style="margin:0 0 4px">⚡ Charge de la veille → HRV</div>
+              <div id="corr-load-txt" style="font-size:11px;color:var(--muted);margin-bottom:8px"></div>
+              <div class="chart-wrap" style="height:200px"><canvas id="chart-corr-load"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /view-recovery -->
+
+      <!-- ════════════════════════════════════════════════
+           VIEW : PROFIL
+      ════════════════════════════════════════════════ -->
+      <div id="view-profile" class="view">
+
+        <!-- Coach -->
+        <div class="coach-section" id="coach-section" style="display:none">
+          <div class="coach-header">
+            <div class="coach-title">
+              <div class="coach-avatar">🤖</div>
+              Conseil du Coach
+            </div>
+            <div class="coach-meta">
+              <span class="coach-date" id="coach-date"></span>
+              <span class="coach-name"></span>
+            </div>
+          </div>
+          <div class="coach-snap" id="coach-snap" style="display:none"></div>
+          <div class="coach-items" id="coach-items"></div>
+        </div>
+
+        <!-- Granularity -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+          <div class="pgran">
+            <button class="pgran-btn active" onclick="setProfileGranularity('month',this)">Mois</button>
+            <button class="pgran-btn" onclick="setProfileGranularity('quarter',this)">Trimestre</button>
+            <button class="pgran-btn" onclick="setProfileGranularity('semester',this)">Semestre</button>
+            <button class="pgran-btn" onclick="setProfileGranularity('year',this)">Année</button>
+          </div>
+        </div>
+
+        <!-- Hero -->
+        <div class="profile-hero">
+          <div class="card" style="text-align:center;padding:24px 16px">
+            <div class="profile-badge-icon" id="profile-main-icon">🏅</div>
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:6px">Niveau</div>
+            <div id="profile-level-name" style="font-size:18px;font-weight:800"></div>
+            <div class="level-bar" id="profile-level-pips"></div>
+            <div style="font-size:11px;color:var(--muted);margin-top:10px" id="profile-weekly-load"></div>
+            <div id="profile-fitness-age" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)"></div>
+          </div>
+          <div class="card" style="padding:16px 18px">
+            <div class="card-header"><span class="card-title">Sports pratiqués</span></div>
+            <div id="profile-sports-list"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title" id="profile-period-label">Depuis le début</span></div>
+            <div id="profile-totals" style="display:grid;grid-template-columns:1fr 1fr;gap:0"></div>
+          </div>
+        </div>
+
+        <!-- Records -->
+        <div class="section-header">Records personnels</div>
+        <div class="records-grid" id="profile-records"></div>
+
+        <!-- Charts -->
+        <div class="section-header">Évolution</div>
+        <div class="content-grid">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Charge d'entraînement</span>
+              <span style="font-size:11px;color:var(--muted)">pts</span>
+            </div>
+            <div class="chart-wrap" style="height:220px"><canvas id="chart-profile-load"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Nombre d'activités</span></div>
+            <div class="chart-wrap" style="height:220px"><canvas id="chart-profile-acts"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Monthly table -->
+        <div class="section-header" style="margin-top:8px">Bilan détaillé</div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="overflow-x:auto">
+            <table class="profile-table">
+              <thead>
+                <tr>
+                  <th>Période</th>
+                  <th>Activités</th>
+                  <th>Durée</th>
+                  <th>Distance</th>
+                  <th>Charge</th>
+                  <th>Sport dominant</th>
+                  <th class="col-rhr">FC repos</th>
+                  <th class="col-sleep">Sommeil moy.</th>
+                </tr>
+              </thead>
+              <tbody id="profile-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Heatmap -->
+        <div class="section-header" style="margin-top:24px">Activité sur 12 mois</div>
+        <div class="card">
+          <div id="heatmap-container"></div>
+        </div>
+
+        <!-- Form & Fatigue -->
+        <div class="section-header" style="margin-top:24px">Forme &amp; Fatigue</div>
+        <div class="card">
+          <div class="form-legend">
+            <span class="fleg"><span class="fleg-line" style="background:#6366f1"></span>CTL — Forme (42j)</span>
+            <span class="fleg"><span class="fleg-line" style="background:#f97316"></span>ATL — Fatigue (7j)</span>
+            <span class="fleg"><span class="fleg-dash" style="border-color:#22c55e"></span>TSB — Fraîcheur</span>
+          </div>
+          <div class="chart-wrap" style="height:240px"><canvas id="chart-form"></canvas></div>
+        </div>
+
+        <!-- VO2max -->
+        <div class="section-header" id="vo2max-section-header" style="display:none;margin-top:24px">Évolution VO2max</div>
+        <div class="card" id="vo2max-section" style="display:none">
+          <div class="chart-wrap" style="height:200px"><canvas id="chart-vo2max"></canvas></div>
+        </div>
+
+        <!-- Trophées -->
+        <div class="section-header" style="margin-top:24px">Trophées</div>
+        <div class="badges-grid" id="profile-badges"></div>
+
+        <!-- Export rapport complet -->
+        <div class="section-header" style="margin-top:24px">Export rapport</div>
+        <div class="card" style="max-width:480px">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6">
+            Génère un fichier JSON avec toutes tes données (activités, bien-être, composition corporelle, calculs de forme, records, objectif de course). À partager avec Claude pour une analyse ou un rapport détaillé. Rien n'est envoyé automatiquement — le fichier est simplement téléchargé sur ton appareil.
+          </div>
+          <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+            <div style="flex:1;min-width:140px">
+              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:6px">Période</label>
+              <select id="export-report-period" class="settings-input" style="width:100%"></select>
+            </div>
+            <button id="export-report-btn" class="btn btn-primary" onclick="exportFullReport()" style="font-size:13px;flex:1;min-width:160px">📄 Exporter le rapport</button>
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:6px">Les calculs de forme, records et objectif restent basés sur tout l'historique (nécessaire pour des valeurs correctes) — seules les listes d'activités et de bien-être sont limitées à la période choisie.</div>
+          <div id="export-report-status" style="display:none;font-size:12px;margin-top:8px"></div>
+        </div>
+
+        <!-- Paramètres -->
+        <div id="profile-settings" class="section-header" style="margin-top:24px">Paramètres</div>
+        <div class="card" style="max-width:480px">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">FC Max (bpm)</label>
+              <input id="set-hr-max" type="number" min="140" max="220" class="settings-input" value="">
+              <div style="font-size:10px;color:var(--muted);margin-top:3px">Vide = auto (max observé sur 12 mois)</div>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">FC Repos (bpm)</label>
+              <input id="set-hr-rest" type="number" min="30" max="90" class="settings-input" value="">
+              <div style="font-size:10px;color:var(--muted);margin-top:3px">Vide = auto (FC repos Garmin du jour)</div>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Correction VO2max</label>
+              <input id="set-vo2-correction" type="number" min="0.8" max="1.5" step="0.01" class="settings-input" value="">
+            </div>
+          </div>
+          <div style="margin-bottom:16px">
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Notifications</label>
+            <button id="notif-toggle-btn" class="btn btn-primary" onclick="toggleNotifications()" style="font-size:13px">🔕 Activer les notifications</button>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">Conseil du matin (à l'ouverture de l'app) et alertes nouveaux records.</div>
+          </div>
+          <div style="margin-bottom:16px">
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Clé API (sécurité)</label>
+            <input id="set-api-key" type="password" class="settings-input" placeholder="Optionnel — doit correspondre à APP_API_KEY sur Vercel" autocomplete="off" style="width:100%">
+            <div style="font-size:11px;color:var(--muted);margin-top:4px">Protège tes données de santé : définis APP_API_KEY dans les variables d'environnement Vercel puis saisis la même clé ici.</div>
+          </div>
+          <button class="btn btn-primary" onclick="saveHRSettings()" style="font-size:13px">Enregistrer</button>
+          <div id="settings-saved" style="display:none;font-size:12px;color:#22c55e;margin-top:8px">✓ Paramètres enregistrés — les calculs sont mis à jour.</div>
+        </div>
+
+        <!-- Calibration Runalyze (ex-onglet Runalyze) -->
+        <div class="section-header" style="margin-top:24px">🎯 Calibration Runalyze</div>
+        <div class="card" style="max-width:480px;margin-bottom:16px">
+          <div style="font-size:12px;color:var(--muted);line-height:1.7">
+            L'API gratuite de Runalyze ne permet pas de lire les métriques calculées (écriture seule).
+            Les valeurs sont donc <strong>calculées localement</strong> puis calibrées sur celles de runalyze.com :
+            ouvre ton tableau de bord Runalyze, recopie les valeurs affichées ci-dessous, et enregistre.
+            Le facteur de correction (valeur Runalyze ÷ calcul local) est appliqué automatiquement
+            dans la section Calculations de l'onglet Entraînement.
+          </div>
+        </div>
+        <div class="card" style="max-width:480px">
+          <div class="section-header" style="margin:0 0 12px;font-size:14px">Métriques</div>
+          <div id="rz-calibration"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
+            <button class="btn btn-primary" onclick="saveRunalyzeCalibration()" style="font-size:13px">💾 Enregistrer la calibration</button>
+            <button class="btn" onclick="resetRunalyzeCalibration()" style="font-size:13px">↺ Réinitialiser</button>
+          </div>
+          <div id="rz-status" style="display:none;font-size:12px;margin-top:8px;padding:8px;border-radius:4px;background:rgba(34,197,94,0.12);color:#16a34a"></div>
+        </div>
+
+        <!-- Photo de séance (tableau blanc → note texte) -->
+        <div class="section-header" style="margin-top:24px">📷 Photo de séance</div>
+        <div class="card" style="max-width:480px">
+          <div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:12px">
+            Prends en photo le tableau blanc de ta séance (WOD, AMRAP…). Elle sera déchiffrée
+            et associée automatiquement à la séance du jour dans les prochaines 24h.
+          </div>
+          <input type="file" id="whiteboard-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleWhiteboardPhotoSelected(event)">
+          <button class="btn btn-primary" onclick="document.getElementById('whiteboard-photo-input').click()" style="font-size:13px">📷 Prendre / choisir une photo</button>
+          <div id="whiteboard-photo-preview" style="display:none;margin-top:12px">
+            <img id="whiteboard-photo-img" style="max-width:100%;border-radius:8px;display:block;margin-bottom:8px">
+            <button class="btn btn-primary" onclick="uploadWhiteboardPhoto()" style="font-size:13px" id="whiteboard-upload-btn">Envoyer</button>
+            <button class="btn" onclick="cancelWhiteboardPhoto()" style="font-size:13px">Annuler</button>
+          </div>
+          <div id="whiteboard-photo-status" style="display:none;font-size:12px;margin-top:8px;padding:8px;border-radius:4px"></div>
+        </div>
+
+      </div><!-- /view-profile -->
+
+      <!-- ════════════════════════════════════════════════
+           VIEW : RUNNING
+      ════════════════════════════════════════════════ -->
 
       <!-- ════════════════════════════════════════════════
            VIEW : AIDE
@@ -1477,6 +1466,12 @@
       <div id="detail-charts-wrap" style="display:none">
         <div class="detail-section">Analyse détaillée</div>
       </div>
+      <div class="detail-section">📝 Notes de séance</div>
+      <textarea id="detail-notes" placeholder="Aucune note pour cette séance — écris-en une, ou envoie une photo du tableau blanc dans Profil." style="width:100%;min-height:90px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;font-size:13px;line-height:1.6;resize:vertical"></textarea>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+        <button class="btn btn-primary" onclick="saveDetailNotes()" style="font-size:12px" id="detail-notes-save">Enregistrer</button>
+        <span id="detail-notes-status" style="font-size:11px;color:var(--muted)"></span>
+      </div>
     </div>
   </div>
 </div>
@@ -1526,43 +1521,19 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
     Entraînement
   </button>
-  <button class="bottom-nav-item" data-view="running" onclick="switchView('running')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4a1 1 0 1 0 2 0 1 1 0 0 0-2 0"/><path d="m7 21 3-6 2 2 2-4 3 1"/><path d="M5 15s1-1 3-1 3 1 3 1"/></svg>
-    Course
-  </button>
-  <button class="bottom-nav-item" data-view="swim" onclick="switchView('swim')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 17c1.5 1.5 3 1.5 4.5 0s3-1.5 4.5 0 3 1.5 4.5 0 3-1.5 4.5 0"/><path d="M2 21c1.5 1.5 3 1.5 4.5 0s3-1.5 4.5 0 3 1.5 4.5 0 3-1.5 4.5 0"/><circle cx="17" cy="6" r="2"/><path d="m4 13 6.5-4 2 2.5L9 15"/></svg>
-    Natation
-  </button>
   <button class="bottom-nav-item" data-view="recovery" onclick="switchView('recovery')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
     Récupération
   </button>
-  <button class="bottom-nav-item" data-view="__more" onclick="toggleMoreMenu(event)" aria-label="Plus d'options">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
-    Plus
-  </button>
-</nav>
-
-<!-- Menu "Plus" (mobile) -->
-<div class="more-menu" id="more-menu">
-  <button class="more-menu-item" data-view="history" onclick="switchViewFromMore('history')">
+  <button class="bottom-nav-item" data-view="history" onclick="switchView('history')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
     Historique
   </button>
-  <button class="more-menu-item" data-view="profile" onclick="switchViewFromMore('profile')">
+  <button class="bottom-nav-item" data-view="profile" onclick="switchView('profile')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
     Profil
   </button>
-  <button class="more-menu-item" data-view="poc" onclick="switchViewFromMore('poc')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
-    Science
-  </button>
-  <button class="more-menu-item" data-view="runalyze" onclick="switchViewFromMore('runalyze')">
-    <span style="font-size:16px;line-height:1">🎯</span>
-    Runalyze
-  </button>
-</div>
+</nav>
 
 <!-- Scripts -->
 <script src="/js/constants.js"></script>

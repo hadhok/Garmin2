@@ -326,6 +326,26 @@ function renderProfile() {
   const wLabel=PROFILE_WINDOW[state.profileGranularity];
   document.getElementById('profile-weekly-load').textContent=`~${Math.round(d.weeklyLoad)} pts / semaine${wLabel?` (${wLabel} mois)`:' (tout)'}`;
 
+  /* Fitness Age (Garmin) — dernier jour renseigné */
+  const faEl = document.getElementById('profile-fitness-age');
+  if (faEl) {
+    const wDays = Object.values(state.wellness?.days || {}).filter(w => w.date).sort((a,b) => b.date.localeCompare(a.date));
+    const withFA = wDays.find(w => w.fitness_age != null);
+    if (withFA) {
+      const delta = withFA.chronological_age != null ? +(withFA.chronological_age - withFA.fitness_age).toFixed(1) : null;
+      const deltaColor = delta == null ? 'var(--muted)' : delta > 0 ? '#22c55e' : delta < 0 ? '#ef4444' : 'var(--muted)';
+      const deltaTxt = delta == null ? '' : delta > 0 ? `${delta} an${delta >= 2 ? 's' : ''} de moins` : delta < 0 ? `${Math.abs(delta)} an${Math.abs(delta) >= 2 ? 's' : ''} de plus` : 'égal à l\'âge réel';
+      faEl.style.display = '';
+      faEl.innerHTML = `
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:6px">Âge de forme (Garmin)</div>
+        <div style="font-size:22px;font-weight:800;color:${deltaColor}">${withFA.fitness_age} <span style="font-size:11px;font-weight:400;color:var(--muted)">ans</span></div>
+        ${withFA.chronological_age != null ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">vs ${withFA.chronological_age} ans réels${deltaTxt ? ' — ' + deltaTxt : ''}</div>` : ''}
+      `;
+    } else {
+      faEl.style.display = 'none';
+    }
+  }
+
   /* Sports */
   document.getElementById('profile-sports-list').innerHTML=d.topTypes.map(t=>
     `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
@@ -421,6 +441,7 @@ function renderProfile() {
   renderFormChart();
   renderVo2maxChart();
   renderBadges();
+  if (typeof renderRunalyzeCalibration === 'function') renderRunalyzeCalibration();
 }
 
 function setProfileGranularity(g, btn) {
@@ -429,4 +450,75 @@ function setProfileGranularity(g, btn) {
   document.querySelectorAll('.pgran-btn').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
   renderProfile();
+}
+
+/* ══════════════════════════════════════════════════════════
+   PHOTO DE SÉANCE (tableau blanc) — upload puis déchiffrage
+   quotidien par une Routine Claude. Voir api/activity_details.py
+   (actions upload_photo / pending_photos / save_note).
+   ══════════════════════════════════════════════════════════ */
+let _whiteboardPhotoDataUrl = null;
+
+function handleWhiteboardPhotoSelected(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = ev => {
+    img.onload = () => {
+      // Redimensionne côté client (max 1400px de large) pour limiter la taille
+      // envoyée — un tableau blanc reste lisible à cette résolution.
+      const maxW = 1400;
+      const scale = Math.min(1, maxW / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width  = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      _whiteboardPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.75);
+
+      document.getElementById('whiteboard-photo-img').src = _whiteboardPhotoDataUrl;
+      document.getElementById('whiteboard-photo-preview').style.display = '';
+      const statusEl = document.getElementById('whiteboard-photo-status');
+      statusEl.style.display = 'none';
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function cancelWhiteboardPhoto() {
+  _whiteboardPhotoDataUrl = null;
+  document.getElementById('whiteboard-photo-preview').style.display = 'none';
+  document.getElementById('whiteboard-photo-input').value = '';
+}
+
+async function uploadWhiteboardPhoto() {
+  if (!_whiteboardPhotoDataUrl) return;
+  const btn = document.getElementById('whiteboard-upload-btn');
+  const statusEl = document.getElementById('whiteboard-photo-status');
+  btn.disabled = true;
+  btn.textContent = 'Envoi…';
+  try {
+    const r = await fetch('/api/activity_details', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'upload_photo', image_base64: _whiteboardPhotoDataUrl }),
+    });
+    const d = await r.json();
+    if (!r.ok || d.error) throw new Error(d.error || 'Erreur inconnue');
+    statusEl.style.display = '';
+    statusEl.style.background = 'rgba(34,197,94,0.12)';
+    statusEl.style.color = '#16a34a';
+    statusEl.textContent = '✓ Photo envoyée — elle sera déchiffrée et associée à ta séance sous 24h.';
+    cancelWhiteboardPhoto();
+  } catch (e) {
+    statusEl.style.display = '';
+    statusEl.style.background = 'rgba(239,68,68,0.12)';
+    statusEl.style.color = '#ef4444';
+    statusEl.textContent = `Erreur : ${e.message}`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Envoyer';
+  }
 }
