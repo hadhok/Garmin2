@@ -5,6 +5,13 @@ GET  /api/activity_details?id={activity_id}   → retourne les samples stockés
 POST /api/activity_details {"activity_id": X}  → fetch Garmin + stockage Supabase
 POST /api/activity_details {"action": "backfill", "type": "run", "limit": 20}
      → backfill des N dernières activités sans details
+POST /api/activity_details {"action": "upload_photo", "image_base64": "..."}
+     → stocke une photo de séance (tableau blanc) en attente de déchiffrage
+POST /api/activity_details {"action": "pending_photos"}
+     → liste les photos en attente (utilisé par la Routine quotidienne)
+POST /api/activity_details {"action": "save_note", "activity_id": X,
+                             "notes": "...", "photo_id": Y}
+     → enregistre la note sur l'activité et supprime la photo (photo_id optionnel)
 
 Table Supabase requise (à créer une seule fois) :
   CREATE TABLE IF NOT EXISTS activity_details (
@@ -275,6 +282,33 @@ class handler(BaseHTTPRequestHandler):
 
                 synced = sum(1 for r in results if r.get('ok') and r['n_samples'] > 0)
                 self._reply(200, {'ok': True, 'synced': synced, 'total': len(to_fetch), 'results': results})
+
+            # ── Upload d'une photo de séance (tableau blanc) en attente ────────
+            elif body.get('action') == 'upload_photo':
+                image_b64 = body.get('image_base64')
+                if not image_b64:
+                    self._reply(400, {'error': 'image_base64 requis'})
+                    return
+                row = sb.table('pending_whiteboard_photos').insert({'image_b64': image_b64}).execute()
+                self._reply(200, {'ok': True, 'id': row.data[0]['id'] if row.data else None})
+
+            # ── Liste des photos en attente de déchiffrage ─────────────────────
+            elif body.get('action') == 'pending_photos':
+                rows = sb.table('pending_whiteboard_photos').select('*').order('uploaded_at').execute()
+                self._reply(200, {'ok': True, 'photos': rows.data or []})
+
+            # ── Enregistre la note déchiffrée sur l'activité + nettoie la photo ─
+            elif body.get('action') == 'save_note':
+                activity_id = body.get('activity_id')
+                notes       = body.get('notes')
+                photo_id    = body.get('photo_id')
+                if not activity_id or notes is None:
+                    self._reply(400, {'error': 'activity_id et notes requis'})
+                    return
+                sb.table('activities').update({'notes': notes}).eq('id', int(activity_id)).execute()
+                if photo_id:
+                    sb.table('pending_whiteboard_photos').delete().eq('id', int(photo_id)).execute()
+                self._reply(200, {'ok': True})
 
             # ── Fetch une activité spécifique ─────────────────────────────────
             elif body.get('activity_id'):

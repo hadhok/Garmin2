@@ -1214,6 +1214,23 @@
           <div id="rz-status" style="display:none;font-size:12px;margin-top:8px;padding:8px;border-radius:4px;background:rgba(34,197,94,0.12);color:#16a34a"></div>
         </div>
 
+        <!-- Photo de séance (tableau blanc → note texte) -->
+        <div class="section-header" style="margin-top:24px">📷 Photo de séance</div>
+        <div class="card" style="max-width:480px">
+          <div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:12px">
+            Prends en photo le tableau blanc de ta séance (WOD, AMRAP…). Elle sera déchiffrée
+            et associée automatiquement à la séance du jour dans les prochaines 24h.
+          </div>
+          <input type="file" id="whiteboard-photo-input" accept="image/*" capture="environment" style="display:none" onchange="handleWhiteboardPhotoSelected(event)">
+          <button class="btn btn-primary" onclick="document.getElementById('whiteboard-photo-input').click()" style="font-size:13px">📷 Prendre / choisir une photo</button>
+          <div id="whiteboard-photo-preview" style="display:none;margin-top:12px">
+            <img id="whiteboard-photo-img" style="max-width:100%;border-radius:8px;display:block;margin-bottom:8px">
+            <button class="btn btn-primary" onclick="uploadWhiteboardPhoto()" style="font-size:13px" id="whiteboard-upload-btn">Envoyer</button>
+            <button class="btn" onclick="cancelWhiteboardPhoto()" style="font-size:13px">Annuler</button>
+          </div>
+          <div id="whiteboard-photo-status" style="display:none;font-size:12px;margin-top:8px;padding:8px;border-radius:4px"></div>
+        </div>
+
       </div><!-- /view-profile -->
 
       <!-- ════════════════════════════════════════════════
@@ -1292,6 +1309,12 @@
       </div>
       <div id="detail-charts-wrap" style="display:none">
         <div class="detail-section">Analyse détaillée</div>
+      </div>
+      <div class="detail-section">📝 Notes de séance</div>
+      <textarea id="detail-notes" placeholder="Aucune note pour cette séance — écris-en une, ou envoie une photo du tableau blanc dans Profil." style="width:100%;min-height:90px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;font-size:13px;line-height:1.6;resize:vertical"></textarea>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+        <button class="btn btn-primary" onclick="saveDetailNotes()" style="font-size:12px" id="detail-notes-save">Enregistrer</button>
+        <span id="detail-notes-status" style="font-size:11px;color:var(--muted)"></span>
       </div>
     </div>
   </div>

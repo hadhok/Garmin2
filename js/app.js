@@ -888,11 +888,43 @@ function openDetail(id) {
     if (typeof loadActivityDetails === 'function') loadActivityDetails(a.id);
   }
 
+  // Notes de séance (texte libre, ou déchiffré depuis une photo)
+  _detailModalActivityId = a.id;
+  document.getElementById('detail-notes').value = a.notes || '';
+  document.getElementById('detail-notes-status').textContent = '';
+
   document.getElementById('detail-modal').classList.add('open');
 }
 
 function closeDetail() {
   document.getElementById('detail-modal').classList.remove('open');
+}
+
+let _detailModalActivityId = null;
+
+async function saveDetailNotes() {
+  if (!_detailModalActivityId) return;
+  const btn = document.getElementById('detail-notes-save');
+  const statusEl = document.getElementById('detail-notes-status');
+  const notes = document.getElementById('detail-notes').value;
+  btn.disabled = true;
+  statusEl.textContent = 'Enregistrement…';
+  try {
+    const r = await fetch('/api/activity_details', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save_note', activity_id: _detailModalActivityId, notes }),
+    });
+    const d = await r.json();
+    if (!r.ok || d.error) throw new Error(d.error || 'Erreur inconnue');
+    const a = ACT_MAP[_detailModalActivityId] || ACT_MAP[String(_detailModalActivityId)];
+    if (a) a.notes = notes;
+    statusEl.textContent = '✓ Enregistré';
+  } catch (e) {
+    statusEl.textContent = `Erreur : ${e.message}`;
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 /* ══════════════════════════════════════════════════════════

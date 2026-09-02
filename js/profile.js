@@ -451,3 +451,74 @@ function setProfileGranularity(g, btn) {
   if(btn) btn.classList.add('active');
   renderProfile();
 }
+
+/* ══════════════════════════════════════════════════════════
+   PHOTO DE SÉANCE (tableau blanc) — upload puis déchiffrage
+   quotidien par une Routine Claude. Voir api/activity_details.py
+   (actions upload_photo / pending_photos / save_note).
+   ══════════════════════════════════════════════════════════ */
+let _whiteboardPhotoDataUrl = null;
+
+function handleWhiteboardPhotoSelected(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = ev => {
+    img.onload = () => {
+      // Redimensionne côté client (max 1400px de large) pour limiter la taille
+      // envoyée — un tableau blanc reste lisible à cette résolution.
+      const maxW = 1400;
+      const scale = Math.min(1, maxW / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width  = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      _whiteboardPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.75);
+
+      document.getElementById('whiteboard-photo-img').src = _whiteboardPhotoDataUrl;
+      document.getElementById('whiteboard-photo-preview').style.display = '';
+      const statusEl = document.getElementById('whiteboard-photo-status');
+      statusEl.style.display = 'none';
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function cancelWhiteboardPhoto() {
+  _whiteboardPhotoDataUrl = null;
+  document.getElementById('whiteboard-photo-preview').style.display = 'none';
+  document.getElementById('whiteboard-photo-input').value = '';
+}
+
+async function uploadWhiteboardPhoto() {
+  if (!_whiteboardPhotoDataUrl) return;
+  const btn = document.getElementById('whiteboard-upload-btn');
+  const statusEl = document.getElementById('whiteboard-photo-status');
+  btn.disabled = true;
+  btn.textContent = 'Envoi…';
+  try {
+    const r = await fetch('/api/activity_details', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'upload_photo', image_base64: _whiteboardPhotoDataUrl }),
+    });
+    const d = await r.json();
+    if (!r.ok || d.error) throw new Error(d.error || 'Erreur inconnue');
+    statusEl.style.display = '';
+    statusEl.style.background = 'rgba(34,197,94,0.12)';
+    statusEl.style.color = '#16a34a';
+    statusEl.textContent = '✓ Photo envoyée — elle sera déchiffrée et associée à ta séance sous 24h.';
+    cancelWhiteboardPhoto();
+  } catch (e) {
+    statusEl.style.display = '';
+    statusEl.style.background = 'rgba(239,68,68,0.12)';
+    statusEl.style.color = '#ef4444';
+    statusEl.textContent = `Erreur : ${e.message}`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Envoyer';
+  }
+}

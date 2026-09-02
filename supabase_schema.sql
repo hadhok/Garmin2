@@ -112,3 +112,17 @@ ALTER TABLE activities ADD COLUMN IF NOT EXISTS raw_debug JSONB;
 -- ── Temps de récupération natif Garmin (minutes), champ recoveryTime ────
 -- de l'activité — utilisé par le Training Readiness (écran Aujourd'hui).
 ALTER TABLE activities ADD COLUMN IF NOT EXISTS recovery_time_min INTEGER;
+
+-- ── Notes de séance (texte déchiffré depuis une photo de tableau blanc) ──
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS notes TEXT;
+
+-- ── Photos de séance en attente de déchiffrage ───────────────────────────
+-- Upload depuis l'app (Profil) → traité une fois par jour par une Routine
+-- Claude qui déchiffre l'image, l'associe à la bonne activité par date,
+-- écrit le texte dans activities.notes, puis supprime la ligne ci-dessous.
+CREATE TABLE IF NOT EXISTS pending_whiteboard_photos (
+  id          BIGSERIAL PRIMARY KEY,
+  image_b64   TEXT NOT NULL,
+  uploaded_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE pending_whiteboard_photos DISABLE ROW LEVEL SECURITY;
