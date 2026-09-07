@@ -1,6 +1,9 @@
 from http.server import BaseHTTPRequestHandler
-import json, os
+import json, os, sys
 from datetime import datetime, timedelta
+
+sys.path.insert(0, os.path.dirname(__file__))
+from _auth import check_auth
 
 # ── Mapping typeKey Garmin → code interne (copie de sync.py racine) ──────────
 TYPE_MAP = {
@@ -456,6 +459,7 @@ def _run_sync():
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
+        if not check_auth(self): return
         try:
             msg  = _run_sync()
             body = json.dumps({'status': 'ok', 'message': msg})

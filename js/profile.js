@@ -297,7 +297,7 @@ function togglePeriod(row, safeKey) {
         const ds=a.date?new Date(a.date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'}):'';
         return `<div class="month-act-item" onclick="event.stopPropagation();openDetail(${a.id})">
           <div class="act-icon ${a.type||'other'}" style="width:30px;height:30px;font-size:14px">${a.icon||'⚡'}</div>
-          <div><div style="font-size:13px;font-weight:600;color:var(--text)">${a.name}</div><div style="font-size:11px;color:var(--muted)">${ds}</div></div>
+          <div><div style="font-size:13px;font-weight:600;color:var(--text)">${escapeHTML(a.name)}</div><div style="font-size:11px;color:var(--muted)">${ds}</div></div>
           <div style="text-align:right"><div style="font-size:13px;font-weight:600">${main}</div><div style="font-size:11px;color:var(--muted)">${sub}</div></div>
         </div>`;
       }).join('');
@@ -362,7 +362,7 @@ function renderProfile() {
       <div style="font-size:26px;margin-bottom:8px">${r.i}</div>
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:4px">${r.l}</div>
       <div style="font-size:20px;font-weight:800;color:var(--accent)">${r.v}</div>
-      <div style="font-size:11px;color:var(--muted2);margin-top:5px;line-height:1.4">${r.s}</div>
+      <div style="font-size:11px;color:var(--muted2);margin-top:5px;line-height:1.4">${escapeHTML(r.s)}</div>
       ${r.d?`<div style="font-size:10px;color:var(--muted2);margin-top:2px">${r.d}</div>`:''}
     </div>`).join('');
 

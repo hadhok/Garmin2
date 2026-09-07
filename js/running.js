@@ -2349,7 +2349,7 @@ function renderRunPR() {
       <div class="pr-pace">${run.pace_min_km}/km</div>
       <div class="pr-meta">
         ${run.distance_km?.toFixed(1)} km · ${date}<br>
-        ${run.name ? `<span style="opacity:.7">${run.name}</span>` : ''}
+        ${run.name ? `<span style="opacity:.7">${escapeHTML(run.name)}</span>` : ''}
       </div>
     </div>`;
   }).join('')}</div>`;

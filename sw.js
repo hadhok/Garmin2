@@ -1,4 +1,4 @@
-const CACHE = 'garmin-v31';
+const CACHE = 'garmin-v32';
 const ASSETS = [
   '/',
   '/index.html',
