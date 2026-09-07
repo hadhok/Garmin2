@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """
-update_coach.py — Coach sportif & analyste de données.
+coach_engine.py — Coach sportif & analyste de données.
+
+Logique d'analyse partagée entre le CLI local (sync_now.py --coach, qui
+écrit coach.json et le pousse via git) et l'endpoint Vercel
+(api/update_coach.py, qui écrit dans Supabase) — anciennement les deux
+vivaient dans un même fichier `update_coach.py` importé par son propre
+homonyme dans api/ via un tour de passe-passe sur sys.path.
 
 Analyse :
   1. Ratio Effort/Récupération  (training_load × te_label vs HRV + sommeil)
@@ -14,7 +20,7 @@ Format de sortie (3 cartes fixes) :
   • Prescription du jour
 
 Usage :
-  python3 update_coach.py
+  python3 coach_engine.py
 """
 import os, json, re, subprocess
 from datetime import datetime, timedelta

@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 def run_coach_update():
     from supabase import create_client
-    import update_coach as uc
+    import coach_engine as uc
 
     sb = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_KEY'])
 

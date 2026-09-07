@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """
-push_plan.py — Génère le plan de la semaine et l'injecte dans Garmin Connect.
+plan_engine.py — Génère le plan de la semaine et l'injecte dans Garmin Connect.
+
+Logique partagée entre le CLI local (sync_now.py --plan) et l'endpoint
+Vercel (api/push_plan.py) — anciennement dupliquée entre deux fichiers
+`push_plan.py` distincts qui divergeaient silencieusement.
 
 Algorithme miroir de js/running.js :
   1. Calcul CTL/ATL/TSB depuis les activités locales
@@ -257,17 +261,24 @@ def _get_garmin_client():
     return client
 
 # ── Fonction principale ───────────────────────────────────────────────────────
-def push_plan_to_garmin():
+def push_plan_to_garmin(activities=None, wellness=None):
+    """
+    activities/wellness : passés directement par l'appelant (ex. l'endpoint
+    Vercel, qui les lit depuis Supabase — il n'y a pas de disque persistant
+    en serverless). Si omis, on retombe sur le cache local JSON écrit par
+    sync_now.py, pour l'usage CLI.
+    """
     print("📋 Génération du plan de la semaine…")
 
-    # 1. Charger les données locales
-    acts_file  = os.path.join(BASE, 'data', 'activities.json')
-    well_file  = os.path.join(BASE, 'data', 'wellness.json')
+    # 1. Charger les données (fournies par l'appelant, sinon cache local)
+    if activities is None or wellness is None:
+        acts_file  = os.path.join(BASE, 'data', 'activities.json')
+        well_file  = os.path.join(BASE, 'data', 'wellness.json')
 
-    with open(acts_file) as f:
-        activities = json.load(f)['activities']
-    with open(well_file) as f:
-        wellness = json.load(f).get('days', {})
+        with open(acts_file) as f:
+            activities = json.load(f)['activities']
+        with open(well_file) as f:
+            wellness = json.load(f).get('days', {})
 
     # 2. CTL / ATL / TSB
     ctl, atl, tsb = compute_ctl_atl(activities)
@@ -275,7 +286,7 @@ def push_plan_to_garmin():
 
     # 3. Wellness récent
     sorted_well = sorted(wellness.values(), key=lambda w: w.get('date',''), reverse=True)
-    last_hrv = next((w['hrv_weekly_avg'] for w in sorted_well if (w.get('hrv_weekly_avg') or 0) > 0), None)
+    last_hrv = next((w['hrv_overnight_avg'] for w in sorted_well if (w.get('hrv_overnight_avg') or 0) > 0), None)
     last_bb  = sorted_well[0].get('body_battery_end') if sorted_well else None
     if last_hrv: print(f"   HRV {last_hrv:.0f} ms")
     if last_bb:  print(f"   Body Battery {last_bb:.0f}%")

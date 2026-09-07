@@ -27,12 +27,7 @@ def _load_env():
 
 # ── Import du code de sync depuis api/sync.py ──────────────────────────────────
 def _import_sync():
-    import importlib.util, sys as _sys
-    spec = importlib.util.spec_from_file_location(
-        'api_sync', os.path.join(BASE, 'api', 'sync.py')
-    )
-    mod = importlib.util.load_from_spec(spec) if False else None
-    # Import direct des fonctions nécessaires
+    import importlib.util
     spec = importlib.util.spec_from_file_location('api_sync', os.path.join(BASE, 'api', 'sync.py'))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -116,7 +111,7 @@ def main():
     if with_coach:
         print("\n🧠 Mise à jour du coach…")
         try:
-            _load_module('update_coach', os.path.join(BASE, 'update_coach.py')).main()
+            _load_module('coach_engine', os.path.join(BASE, 'coach_engine.py')).main()
         except Exception as e:
             print(f"⚠️  Erreur coach : {e}")
 
@@ -124,7 +119,7 @@ def main():
     if with_plan:
         print("\n📋 Injection du plan d'entraînement dans Garmin Connect…")
         try:
-            _load_module('push_plan', os.path.join(BASE, 'push_plan.py')).push_plan_to_garmin()
+            _load_module('plan_engine', os.path.join(BASE, 'plan_engine.py')).push_plan_to_garmin()
         except Exception as e:
             print(f"⚠️  Erreur plan : {e}")
             import traceback; traceback.print_exc()
@@ -133,7 +128,7 @@ def main():
     if with_renpho:
         print("\n⚖️  Sync Renpho Health…")
         try:
-            msg = _load_module('renpho_sync', os.path.join(BASE, 'api', 'renpho_sync.py')).run_renpho_sync()
+            msg = _load_module('renpho_sync', os.path.join(BASE, 'api', '_renpho_sync.py')).run_renpho_sync()
             print(f"   → {msg}")
         except Exception as e:
             print(f"⚠️  Erreur Renpho : {e}")

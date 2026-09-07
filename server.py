@@ -101,7 +101,7 @@ def status():
 def api_push_plan():
     try:
         import importlib.util
-        spec = importlib.util.spec_from_file_location('push_plan', os.path.join(BASE, 'push_plan.py'))
+        spec = importlib.util.spec_from_file_location('plan_engine', os.path.join(BASE, 'plan_engine.py'))
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         pushed = mod.push_plan_to_garmin()
