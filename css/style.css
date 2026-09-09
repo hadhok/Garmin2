@@ -1104,8 +1104,8 @@ body.loading main::before {
 /* ══════════════════════════════════════════════════════════
    VUE MULTI-SEMAINES (structure d'entraînement)
    ══════════════════════════════════════════════════════════ */
-.week-ov-grid { display: flex; flex-direction: column; gap: 4px; }
-.week-ov-row  { display: grid; grid-template-columns: 34px repeat(7,1fr); gap: 4px; align-items: center; }
+.week-ov-grid { display: flex; flex-direction: column; gap: 3px; max-width: 100%; overflow-x: auto; }
+.week-ov-row  { display: grid; grid-template-columns: 30px repeat(7, 28px); gap: 3px; align-items: center; width: max-content; }
 .week-ov-header { font-size: 9px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 2px; }
 .week-ov-daylabel { text-align: center; }
 .week-ov-tsb {
@@ -1113,11 +1113,15 @@ body.loading main::before {
   padding-right: 4px; font-variant-numeric: tabular-nums;
 }
 .week-ov-cell {
-  aspect-ratio: 1; border-radius: 5px; display: flex; align-items: center;
-  justify-content: center; font-size: 11px; transition: transform .1s;
+  width: 28px; height: 28px; border-radius: 5px; display: flex; align-items: center;
+  justify-content: center; font-size: 12px; line-height: 1; transition: transform .1s;
 }
 .week-ov-cell[onclick] { cursor: pointer; }
 .week-ov-cell[onclick]:hover { transform: scale(1.15); }
+@media (min-width: 480px) {
+  .week-ov-row  { grid-template-columns: 34px repeat(7, 34px); gap: 5px; }
+  .week-ov-cell { width: 34px; height: 34px; font-size: 14px; }
+}
 .week-ov-cell.today { outline: 2px solid var(--accent); outline-offset: 1px; }
 .week-ov-cell.future { opacity: .3; }
 .week-ov-current .week-ov-tsb { color: var(--text); }
