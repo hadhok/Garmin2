@@ -11,24 +11,20 @@ const GOAL_PRESETS = [
   { label: 'Marathon', km: 42.195 },
 ];
 
-/* Objectif de course : stocké côté serveur (Supabase, table race_goal)
-   pour persister entre appareils/navigateurs — le localStorage seul ne
-   survit pas à un changement d'origine (preview Vercel, autre appareil). */
+/* Objectifs de course (plusieurs possibles) : stockés côté serveur
+   (Supabase, table race_goals) pour persister entre appareils/
+   navigateurs — le localStorage seul ne survit pas à un changement
+   d'origine (preview Vercel, autre appareil). */
 async function loadRaceGoal() {
   try {
     const r = await fetch('/api/race_goal');
-    if (r.ok) {
-      const data = await r.json();
-      state.raceGoal = data.goal || null;
-    } else {
-      state.raceGoal = null;
-    }
-  } catch { state.raceGoal = null; }
+    state.raceGoals = r.ok ? ((await r.json()).goals || []) : [];
+  } catch { state.raceGoals = []; }
 
-  /* Migration : objectif présent en localStorage (ancienne version,
+  /* Migration : objectif présent en localStorage (très ancienne version,
      stockage local uniquement) mais absent côté serveur -> on le pousse
      une fois pour qu'il persiste enfin entre appareils. */
-  if (!state.raceGoal) {
+  if (!state.raceGoals.length) {
     try {
       const legacy = JSON.parse(localStorage.getItem('race_goal') || 'null');
       if (legacy?.date && legacy?.km > 0) {
@@ -38,20 +34,38 @@ async function loadRaceGoal() {
   }
 }
 
+function getRaceGoals() {
+  return state.raceGoals || [];
+}
+
+/* Un seul objectif "à venir" le plus proche — pour les consommateurs
+   qui n'ont besoin que d'un résumé (ex. rapport exporté). */
 function getRaceGoal() {
-  return state.raceGoal || null;
+  const upcoming = getRaceGoals().filter(g => g.date >= TODAY_ISO).sort((a, b) => a.date.localeCompare(b.date));
+  return upcoming[0] || getRaceGoals()[0] || null;
 }
 
 async function saveRaceGoalData(goal) {
   const r = await fetch('/api/race_goal', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(goal),
+    body: JSON.stringify({ action: goal.id ? 'update' : 'add', ...goal }),
   });
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'échec de l\'enregistrement');
   const data = await r.json();
-  state.raceGoal = data.goal || goal;
+  const saved = data.goal || goal;
+  const idx = state.raceGoals.findIndex(g => g.id === saved.id);
+  if (idx >= 0) state.raceGoals[idx] = saved; else state.raceGoals.push(saved);
   localStorage.removeItem('race_goal'); // source de vérité désormais côté serveur
+}
+
+async function deleteRaceGoalData(id) {
+  await fetch('/api/race_goal', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'delete', id }),
+  });
+  state.raceGoals = state.raceGoals.filter(g => g.id !== id);
 }
 
 /* "3:45:00" ou "45:30" → secondes */
@@ -117,33 +131,20 @@ function predictRaceTime(distKm) {
 }
 
 /* ── Rendu ── */
-function renderRunGoal() {
-  const el = document.getElementById('run-goal');
-  if (!el) return;
-  const goal = getRaceGoal();
-  if (!goal) {
-    el.innerHTML = `
-      <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-        <div style="font-size:13px;color:var(--muted)">🎯 Aucun objectif de course défini</div>
-        <button class="btn btn-primary" onclick="showGoalForm()" style="font-size:12px">Définir un objectif</button>
-      </div>`;
-    return;
-  }
-
+function _renderGoalCard(goal) {
   const raceDate = new Date(goal.date + 'T12:00:00');
   const daysLeft = Math.round((startOfDay(raceDate) - startOfDay(TODAY)) / 86400000);
   const dateStr = raceDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   if (daysLeft < 0) {
-    el.innerHTML = `
-      <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+    return `
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px">
         <div style="font-size:13px">🏁 <strong>${escapeHTML(goal.name || 'Course')}</strong> — c'était le ${dateStr}. Bravo !</div>
         <div style="display:flex;gap:8px">
-          <button class="btn" onclick="showGoalForm()" style="font-size:12px">Nouvel objectif</button>
-          <button class="btn btn-ghost" onclick="clearRaceGoal()" style="font-size:12px">Effacer</button>
+          <button class="btn btn-ghost" onclick="showGoalForm(${goal.id})" style="font-size:12px">Modifier</button>
+          <button class="btn btn-ghost" onclick="clearRaceGoal(${goal.id})" style="font-size:12px">Effacer</button>
         </div>
       </div>`;
-    return;
   }
 
   const pred = predictRaceTime(goal.km);
@@ -175,8 +176,8 @@ function renderRunGoal() {
       ${sub}
     </div>`;
 
-  el.innerHTML = `
-    <div class="card" style="border:1.5px solid var(--accent-dim)">
+  return `
+    <div class="card" style="border:1.5px solid var(--accent-dim);margin-bottom:10px">
       <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">
         <div>
           <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">🎯 Objectif</div>
@@ -198,21 +199,41 @@ function renderRunGoal() {
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
         <div style="font-size:10px;color:var(--muted)">Projection : charge moyenne 28 j poursuivie, affûtage −50 % la dernière semaine</div>
         <div style="display:flex;gap:6px">
-          <button class="btn btn-ghost" onclick="showGoalForm()" style="font-size:11px;padding:4px 10px">Modifier</button>
-          <button class="btn btn-ghost" onclick="clearRaceGoal()" style="font-size:11px;padding:4px 10px">✕</button>
+          <button class="btn btn-ghost" onclick="showGoalForm(${goal.id})" style="font-size:11px;padding:4px 10px">Modifier</button>
+          <button class="btn btn-ghost" onclick="clearRaceGoal(${goal.id})" style="font-size:11px;padding:4px 10px">✕</button>
         </div>
       </div>
     </div>`;
 }
 
-function showGoalForm() {
+function renderRunGoal() {
   const el = document.getElementById('run-goal');
   if (!el) return;
-  const g = getRaceGoal() || {};
+  const goals = [...getRaceGoals()].sort((a, b) => a.date.localeCompare(b.date));
+
+  if (!goals.length) {
+    el.innerHTML = `
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div style="font-size:13px;color:var(--muted)">🎯 Aucun objectif de course défini</div>
+        <button class="btn btn-primary" onclick="showGoalForm()" style="font-size:12px">Définir un objectif</button>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = goals.map(_renderGoalCard).join('') + `
+    <div style="text-align:right">
+      <button class="btn btn-ghost" onclick="showGoalForm()" style="font-size:12px">+ Ajouter un objectif</button>
+    </div>`;
+}
+
+function showGoalForm(goalId) {
+  const el = document.getElementById('run-goal');
+  if (!el) return;
+  const g = (goalId != null ? getRaceGoals().find(x => x.id === goalId) : null) || {};
   const minIso = localIso(TODAY);
   el.innerHTML = `
     <div class="card">
-      <div style="font-size:13px;font-weight:700;margin-bottom:12px">🎯 Objectif de course</div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px">🎯 ${g.id != null ? 'Modifier l\'objectif' : 'Nouvel objectif de course'}</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px">
         <div>
           <label style="font-size:10px;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:4px">Nom</label>
@@ -238,7 +259,7 @@ function showGoalForm() {
         </div>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-primary" onclick="saveRaceGoal()" style="font-size:12px">Enregistrer</button>
+        <button class="btn btn-primary" onclick="saveRaceGoal(${g.id != null ? g.id : ''})" style="font-size:12px">Enregistrer</button>
         <button class="btn btn-ghost" onclick="renderRunGoal()" style="font-size:12px">Annuler</button>
       </div>
     </div>`;
@@ -247,7 +268,7 @@ function showGoalForm() {
   });
 }
 
-async function saveRaceGoal() {
+async function saveRaceGoal(goalId) {
   const name = document.getElementById('goal-name')?.value?.trim() || '';
   const date = document.getElementById('goal-date')?.value;
   const distSel = document.getElementById('goal-dist')?.value;
@@ -260,10 +281,12 @@ async function saveRaceGoal() {
   if (!(km > 0)) { showToast('Distance invalide', 'err'); return; }
   if (target && parseTimeToSec(target) == null) { showToast('Temps visé invalide (format h:mm:ss)', 'err'); return; }
 
-  const btn = document.querySelector('#run-goal button[onclick="saveRaceGoal()"]');
+  const btn = document.querySelector('#run-goal button.btn-primary');
   if (btn) { btn.disabled = true; btn.textContent = 'Enregistrement…'; }
   try {
-    await saveRaceGoalData({ name, date, km, target });
+    const goal = { name, date, km, target };
+    if (goalId != null && !isNaN(goalId)) goal.id = goalId;
+    await saveRaceGoalData(goal);
     showToast('Objectif enregistré 🎯', 'ok');
   } catch (e) {
     showToast('Erreur : ' + e.message, 'err');
@@ -271,15 +294,7 @@ async function saveRaceGoal() {
   renderRunGoal();
 }
 
-async function clearRaceGoal() {
-  try {
-    await fetch('/api/race_goal', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clear: true }),
-    });
-  } catch {}
-  state.raceGoal = null;
-  localStorage.removeItem('race_goal');
+async function clearRaceGoal(goalId) {
+  try { await deleteRaceGoalData(goalId); } catch {}
   renderRunGoal();
 }

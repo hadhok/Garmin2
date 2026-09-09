@@ -59,7 +59,7 @@ const state = {
   filter:             'all',
   data:               null,
   wellness:           null,
-  raceGoal:           undefined, // undefined = pas encore chargé, null = aucun objectif
+  raceGoals:          undefined, // undefined = pas encore chargé, [] = aucun objectif
   healthDays:         30,
   profileGranularity: 'month',
 };
@@ -818,6 +818,8 @@ function openDetail(id) {
       <div class="detail-stat-value">${s.v}<span class="detail-stat-unit"> ${s.u}</span></div>
     </div>`).join('');
 
+  if (typeof renderTwinComparison === 'function') renderTwinComparison(a);
+
   const tRows = [];
   if (a.training_load > 0) tRows.push(['Charge totale',   `${Math.round(a.training_load)} pts`]);
   if (a.aerobic_te   > 0) tRows.push(['Effet aérobie',   `${a.aerobic_te.toFixed(1)} / 5`]);
@@ -881,15 +883,41 @@ function closeSyncModal() {
   document.getElementById('sync-log').style.display = 'none';
 }
 
+const SYNC_PROGRESS_MESSAGES = [
+  'Connexion via tokens sauvegardés…',
+  'Récupération des activités Garmin…',
+  'Mise à jour des données de bien-être…',
+  'Ça peut prendre un moment sur un gros historique…',
+  'Toujours en cours — la connexion Garmin peut être lente…',
+];
+
 async function runSync() {
   const btn = document.getElementById('sync-submit');
   const log = document.getElementById('sync-log');
+  const progressWrap = document.getElementById('sync-progress-wrap');
+  const elapsedEl = document.getElementById('sync-progress-elapsed');
   btn.disabled = true;
   btn.textContent = 'Synchro en cours…';
   log.style.display = 'block';
-  log.textContent = 'Connexion via tokens sauvegardés…';
+  log.textContent = SYNC_PROGRESS_MESSAGES[0];
+  if (progressWrap) progressWrap.style.display = 'block';
   const dots = document.querySelectorAll('.sync-dot');
   dots.forEach(d => d.classList.add('syncing'));
+
+  /* Pas de progression réelle côté serveur (un seul appel POST qui
+     répond à la fin) : barre indéterminée + décompte du temps écoulé
+     et messages rotatifs, pour que l'attente (jusqu'à 300s possible)
+     ne donne pas l'impression d'un gel de l'interface. */
+  const startTs = Date.now();
+  let msgIdx = 0;
+  const elapsedTimer = setInterval(() => {
+    const s = Math.round((Date.now() - startTs) / 1000);
+    if (elapsedEl) elapsedEl.textContent = `${s}s écoulées`;
+    if (s > 0 && s % 6 === 0) {
+      msgIdx = Math.min(msgIdx + 1, SYNC_PROGRESS_MESSAGES.length - 1);
+      log.textContent = SYNC_PROGRESS_MESSAGES[msgIdx];
+    }
+  }, 1000);
 
   try {
     const r = await fetch('/api/sync', { method:'POST', headers:{'Content-Type':'application/json'} });
@@ -937,6 +965,8 @@ async function runSync() {
       : `Le serveur n'a pas répondu correctement (${e?.message || 'erreur inconnue'}). Réessaie dans quelques instants — tes données actuelles ne sont pas affectées.`;
     showToast('Échec de la synchro — données inchangées', 'err');
   } finally {
+    clearInterval(elapsedTimer);
+    if (progressWrap) progressWrap.style.display = 'none';
     btn.disabled = false;
     btn.textContent = 'Synchroniser';
     dots.forEach(d => d.classList.remove('syncing'));
@@ -1605,6 +1635,8 @@ async function init() {
   if (typeof checkNewPRs === 'function') { try { checkNewPRs(); } catch(e) {} }
   /* Conseil du matin (notification locale, 1×/jour) */
   if (typeof maybeMorningNotification === 'function') { try { maybeMorningNotification(); } catch(e) {} }
+  /* Alerte fatigue/surcharge (TSB très bas ou ACWR > 1.5, notification locale, 1×/jour) */
+  if (typeof maybeFatigueAlert === 'function') { try { maybeFatigueAlert(); } catch(e) {} }
 }
 
 /* PWA laissée ouverte pendant la nuit : TODAY et tous les calculs

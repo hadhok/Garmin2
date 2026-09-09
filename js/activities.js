@@ -20,6 +20,14 @@ function sortActBy(col) {
   renderActivities();
 }
 
+function clearActsSearch() {
+  const input = document.getElementById('acts-search');
+  if (!input) return;
+  input.value = '';
+  input.focus();
+  renderActivities();
+}
+
 function setActPeriod(p, btn) {
   actState.period = p;
   actState.page   = 0;
@@ -97,6 +105,8 @@ function renderActivities() {
   /* Search filter */
   const q = (document.getElementById('acts-search')?.value || '').trim().toLowerCase();
   const acts = q ? raw.filter(a => (a.name||'').toLowerCase().includes(q) || (a.type_label||TYPE_LABEL[a.type]||'').toLowerCase().includes(q)) : raw;
+  const clearBtn = document.getElementById('acts-search-clear');
+  if (clearBtn) clearBtn.style.display = q ? 'flex' : 'none';
 
   /* KPIs strip (computed on filtered set, not paginated) */
   const kpis = computeKPIs(acts);

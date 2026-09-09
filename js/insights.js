@@ -70,6 +70,31 @@ function maybeMorningNotification() {
   localStorage.setItem('notif_last_morning', TODAY_ISO);
 }
 
+/* Alerte fatigue/surcharge — TSB très négatif ou ACWR > 1.5 (zone à
+   risque de blessure). Une seule fois par jour, indépendamment de la
+   fenêtre horaire du conseil du matin (le signal reste pertinent toute
+   la journée, notamment avant une séance prévue en fin de journée). */
+function maybeFatigueAlert() {
+  if (!notificationsEnabled()) return;
+  if (localStorage.getItem('notif_last_fatigue') === TODAY_ISO) return;
+
+  const curve = (typeof computeFormeCurve === 'function') ? computeFormeCurve(getAll(), 1) : [];
+  const tsb   = curve.length ? curve[curve.length - 1].tsb : null;
+  const acwr  = (typeof computeDailyReco === 'function') ? computeDailyReco().acwrVal : null;
+
+  const tsbCritical  = tsb  != null && tsb  < -25;
+  const acwrCritical = acwr != null && acwr > 1.5;
+  if (!tsbCritical && !acwrCritical) return;
+
+  const lines = [];
+  if (tsbCritical)  lines.push(`⚠️ TSB très bas (${tsb.toFixed(0)}) — fatigue accumulée importante.`);
+  if (acwrCritical) lines.push(`⚠️ Charge aiguë/chronique élevée (ACWR ${acwr.toFixed(2)}) — risque de blessure accru.`);
+  lines.push('Envisage une séance légère ou un jour de repos.');
+
+  sendLocalNotification('🔴 Signal de surcharge', lines.join('\n'));
+  localStorage.setItem('notif_last_fatigue', TODAY_ISO);
+}
+
 /* ══════════════════════════════════════════════════════════
    DÉTECTION DE RECORDS PERSONNELS
    Snapshot des meilleures allures par tranche de distance,
@@ -120,6 +145,94 @@ function checkNewPRs() {
       news.map(n => `${n.label} : ${secToPace(n.rec.pace)}/km (avant : ${secToPace(n.prev.pace)}/km)`).join('\n'));
   }
   return news;
+}
+
+/* ══════════════════════════════════════════════════════════
+   SÉANCE JUMELLE — comparaison auto avec la séance passée la plus
+   comparable (même type, distance ±10% ou durée ±20% si pas de
+   distance), affichée dans le modal de détail d'activité.
+   ══════════════════════════════════════════════════════════ */
+function findTwinActivity(a) {
+  if (!a || !a.date) return null;
+  const prior = getAll().filter(x => x.id !== a.id && x.type === a.type && (x.date || '') < a.date);
+  if (!prior.length) return null;
+
+  let candidates;
+  if (a.distance_km > 0) {
+    const lo = a.distance_km * 0.9, hi = a.distance_km * 1.1;
+    candidates = prior.filter(x => x.distance_km >= lo && x.distance_km <= hi);
+  } else if (a.duration_min > 0) {
+    const lo = a.duration_min * 0.8, hi = a.duration_min * 1.2;
+    candidates = prior.filter(x => x.duration_min >= lo && x.duration_min <= hi);
+  } else {
+    return null;
+  }
+  if (!candidates.length) return null;
+
+  candidates.sort((x, y) => (y.date || '').localeCompare(x.date || ''));
+  return candidates[0];
+}
+
+/* rawDelta : valeur actuelle − valeur de la séance jumelle, dans l'unité
+   brute (secondes pour l'allure, km/h pour la vitesse...) — la flèche
+   suit toujours le sens réel de cette valeur ; higherIsBetter détermine
+   uniquement la couleur (vert/rouge), indépendamment du sens de la flèche
+   (ex. allure : une baisse de temps = ▼, colorée en vert car plus rapide). */
+function _twinDeltaRow(label, curVal, curUnit, rawDelta, deltaLabel, higherIsBetter) {
+  const dir = rawDelta > 0 ? '▲' : rawDelta < 0 ? '▼' : '–';
+  const isGood = rawDelta === 0 ? null : (rawDelta > 0) === higherIsBetter;
+  const color = isGood == null ? 'var(--muted)' : isGood ? 'var(--green)' : 'var(--red)';
+  return `<div class="detail-row">
+    <span class="detail-row-label">${label}</span>
+    <span class="detail-row-value">${curVal}${curUnit ? ' ' + curUnit : ''} <span style="color:${color};font-weight:600">${dir} ${deltaLabel}</span></span>
+  </div>`;
+}
+
+function renderTwinComparison(a) {
+  const wrap = document.getElementById('detail-twin-wrap');
+  if (!wrap) return;
+  const twin = a ? findTwinActivity(a) : null;
+  if (!twin) { wrap.style.display = 'none'; return; }
+
+  const rows = [];
+
+  if (a.pace_min_km && twin.pace_min_km) {
+    const cur = paceToSec(a.pace_min_km), prev = paceToSec(twin.pace_min_km);
+    if (cur && prev && cur !== prev) {
+      const deltaSec = cur - prev; // négatif = plus rapide (mieux) → flèche ▼
+      rows.push(_twinDeltaRow('Allure', a.pace_min_km, '/km', deltaSec, `${secToPace(Math.abs(deltaSec))}/km`, false));
+    }
+  } else if (a.speed_kmh && twin.speed_kmh && a.speed_kmh !== twin.speed_kmh) {
+    const delta = +(a.speed_kmh - twin.speed_kmh).toFixed(1);
+    rows.push(_twinDeltaRow('Vitesse', a.speed_kmh, 'km/h', delta, `${Math.abs(delta)} km/h`, true));
+  }
+
+  if (a.hr_avg && twin.hr_avg && a.hr_avg !== twin.hr_avg) {
+    const delta = a.hr_avg - twin.hr_avg;
+    /* FC plus basse à effort comparable = généralement mieux, mais reste
+       indicatif (dérive cardiaque, chaleur...) : couleur neutre plutôt
+       qu'un jugement de valeur trop tranché. */
+    rows.push(`<div class="detail-row">
+      <span class="detail-row-label">FC moyenne</span>
+      <span class="detail-row-value">${a.hr_avg} bpm <span style="color:var(--muted);font-weight:600">${delta>0?'▲':'▼'} ${Math.abs(delta)} bpm</span></span>
+    </div>`);
+  }
+
+  if (a.training_load > 0 && twin.training_load > 0 && Math.round(a.training_load) !== Math.round(twin.training_load)) {
+    const delta = Math.round(a.training_load - twin.training_load);
+    rows.push(`<div class="detail-row">
+      <span class="detail-row-label">Charge</span>
+      <span class="detail-row-value">${Math.round(a.training_load)} pts <span style="color:var(--muted);font-weight:600">${delta>0?'▲':'▼'} ${Math.abs(delta)} pts</span></span>
+    </div>`);
+  }
+
+  if (!rows.length) { wrap.style.display = 'none'; return; }
+
+  const twinDate = twin.date ? new Date(twin.date + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+  const subtitle = document.getElementById('detail-twin-subtitle');
+  if (subtitle) subtitle.textContent = `vs ${twinDate}${twin.name ? ' · ' + twin.name : ''}`;
+  document.getElementById('detail-twin-rows').innerHTML = rows.join('');
+  wrap.style.display = '';
 }
 
 /* ══════════════════════════════════════════════════════════

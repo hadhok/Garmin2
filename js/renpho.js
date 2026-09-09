@@ -150,12 +150,30 @@ function renderBodyMetrics() {
   const weights = slice.map(m => m.weight_kg);
   const fats    = slice.map(m => m.body_fat_pct);
 
+  /* Charge d'entraînement (somme glissante 7j) alignée sur les mêmes
+     dates, pour visualiser d'un coup d'œil si les pics de charge
+     précèdent/suivent des variations de poids ou de masse grasse. */
+  const loadByDate = {};
+  getAll().forEach(a => {
+    const d = (a.date || '').slice(0, 10);
+    if (d) loadByDate[d] = (loadByDate[d] || 0) + (a.training_load || 0);
+  });
+  const loads = slice.map(m => {
+    const end = new Date(m.date + 'T12:00:00');
+    let sum = 0;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(end); d.setDate(d.getDate() - i);
+      sum += loadByDate[localIso(d)] || 0;
+    }
+    return Math.round(sum);
+  });
+
   const datasets = [{
     label: 'Poids (kg)',
     data: weights,
     borderColor: '#6366f1', borderWidth: 2,
     pointRadius: 2, tension: 0.4, fill: false,
-    yAxisID: 'yW', spanGaps: true,
+    yAxisID: 'yW', spanGaps: true, order: 1,
   }];
   if (fats.some(v => v != null)) {
     datasets.push({
@@ -163,7 +181,17 @@ function renderBodyMetrics() {
       data: fats,
       borderColor: '#f97316', borderWidth: 1.5,
       pointRadius: 1, tension: 0.4, fill: false,
-      yAxisID: 'yF', spanGaps: true, borderDash: [4, 3],
+      yAxisID: 'yF', spanGaps: true, borderDash: [4, 3], order: 1,
+    });
+  }
+  if (loads.some(v => v > 0)) {
+    datasets.push({
+      type: 'bar',
+      label: 'Charge d\'entraînement (7j glissants)',
+      data: loads,
+      backgroundColor: 'rgba(34,197,94,0.18)',
+      borderWidth: 0,
+      yAxisID: 'yL', order: 2,
     });
   }
 
@@ -174,12 +202,13 @@ function renderBodyMetrics() {
       responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { display: true, labels: { boxWidth: 12, font: { size: 10 } } },
-        tooltip: { callbacks: { label: c => c.dataset.yAxisID === 'yW' ? `${c.raw} kg` : `${c.raw}%` } },
+        tooltip: { callbacks: { label: c => c.dataset.yAxisID === 'yW' ? `${c.raw} kg` : c.dataset.yAxisID === 'yF' ? `${c.raw}%` : `${c.raw} pts (7j)` } },
       },
       scales: {
         x:  { grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 9 } } },
         yW: { position: 'left',  title: { display: true, text: 'kg',  font: { size: 9 }, color: '#6366f1' }, grid: { color: 'rgba(107,114,128,0.1)' } },
         yF: { position: 'right', title: { display: true, text: '%',   font: { size: 9 }, color: '#f97316' }, grid: { display: false } },
+        yL: { position: 'right', offset: true, title: { display: true, text: 'charge', font: { size: 9 }, color: '#22c55e' }, grid: { display: false }, beginAtZero: true },
       }
     }
   });

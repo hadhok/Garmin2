@@ -116,7 +116,9 @@ CREATE TABLE IF NOT EXISTS runalyze_config (
 
 ALTER TABLE runalyze_config DISABLE ROW LEVEL SECURITY;
 
--- ── Objectif de course (1 seule ligne, id=1) ────────────────
+-- ── Objectif de course (ancien format, 1 seule ligne, id=1) ──
+-- Conservée pour la migration automatique vers race_goals ci-dessous ;
+-- plus utilisée par le code une fois la migration effectuée.
 CREATE TABLE IF NOT EXISTS race_goal (
   id          INT  PRIMARY KEY DEFAULT 1,
   name        TEXT,
@@ -125,6 +127,18 @@ CREATE TABLE IF NOT EXISTS race_goal (
   target      TEXT,          -- temps visé "h:mm:ss", optionnel
   updated_at  TEXT
 );
+
+-- ── Objectifs de course multiples ───────────────────────────
+CREATE TABLE IF NOT EXISTS race_goals (
+  id          BIGSERIAL PRIMARY KEY,
+  name        TEXT,
+  date        TEXT NOT NULL,     -- 'YYYY-MM-DD'
+  km          FLOAT NOT NULL,
+  target      TEXT,              -- temps visé "h:mm:ss", optionnel
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  updated_at  TEXT
+);
+ALTER TABLE race_goals DISABLE ROW LEVEL SECURITY;
 
 ALTER TABLE race_goal DISABLE ROW LEVEL SECURITY;
 

@@ -105,6 +105,95 @@ function renderWeekCells(acts) {
   }).join('');
 }
 
+/* ── Vue calendrier multi-semaines (structure d'entraînement) ──
+   8 dernières semaines (lun-dim), une pastille/jour colorée par charge
+   cumulée du jour, TSB de fin de semaine affiché en tête de ligne.
+   Indépendant de la navigation semaine/mois/année : toujours ancré sur
+   la semaine réelle en cours, pour une vue d'ensemble rapide. ── */
+const WEEK_OVERVIEW_N = 8;
+
+function _loadCellColor(load) {
+  if (!load || load <= 0) return 'var(--border2)';
+  if (load < 50)  return '#6366f155';
+  if (load < 100) return '#6366f1aa';
+  if (load < 200) return '#f97316cc';
+  return '#ef4444d9';
+}
+
+function renderWeekOverviewCalendar() {
+  const el = document.getElementById('week-overview-calendar');
+  if (!el) return;
+
+  const all = getAll();
+  const loadByDate = {};
+  all.forEach(a => {
+    const d = (a.date || '').slice(0, 10);
+    if (d) loadByDate[d] = (loadByDate[d] || 0) + (a.training_load || 0);
+  });
+  const iconByDate = {};
+  all.forEach(a => {
+    const d = (a.date || '').slice(0, 10);
+    if (!d) return;
+    const cur = iconByDate[d];
+    if (!cur || (a.training_load || 0) > (cur.load || 0)) iconByDate[d] = { icon: a.icon || '⚡', type: a.type, load: a.training_load || 0 };
+  });
+
+  const curve = (typeof computeFormeCurve === 'function') ? computeFormeCurve(all, WEEK_OVERVIEW_N * 7 + 7) : [];
+  const tsbByDate = {};
+  curve.forEach(d => { tsbByDate[d.date] = d.tsb; });
+
+  const today = new Date(TODAY);
+  const mondayOffset = (today.getDay() + 6) % 7; // lundi = 0
+  const thisMonday = new Date(today); thisMonday.setDate(today.getDate() - mondayOffset);
+
+  const rows = [];
+  for (let w = WEEK_OVERVIEW_N - 1; w >= 0; w--) {
+    const weekStart = new Date(thisMonday); weekStart.setDate(thisMonday.getDate() - w * 7);
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart); d.setDate(weekStart.getDate() + i);
+      const iso = localIso(d);
+      days.push({ iso, day: d.getDate(), load: loadByDate[iso] || 0, act: iconByDate[iso], isToday: iso === TODAY_ISO, isFuture: iso > TODAY_ISO });
+    }
+    const weekEndIso = days[6].iso;
+    const tsb = tsbByDate[weekEndIso];
+    rows.push({ days, tsb, isCurrent: w === 0 });
+  }
+
+  const dayLabels = ['L','M','M','J','V','S','D'].map(d => `<div class="week-ov-daylabel">${d}</div>`).join('');
+
+  el.innerHTML = `
+    <div class="week-ov-grid">
+      <div class="week-ov-row week-ov-header"><div class="week-ov-tsb"></div>${dayLabels}</div>
+      ${rows.map(r => `
+        <div class="week-ov-row ${r.isCurrent ? 'week-ov-current' : ''}">
+          <div class="week-ov-tsb" title="TSB fin de semaine">${r.tsb != null ? r.tsb.toFixed(0) : '–'}</div>
+          ${r.days.map(d => `
+            <div class="week-ov-cell ${d.isToday ? 'today' : ''} ${d.isFuture ? 'future' : ''}"
+                 style="background:${d.isFuture ? 'transparent' : _loadCellColor(d.load)}"
+                 title="${d.iso}${d.load > 0 ? ' · ' + Math.round(d.load) + ' pts' : ''}"
+                 ${d.act ? `onclick="openDetailByDate('${d.iso}')"` : ''}>
+              ${d.act ? d.act.icon : ''}
+            </div>`).join('')}
+        </div>`).join('')}
+    </div>
+    <div class="week-ov-legend">
+      <span>Charge :</span>
+      <span class="week-ov-swatch" style="background:var(--border2)"></span> repos
+      <span class="week-ov-swatch" style="background:#6366f155"></span> légère
+      <span class="week-ov-swatch" style="background:#6366f1aa"></span> modérée
+      <span class="week-ov-swatch" style="background:#f97316cc"></span> forte
+      <span class="week-ov-swatch" style="background:#ef4444d9"></span> très forte
+    </div>`;
+}
+
+/* Ouvre le détail de la première activité d'un jour donné (clic sur une
+   pastille de la vue multi-semaines) */
+function openDetailByDate(iso) {
+  const a = getAll().find(x => x.date === iso);
+  if (a) { ACT_MAP[a.id] = a; openDetail(a.id); }
+}
+
 /* ══════════════════════════════════════════════════════════
    CHARTS
    ══════════════════════════════════════════════════════════ */
@@ -274,6 +363,7 @@ function renderDashboard() {
     renderWeekCells(getAll());
     renderWeekCharts(acts);
     renderActivityCards('list-week', acts, 6);
+    if (typeof renderWeekOverviewCalendar === 'function') renderWeekOverviewCalendar();
   }
   if (state.tab === 'month') {
     renderKPIs('kpi-month', acts, prevActs);
