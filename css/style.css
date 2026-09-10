@@ -1104,6 +1104,12 @@ body.loading main::before {
 /* ══════════════════════════════════════════════════════════
    VUE MULTI-SEMAINES (structure d'entraînement)
    ══════════════════════════════════════════════════════════ */
+.week-ov-nav {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+}
+.week-ov-nav .btn-icon { width: 26px; height: 26px; }
+.week-ov-nav .btn-icon:disabled { opacity: .35; cursor: default; }
+.week-ov-range { font-size: 12px; font-weight: 600; color: var(--text2); }
 .week-ov-grid { display: flex; flex-direction: column; gap: 3px; max-width: 100%; overflow-x: auto; }
 .week-ov-row  { display: grid; grid-template-columns: 30px repeat(7, 28px); gap: 3px; align-items: center; width: max-content; }
 .week-ov-header { font-size: 9px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); margin-bottom: 2px; }

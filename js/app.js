@@ -60,6 +60,7 @@ const state = {
   data:               null,
   wellness:           null,
   raceGoals:          undefined, // undefined = pas encore chargé, [] = aucun objectif
+  weekOvOffset:       0,         // pagination du calendrier multi-semaines (Entraînement > Vue d'ensemble)
   healthDays:         30,
   profileGranularity: 'month',
 };

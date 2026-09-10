@@ -120,9 +120,19 @@ function _loadCellColor(load) {
   return '#ef4444d9';
 }
 
+function moveWeekOverview(dir) {
+  state.weekOvOffset = Math.max(0, (state.weekOvOffset || 0) + dir);
+  renderWeekOverviewCalendar();
+}
+function resetWeekOverview() {
+  state.weekOvOffset = 0;
+  renderWeekOverviewCalendar();
+}
+
 function renderWeekOverviewCalendar() {
   const el = document.getElementById('week-overview-calendar');
   if (!el) return;
+  const offset = state.weekOvOffset || 0;
 
   const all = getAll();
   const loadByDate = {};
@@ -138,17 +148,23 @@ function renderWeekOverviewCalendar() {
     if (!cur || (a.training_load || 0) > (cur.load || 0)) iconByDate[d] = { icon: a.icon || '⚡', type: a.type, load: a.training_load || 0 };
   });
 
-  const curve = (typeof computeFormeCurve === 'function') ? computeFormeCurve(all, WEEK_OVERVIEW_N * 7 + 7) : [];
+  /* computeFormeCurve() calcule toujours nDays en remontant depuis
+     AUJOURD'HUI : il faut donc couvrir jusqu'à la semaine la plus
+     ancienne affichée, pas seulement la fenêtre visible. */
+  const curveDays = (offset + 1) * WEEK_OVERVIEW_N * 7 + 7;
+  const curve = (typeof computeFormeCurve === 'function') ? computeFormeCurve(all, curveDays) : [];
   const tsbByDate = {};
   curve.forEach(d => { tsbByDate[d.date] = d.tsb; });
 
   const today = new Date(TODAY);
   const mondayOffset = (today.getDay() + 6) % 7; // lundi = 0
   const thisMonday = new Date(today); thisMonday.setDate(today.getDate() - mondayOffset);
+  /* Fenêtre décalée en arrière par pages entières de WEEK_OVERVIEW_N semaines */
+  const windowEndMonday = new Date(thisMonday); windowEndMonday.setDate(thisMonday.getDate() - offset * WEEK_OVERVIEW_N * 7);
 
   const rows = [];
   for (let w = WEEK_OVERVIEW_N - 1; w >= 0; w--) {
-    const weekStart = new Date(thisMonday); weekStart.setDate(thisMonday.getDate() - w * 7);
+    const weekStart = new Date(windowEndMonday); weekStart.setDate(windowEndMonday.getDate() - w * 7);
     const days = [];
     for (let i = 0; i < 7; i++) {
       const d = new Date(weekStart); d.setDate(weekStart.getDate() + i);
@@ -157,12 +173,23 @@ function renderWeekOverviewCalendar() {
     }
     const weekEndIso = days[6].iso;
     const tsb = tsbByDate[weekEndIso];
-    rows.push({ days, tsb, isCurrent: w === 0 });
+    rows.push({ days, tsb, isCurrent: offset === 0 && w === 0 });
   }
 
   const dayLabels = ['L','M','M','J','V','S','D'].map(d => `<div class="week-ov-daylabel">${d}</div>`).join('');
 
+  const rangeStart = rows[0].days[0];
+  const rangeEnd = rows[rows.length - 1].days[6];
+  const fmtShort = iso => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  const rangeLabel = `${fmtShort(rangeStart.iso)} – ${fmtShort(rangeEnd.iso)}`;
+
   el.innerHTML = `
+    <div class="week-ov-nav">
+      <button class="btn-icon" onclick="moveWeekOverview(1)" title="Semaines précédentes">‹</button>
+      <span class="week-ov-range">${rangeLabel}</span>
+      <button class="btn-icon" onclick="moveWeekOverview(-1)" title="Semaines suivantes" ${offset === 0 ? 'disabled' : ''}>›</button>
+      ${offset > 0 ? `<button class="btn-today" onclick="resetWeekOverview()">Aujourd'hui</button>` : ''}
+    </div>
     <div class="week-ov-grid">
       <div class="week-ov-row week-ov-header"><div class="week-ov-tsb"></div>${dayLabels}</div>
       ${rows.map(r => `
