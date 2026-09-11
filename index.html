@@ -165,6 +165,7 @@
         <div class="subtab-bar">
           <button class="subtab active" data-tab="day" onclick="switchSubTab('day')">Aujourd'hui</button>
           <button class="subtab" onclick="switchView('training')" style="color:var(--accent);opacity:.8">📈 Entraînement →</button>
+          <button class="subtab" onclick="switchView('live')" style="color:var(--accent);opacity:.8">❤️ FC en direct</button>
         </div>
 
         <!-- Period navigation -->
@@ -864,6 +865,52 @@
       </div><!-- /view-runalyze -->
 
       <!-- ════════════════════════════════════════════════
+           VIEW : FC EN DIRECT (Web Bluetooth)
+      ════════════════════════════════════════════════ -->
+      <div id="view-live" class="view">
+        <div style="padding:16px;max-width:480px;margin:0 auto">
+
+          <div id="live-hr-unsupported" class="card" style="display:none;text-align:center">
+            <div style="font-size:32px;margin-bottom:8px">🚫</div>
+            <div style="font-weight:700;margin-bottom:6px">Non supporté par ce navigateur</div>
+            <div style="font-size:12px;color:var(--muted);line-height:1.6">
+              Le Bluetooth direct (Web Bluetooth) ne fonctionne que sur Chrome/Edge — pas sur Safari ni sur iOS,
+              quel que soit le navigateur utilisé. Sur iPhone/iPad, cette fonctionnalité n'est malheureusement
+              pas possible depuis un navigateur.
+            </div>
+          </div>
+
+          <div id="live-hr-connect-wrap" class="card" style="text-align:center">
+            <div style="font-size:32px;margin-bottom:8px">❤️</div>
+            <div style="font-weight:700;margin-bottom:6px">FC en direct</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6">
+              Active d'abord <b>Diffuser la FC</b> sur ta montre (Réglages → Capteurs → FC poignet),
+              puis connecte-toi ci-dessous.
+            </div>
+            <button id="live-hr-connect-btn" class="btn btn-primary" onclick="connectLiveHR()" style="width:100%;justify-content:center">
+              🔵 Connecter le capteur FC
+            </button>
+            <div id="live-hr-status" style="font-size:12px;color:var(--muted);margin-top:10px"></div>
+          </div>
+
+          <div id="live-hr-panel" style="display:none">
+            <div class="card" style="text-align:center">
+              <div id="live-hr-bpm" style="font-size:64px;font-weight:800;color:var(--text);line-height:1">–</div>
+              <div style="font-size:12px;color:var(--muted);margin-bottom:8px">bpm</div>
+              <div id="live-hr-zone" class="live-hr-zone-badge"></div>
+              <div style="font-size:11px;color:var(--muted);margin-top:10px">Durée : <span id="live-hr-elapsed">0:00</span></div>
+            </div>
+            <div class="card" style="margin-top:12px">
+              <div style="height:120px"><canvas id="live-hr-chart"></canvas></div>
+            </div>
+            <div class="card" id="live-hr-stats" style="margin-top:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+            <button class="btn btn-ghost" onclick="disconnectLiveHR()" style="width:100%;justify-content:center;margin-top:12px">Déconnecter</button>
+          </div>
+
+        </div>
+      </div><!-- /view-live -->
+
+      <!-- ════════════════════════════════════════════════
            VIEW : PROFIL
       ════════════════════════════════════════════════ -->
       <div id="view-profile" class="view">
@@ -1016,6 +1063,14 @@
             <span style="flex:1">
               <span style="display:block;font-size:13px;font-weight:700;color:var(--text)">Runalyze</span>
               <span style="display:block;font-size:11px;color:var(--muted)">Synchronisation et calibration VO2max</span>
+            </span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+          <button class="card" onclick="switchView('live')" style="display:flex;align-items:center;gap:12px;text-align:left;cursor:pointer;border:none;width:100%;font-family:inherit">
+            <span style="font-size:22px">❤️</span>
+            <span style="flex:1">
+              <span style="display:block;font-size:13px;font-weight:700;color:var(--text)">FC en direct</span>
+              <span style="display:block;font-size:11px;color:var(--muted)">FC en Bluetooth pendant l'entraînement (Chrome/Edge uniquement)</span>
             </span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted);flex-shrink:0"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
@@ -1607,6 +1662,7 @@
 <script src="/js/renpho.js"></script>
 <script src="/js/help.js"></script>
 <script src="/js/runalyze.js"></script>
+<script src="/js/live_hr.js"></script>
 <script src="/js/insights.js"></script>
 <script src="/js/report.js"></script>
 <script>

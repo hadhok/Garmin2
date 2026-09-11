@@ -1117,6 +1117,7 @@ function switchView(view, swipeDir) {
     profile:  'Profil',
     runalyze: 'Runalyze',
     poc:      '🔬 Science',
+    live:     '❤️ FC en direct',
     /* legacy aliases */
     dashboard: 'Dashboard', activities: 'Activités', health: 'Santé',
     running: 'Running', poc: 'Science du sport', help: 'Aide',
@@ -1332,6 +1333,7 @@ function renderAll() {
   if (state.view === 'history')  { renderActivities(); return; }
   if (state.view === 'swim')     { if (typeof renderSwimPage === 'function') renderSwimPage(); return; }
   if (state.view === 'runalyze') { if (typeof onSwitchToRunalyze === 'function') onSwitchToRunalyze(); return; }
+  if (state.view === 'live')     { if (typeof renderLiveHR === 'function') renderLiveHR(); return; }
   /* Aliases legacy */
   if (state.view === 'health')     { renderHealth();     return; }
   if (state.view === 'profile')    { renderProfile();    return; }

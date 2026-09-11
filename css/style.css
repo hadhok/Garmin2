@@ -1138,6 +1138,17 @@ body.loading main::before {
 .week-ov-swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
 
 /* ══════════════════════════════════════════════════════════
+   FC EN DIRECT (Web Bluetooth)
+   ══════════════════════════════════════════════════════════ */
+.live-hr-zone-badge {
+  display: inline-block; padding: 4px 12px; border-radius: 999px;
+  font-size: 12px; font-weight: 700;
+}
+.live-hr-stat { text-align: center; }
+.live-hr-stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 2px; }
+.live-hr-stat-value { font-size: 20px; font-weight: 700; color: var(--text); }
+
+/* ══════════════════════════════════════════════════════════
    ZONE BARS
    ══════════════════════════════════════════════════════════ */
 .zone-row      { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
