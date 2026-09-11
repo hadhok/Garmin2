@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-09-10T13:21:33",
+  "updated_at": "2026-09-11T13:19:30",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "progression",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 59.2,
-    "atl": 84.8,
-    "tsb": -25.6,
-    "effort_idx": 0.9,
-    "body_battery": 47,
+    "ctl": 57.8,
+    "atl": 72.7,
+    "tsb": -14.9,
+    "effort_idx": 0.95,
+    "body_battery": 46,
     "training_readiness": null,
     "niveau": "Sportif",
     "total_activites": 287,
@@ -20,19 +20,19 @@
       "type": "warning",
       "icon": "🟡",
       "title": "Sous tension",
-      "text": "Effort pondéré 7j : 0.9× (1.0 = charge de base, >2 = intense). TSB -26 pts (CTL 59.2 / ATL 84.8). • HRV 46.4 ms (-1 ms vs S-1) • Sommeil 8.4h/nuit • Body Battery : 47%"
+      "text": "Effort pondéré 7j : 0.9× (1.0 = charge de base, >2 = intense). TSB -15 pts (CTL 57.8 / ATL 72.7). • HRV 45.6 ms (-3 ms vs S-1) • Sommeil 8.6h/nuit • Body Battery : 46%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "📊 manque de Zone 1-2 (46% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (21%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (33%) — surveille la fatigue accumulée\n⚖️ Poids -1.3 kg — apport protéiné : 128g/j"
+      "text": "📊 manque de Zone 1-2 (42% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (22%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (37%) — surveille la fatigue accumulée\n⚖️ Poids -1.2 kg — apport protéiné : 129g/j"
     },
     {
       "type": "goal",
       "icon": "📋",
       "title": "Prescription : Séance légère — Zone 2",
-      "text": "Hier : Lactate Threshold (hiit). [Body Battery 47% · TSB -26] Fatigue accumulée malgré une BB correcte. 45-60 min à allure conversationnelle. — Z2 — 60-70% FCmax"
+      "text": "Hier : Aerobic Base (strength). [Body Battery 46% · TSB -15] Fatigue accumulée malgré une BB correcte. 45-60 min à allure conversationnelle. — Z2 — 60-70% FCmax"
     }
   ]
 }
