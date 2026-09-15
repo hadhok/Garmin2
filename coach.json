@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-09-14T15:43:12",
+  "updated_at": "2026-09-15T14:12:19",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "vigilance",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 62.9,
-    "atl": 95.6,
-    "tsb": -32.7,
-    "effort_idx": 1.28,
-    "body_battery": 36,
+    "ctl": 61.4,
+    "atl": 81.9,
+    "tsb": -20.5,
+    "effort_idx": 1.34,
+    "body_battery": 49,
     "training_readiness": null,
     "niveau": "Athlète",
     "total_activites": 291,
@@ -20,19 +20,19 @@
       "type": "warning",
       "icon": "🟡",
       "title": "Sous tension",
-      "text": "Effort pondéré 7j : 1.3× (1.0 = charge de base, >2 = intense). TSB -33 pts (CTL 62.9 / ATL 95.6). • HRV 43.4 ms (-6 ms vs S-1) • Sommeil 8.3h/nuit • Body Battery : 36%"
+      "text": "Effort pondéré 7j : 1.3× (1.0 = charge de base, >2 = intense). TSB -20 pts (CTL 61.4 / ATL 81.9). • HRV 43.8 ms (-5 ms vs S-1) • Sommeil 8.4h/nuit • Body Battery : 49%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "💛 HRV statut UNBALANCED — système nerveux sous pression\n📊 manque de Zone 1-2 (38% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (27%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (36%) — surveille la fatigue accumulée\n⚖️ Poids -1.2 kg — apport protéiné : 129g/j"
+      "text": "💛 HRV statut UNBALANCED — système nerveux sous pression\n📊 manque de Zone 1-2 (39% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (27%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (34%) — surveille la fatigue accumulée"
     },
     {
       "type": "goal",
       "icon": "📋",
-      "title": "Prescription : Récupération active",
-      "text": "Hier : Lactate Threshold (run). [Body Battery 36% · TSB -33] Réserves très basses. 20-30 min marche, mobilité ou yoga uniquement. — Z1 — FC < 120 bpm"
+      "title": "Prescription : Séance légère — Zone 2",
+      "text": "Hier : Aerobic Base (swim). [Body Battery 49% · TSB -20] Fatigue accumulée malgré une BB correcte. 45-60 min à allure conversationnelle. — Z2 — 60-70% FCmax"
     }
   ]
 }
