@@ -319,6 +319,16 @@ class handler(BaseHTTPRequestHandler):
                 synced = sum(1 for r in results if r.get('ok') and r.get('samples', 0) > 0)
                 self._reply(200, {'ok': True, 'synced': synced, 'total': len(to_fetch), 'results': results})
 
+            # ── Note de séance (texte libre, saisi manuellement) ───────────────
+            elif body.get('action') == 'save_note':
+                activity_id = body.get('activity_id')
+                if not activity_id:
+                    self._reply(400, {'error': 'activity_id requis'})
+                    return
+                notes = (body.get('notes') or '').strip() or None
+                sb.table('activities').update({'notes': notes}).eq('id', int(activity_id)).execute()
+                self._reply(200, {'ok': True})
+
             # ── Fetch une activité spécifique ─────────────────────────────────
             elif body.get('activity_id'):
                 activity_id = int(body['activity_id'])

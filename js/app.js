@@ -855,6 +855,12 @@ function openDetail(id) {
     if (typeof loadActivityDetails === 'function') loadActivityDetails(a.id);
   }
 
+  _detailModalActivityId = a.id;
+  const notesEl = document.getElementById('detail-notes');
+  if (notesEl) notesEl.value = a.notes || '';
+  const notesStatusEl = document.getElementById('detail-notes-status');
+  if (notesStatusEl) notesStatusEl.textContent = '';
+
   document.getElementById('detail-modal').classList.add('open');
 }
 
@@ -863,6 +869,31 @@ function closeDetail() {
   document.querySelector('#detail-modal .detail-modal')?.classList.remove('detail-modal--expanded');
   const btn = document.getElementById('detail-expand-btn');
   if (btn) btn.textContent = '⤢';
+}
+
+let _detailModalActivityId = null;
+
+async function saveDetailNotes() {
+  if (!_detailModalActivityId) return;
+  const notesEl = document.getElementById('detail-notes');
+  const statusEl = document.getElementById('detail-notes-status');
+  const notes = notesEl?.value || '';
+  if (statusEl) statusEl.textContent = 'Enregistrement…';
+  try {
+    const r = await fetch('/api/activity_details', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save_note', activity_id: _detailModalActivityId, notes }),
+    });
+    if (!r.ok) throw new Error('échec');
+    const act = ACT_MAP[_detailModalActivityId] || ACT_MAP[String(_detailModalActivityId)];
+    if (act) act.notes = notes || null;
+    if (statusEl) statusEl.textContent = '✓ Enregistré';
+    if (typeof showToast === 'function') showToast('Note enregistrée', 'ok');
+  } catch (e) {
+    if (statusEl) statusEl.textContent = '❌ Erreur';
+    if (typeof showToast === 'function') showToast('Erreur lors de l\'enregistrement', 'err');
+  }
 }
 
 function toggleDetailExpand() {

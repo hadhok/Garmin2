@@ -1561,6 +1561,16 @@
       <div id="detail-charts-wrap" style="display:none">
         <div class="detail-section">Analyse détaillée</div>
       </div>
+      <div>
+        <div class="detail-section">Notes de séance</div>
+        <textarea id="detail-notes" class="settings-input" rows="4"
+          placeholder="Contenu du WOD, ressenti, tableau blanc de la salle…"
+          style="width:100%;resize:vertical;font-family:inherit"></textarea>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+          <button class="btn btn-secondary" onclick="saveDetailNotes()" style="font-size:12px">Enregistrer</button>
+          <span id="detail-notes-status" style="font-size:11px;color:var(--muted)"></span>
+        </div>
+      </div>
     </div>
   </div>
 </div>

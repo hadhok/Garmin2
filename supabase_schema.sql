@@ -146,3 +146,6 @@ ALTER TABLE race_goal DISABLE ROW LEVEL SECURITY;
 -- activity_details.swim_length_buckets (voir api/activity_details.py),
 -- pas de table dédiée (limite de fonctions serverless sur le plan Hobby Vercel).
 ALTER TABLE activity_details ADD COLUMN IF NOT EXISTS swim_length_buckets JSONB;
+
+-- ── Notes de séance (texte libre, saisi manuellement dans le détail) ──
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS notes TEXT;
