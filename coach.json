@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-10-02T15:26:45",
+  "updated_at": "2026-10-03T14:10:06",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "maintien",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 53.2,
-    "atl": 32.2,
-    "tsb": 21.0,
-    "effort_idx": 0.97,
-    "body_battery": 54,
+    "ctl": 51.9,
+    "atl": 27.6,
+    "tsb": 24.3,
+    "effort_idx": 0.49,
+    "body_battery": 50,
     "training_readiness": null,
     "niveau": "Sportif",
     "total_activites": 299,
@@ -20,7 +20,7 @@
       "type": "warning",
       "icon": "🟡",
       "title": "Sous tension",
-      "text": "Effort pondéré 7j : 1.0× (1.0 = charge de base, >2 = intense). TSB +21 pts (CTL 53.2 / ATL 32.2). • HRV 38.9 ms (-4 ms vs S-1) • Sommeil 8.0h/nuit • Body Battery : 54%"
+      "text": "Effort pondéré 7j : 0.5× (1.0 = charge de base, >2 = intense). TSB +24 pts (CTL 51.9 / ATL 27.6). • HRV 38.0 ms (-4 ms vs S-1) • Sommeil 8.3h/nuit • Body Battery : 50%"
     },
     {
       "type": "tip",
@@ -32,7 +32,7 @@
       "type": "goal",
       "icon": "📋",
       "title": "Prescription : Séance modérée — Tempo",
-      "text": "[Body Battery 54% · TSB +21] Forme correcte. 50 min : 10 min Z2 + 25 min tempo + 15 min retour au calme. — Z3 → Z4"
+      "text": "[Body Battery 50% · TSB +24] Forme correcte. 50 min : 10 min Z2 + 25 min tempo + 15 min retour au calme. — Z3 → Z4"
     }
   ]
 }
