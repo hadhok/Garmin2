@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-10-03T14:10:06",
+  "updated_at": "2026-10-04T14:39:40",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "maintien",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 51.9,
-    "atl": 27.6,
-    "tsb": 24.3,
+    "ctl": 50.6,
+    "atl": 23.6,
+    "tsb": 27.0,
     "effort_idx": 0.49,
-    "body_battery": 50,
+    "body_battery": 76,
     "training_readiness": null,
     "niveau": "Sportif",
     "total_activites": 299,
@@ -20,19 +20,19 @@
       "type": "warning",
       "icon": "🟡",
       "title": "Sous tension",
-      "text": "Effort pondéré 7j : 0.5× (1.0 = charge de base, >2 = intense). TSB +24 pts (CTL 51.9 / ATL 27.6). • HRV 38.0 ms (-4 ms vs S-1) • Sommeil 8.3h/nuit • Body Battery : 50%"
+      "text": "Effort pondéré 7j : 0.5× (1.0 = charge de base, >2 = intense). TSB +27 pts (CTL 50.6 / ATL 23.6). • HRV 39.3 ms (-0 ms vs S-1) • Sommeil 8.0h/nuit • Body Battery : 76%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "💛 HRV statut LOW — système nerveux sous pression\n📊 Zone 3 trop présente (25%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📉 Semaine très creuse (27 pts vs 353 moy.)"
+      "text": "💛 HRV statut UNBALANCED — système nerveux sous pression\n📊 Zone 3 trop présente (25%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📉 Semaine très creuse (27 pts vs 353 moy.)"
     },
     {
       "type": "goal",
       "icon": "📋",
-      "title": "Prescription : Séance modérée — Tempo",
-      "text": "[Body Battery 50% · TSB +24] Forme correcte. 50 min : 10 min Z2 + 25 min tempo + 15 min retour au calme. — Z3 → Z4"
+      "title": "Prescription : Séance longue — Endurance fondamentale",
+      "text": "[Body Battery 76% · TSB +27] Bonne forme, mise sur le volume. 60-90 min à allure modérée. — Z2 — 65-75% FCmax"
     }
   ]
 }
