@@ -1,18 +1,18 @@
 {
-  "updated_at": "2026-10-11T15:21:57",
+  "updated_at": "2026-10-12T18:40:47",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "maintien",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 53.0,
-    "atl": 49.5,
-    "tsb": 3.5,
-    "effort_idx": 1.25,
-    "body_battery": 65,
+    "ctl": 54.5,
+    "atl": 58.8,
+    "tsb": -4.3,
+    "effort_idx": 1.2,
+    "body_battery": 17,
     "training_readiness": null,
     "niveau": "Sportif",
-    "total_activites": 303,
+    "total_activites": 304,
     "total_km": 722
   },
   "items": [
@@ -20,19 +20,19 @@
       "type": "warning",
       "icon": "🟡",
       "title": "Sous tension",
-      "text": "Effort pondéré 7j : 1.2× (1.0 = charge de base, >2 = intense). TSB +4 pts (CTL 53.0 / ATL 49.5). • HRV 37.6 ms (-1 ms vs S-1) • Sommeil 8.3h/nuit • Body Battery : 65%"
+      "text": "Effort pondéré 7j : 1.2× (1.0 = charge de base, >2 = intense). TSB -4 pts (CTL 54.5 / ATL 58.8). • HRV 37.5 ms (-2 ms vs S-1) • Sommeil 8.1h/nuit • Body Battery : 17%"
     },
     {
-      "type": "tip",
+      "type": "warning",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "💛 HRV statut LOW — système nerveux sous pression\n✅ Structure d'entraînement pyramidale sur 6 séances analysées"
+      "text": "💛 HRV statut LOW — système nerveux sous pression\n📊 manque de Zone 1-2 (57% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (24%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📈 Charge semaine +68% au-dessus de la moyenne — risque de surcharge"
     },
     {
       "type": "goal",
       "icon": "📋",
-      "title": "Prescription : Séance longue — Endurance fondamentale",
-      "text": "[Body Battery 65% · TSB +4] Bonne forme, mise sur le volume. 60-90 min à allure modérée. — Z2 — 65-75% FCmax"
+      "title": "Prescription : Récupération active",
+      "text": "[Body Battery 17% · TSB -4] Réserves très basses. 20-30 min marche, mobilité ou yoga uniquement. — Z1 — FC < 120 bpm"
     }
   ]
 }
