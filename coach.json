@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-10-31T15:07:22",
+  "updated_at": "2026-11-01T15:50:20",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "vigilance",
-    "fatigue_level": "tired",
+    "fatigue_level": "balanced",
     "garmin_status": null,
-    "ctl": 47.5,
-    "atl": 35.1,
-    "tsb": 12.4,
+    "ctl": 46.4,
+    "atl": 30.1,
+    "tsb": 16.3,
     "effort_idx": 2.0,
-    "body_battery": 59,
+    "body_battery": 49,
     "training_readiness": null,
     "niveau": "Sportif",
     "total_activites": 313,
@@ -17,22 +17,22 @@
   },
   "items": [
     {
-      "type": "warning",
+      "type": "tip",
       "icon": "🟡",
       "title": "Sous tension",
-      "text": "Effort pondéré 7j : 2.0× (1.0 = charge de base, >2 = intense). TSB +12 pts (CTL 47.5 / ATL 35.1). • HRV 38.6 ms (+1 ms vs S-1) • Sommeil 8.1h/nuit • Body Battery : 59%"
+      "text": "Effort pondéré 7j : 2.0× (1.0 = charge de base, >2 = intense). TSB +16 pts (CTL 46.4 / ATL 30.1). • HRV 39.0 ms (+1 ms vs S-1) • Sommeil 8.3h/nuit • Body Battery : 49%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "💛 HRV statut UNBALANCED — système nerveux sous pression\n📊 manque de Zone 1-2 (34% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (30%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (36%) — surveille la fatigue accumulée"
+      "text": "📊 manque de Zone 1-2 (34% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (30%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (36%) — surveille la fatigue accumulée"
     },
     {
       "type": "goal",
       "icon": "📋",
-      "title": "Prescription : Séance longue — Endurance fondamentale",
-      "text": "[Body Battery 59% · TSB +12] Bonne forme, mise sur le volume. 60-90 min à allure modérée. — Z2 — 65-75% FCmax"
+      "title": "Prescription : Séance modérée — Tempo",
+      "text": "[Body Battery 49% · TSB +16] Forme correcte. 50 min : 10 min Z2 + 25 min tempo + 15 min retour au calme. — Z3 → Z4"
     }
   ]
 }
