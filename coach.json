@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-11-01T15:50:20",
+  "updated_at": "2026-11-02T19:14:37",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "vigilance",
-    "fatigue_level": "balanced",
+    "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 46.4,
-    "atl": 30.1,
-    "tsb": 16.3,
+    "ctl": 45.2,
+    "atl": 25.8,
+    "tsb": 19.4,
     "effort_idx": 2.0,
-    "body_battery": 49,
+    "body_battery": 99,
     "training_readiness": null,
     "niveau": "Sportif",
     "total_activites": 313,
@@ -17,22 +17,22 @@
   },
   "items": [
     {
-      "type": "tip",
+      "type": "warning",
       "icon": "🟡",
       "title": "Sous tension",
-      "text": "Effort pondéré 7j : 2.0× (1.0 = charge de base, >2 = intense). TSB +16 pts (CTL 46.4 / ATL 30.1). • HRV 39.0 ms (+1 ms vs S-1) • Sommeil 8.3h/nuit • Body Battery : 49%"
+      "text": "Effort pondéré 7j : 2.0× (1.0 = charge de base, >2 = intense). TSB +19 pts (CTL 45.2 / ATL 25.8). • HRV 39.4 ms (+1 ms vs S-1) • Sommeil 8.6h/nuit • Body Battery : 99%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "📊 manque de Zone 1-2 (34% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (30%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (36%) — surveille la fatigue accumulée"
+      "text": "💛 HRV statut UNBALANCED — système nerveux sous pression\n📊 manque de Zone 1-2 (34% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (30%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (36%) — surveille la fatigue accumulée\n⚖️ Poids +2.1 kg — normal si muscle"
     },
     {
       "type": "goal",
       "icon": "📋",
-      "title": "Prescription : Séance modérée — Tempo",
-      "text": "[Body Battery 49% · TSB +16] Forme correcte. 50 min : 10 min Z2 + 25 min tempo + 15 min retour au calme. — Z3 → Z4"
+      "title": "Prescription : Séance longue — Endurance fondamentale",
+      "text": "[Body Battery 99% · TSB +19] Bonne forme, mise sur le volume. 60-90 min à allure modérée. — Z2 — 65-75% FCmax"
     }
   ]
 }
