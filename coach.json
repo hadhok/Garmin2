@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-11-07T15:28:56",
+  "updated_at": "2026-11-08T15:49:30",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "maintien",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 50.5,
-    "atl": 65.6,
-    "tsb": -15.1,
+    "ctl": 49.3,
+    "atl": 56.2,
+    "tsb": -6.9,
     "effort_idx": 1.0,
-    "body_battery": 50,
+    "body_battery": 40,
     "training_readiness": null,
     "niveau": "Sportif",
     "total_activites": 316,
@@ -20,7 +20,7 @@
       "type": "warning",
       "icon": "🟡",
       "title": "Sous tension",
-      "text": "Effort pondéré 7j : 1.0× (1.0 = charge de base, >2 = intense). TSB -15 pts (CTL 50.5 / ATL 65.6). • HRV 38.2 ms (-1 ms vs S-1) • Sommeil 8.1h/nuit • Body Battery : 50%"
+      "text": "Effort pondéré 7j : 1.0× (1.0 = charge de base, >2 = intense). TSB -7 pts (CTL 49.3 / ATL 56.2). • HRV 39.6 ms (+1 ms vs S-1) • Sommeil 8.1h/nuit • Body Battery : 40%"
     },
     {
       "type": "tip",
@@ -32,7 +32,7 @@
       "type": "goal",
       "icon": "📋",
       "title": "Prescription : Séance légère — Zone 2",
-      "text": "Hier : Aerobic Base (cardio). [Body Battery 50% · TSB -15] Fatigue accumulée malgré une BB correcte. 45-60 min à allure conversationnelle. — Z2 — 60-70% FCmax"
+      "text": "[Body Battery 40% · TSB -7] Fatigue accumulée malgré une BB correcte. 45-60 min à allure conversationnelle. — Z2 — 60-70% FCmax"
     }
   ]
 }
