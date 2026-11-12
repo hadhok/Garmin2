@@ -1,38 +1,38 @@
 {
-  "updated_at": "2026-11-11T16:56:16",
+  "updated_at": "2026-11-12T17:24:01",
   "coach": "Claude",
   "stats_snapshot": {
-    "phase": "progression",
-    "fatigue_level": "balanced",
+    "phase": "maintien",
+    "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 45.8,
-    "atl": 35.4,
-    "tsb": 10.4,
+    "ctl": 53.2,
+    "atl": 75.5,
+    "tsb": -22.2,
     "effort_idx": 1.0,
-    "body_battery": 63,
+    "body_battery": 32,
     "training_readiness": null,
     "niveau": "Sportif",
-    "total_activites": 316,
+    "total_activites": 317,
     "total_km": 724
   },
   "items": [
     {
-      "type": "tip",
-      "icon": "💪",
-      "title": "Productif",
-      "text": "Effort pondéré 7j : 1.0× (1.0 = charge de base, >2 = intense). TSB +10 pts (CTL 45.8 / ATL 35.4). • HRV 40.9 ms (+4 ms vs S-1) • Sommeil 8.2h/nuit • Body Battery : 63%"
+      "type": "warning",
+      "icon": "🟡",
+      "title": "Sous tension",
+      "text": "Effort pondéré 7j : 1.0× (1.0 = charge de base, >2 = intense). TSB -22 pts (CTL 53.2 / ATL 75.5). • HRV 40.7 ms (+3 ms vs S-1) • Sommeil 8.5h/nuit • Body Battery : 32%"
     },
     {
       "type": "warning",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "📊 manque de Zone 1-2 (29% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (33%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (38%) — surveille la fatigue accumulée\n📈 Charge semaine +62% au-dessus de la moyenne — risque de surcharge"
+      "text": "📊 manque de Zone 1-2 (31% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (28%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (41%) — surveille la fatigue accumulée\n📈 Charge semaine +92% au-dessus de la moyenne — risque de surcharge"
     },
     {
       "type": "goal",
       "icon": "📋",
-      "title": "Prescription : Séance longue — Endurance fondamentale",
-      "text": "[Body Battery 63% · TSB +10] Bonne forme, mise sur le volume. 60-90 min à allure modérée. — Z2 — 65-75% FCmax"
+      "title": "Prescription : Récupération active",
+      "text": "Hier : Anaerobic Capacity (hockey). [Body Battery 32% · TSB -22] Réserves très basses. 20-30 min marche, mobilité ou yoga uniquement. — Z1 — FC < 120 bpm"
     }
   ]
 }
