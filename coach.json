@@ -1,18 +1,18 @@
 {
-  "updated_at": "2026-11-16T19:19:53",
+  "updated_at": "2026-11-17T18:13:12",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "maintien",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 54.4,
-    "atl": 65.8,
-    "tsb": -11.3,
-    "effort_idx": 1.0,
-    "body_battery": 49,
+    "ctl": 59.7,
+    "atl": 92.2,
+    "tsb": -32.5,
+    "effort_idx": 0.96,
+    "body_battery": 37,
     "training_readiness": null,
     "niveau": "Sportif",
-    "total_activites": 318,
+    "total_activites": 320,
     "total_km": 724
   },
   "items": [
@@ -20,19 +20,19 @@
       "type": "warning",
       "icon": "🟡",
       "title": "Sous tension",
-      "text": "Effort pondéré 7j : 1.0× (1.0 = charge de base, >2 = intense). TSB -11 pts (CTL 54.4 / ATL 65.8). • HRV 40.6 ms (+2 ms vs S-1) • Sommeil 8.4h/nuit • Body Battery : 49%"
+      "text": "Effort pondéré 7j : 1.0× (1.0 = charge de base, >2 = intense). TSB -32 pts (CTL 59.7 / ATL 92.2). • HRV 40.9 ms (+2 ms vs S-1) • Sommeil 8.3h/nuit • Body Battery : 37%"
     },
     {
       "type": "warning",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "📊 manque de Zone 1-2 (30% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (27%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (43%) — surveille la fatigue accumulée\n📈 Charge semaine +60% au-dessus de la moyenne — risque de surcharge\n⚖️ Poids -4.5 kg — apport protéiné : 119g/j"
+      "text": "📊 manque de Zone 1-2 (31% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (29%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (40%) — surveille la fatigue accumulée\n📈 Charge semaine +96% au-dessus de la moyenne — risque de surcharge\n⚖️ Poids -4.5 kg — apport protéiné : 119g/j"
     },
     {
       "type": "goal",
       "icon": "📋",
-      "title": "Prescription : Séance légère — Zone 2",
-      "text": "[Body Battery 49% · TSB -11] Fatigue accumulée malgré une BB correcte. 45-60 min à allure conversationnelle. (note : perte de poids rapide — veille à l'apport calorique autour de la séance) — Z2 — 60-70% FCmax"
+      "title": "Prescription : Récupération active",
+      "text": "Hier : Speed (hockey). [Body Battery 37% · TSB -32] Réserves très basses. 20-30 min marche, mobilité ou yoga uniquement. (note : perte de poids rapide — veille à l'apport calorique autour de la séance) — Z1 — FC < 120 bpm"
     }
   ]
 }
