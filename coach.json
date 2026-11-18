@@ -1,18 +1,18 @@
 {
-  "updated_at": "2026-11-17T18:13:12",
+  "updated_at": "2026-11-18T17:50:35",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "maintien",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 59.7,
-    "atl": 92.2,
-    "tsb": -32.5,
-    "effort_idx": 0.96,
+    "ctl": 61.0,
+    "atl": 95.3,
+    "tsb": -34.3,
+    "effort_idx": 1.07,
     "body_battery": 37,
     "training_readiness": null,
-    "niveau": "Sportif",
-    "total_activites": 320,
+    "niveau": "Athlète",
+    "total_activites": 321,
     "total_km": 724
   },
   "items": [
@@ -20,19 +20,19 @@
       "type": "warning",
       "icon": "🟡",
       "title": "Sous tension",
-      "text": "Effort pondéré 7j : 1.0× (1.0 = charge de base, >2 = intense). TSB -32 pts (CTL 59.7 / ATL 92.2). • HRV 40.9 ms (+2 ms vs S-1) • Sommeil 8.3h/nuit • Body Battery : 37%"
+      "text": "Effort pondéré 7j : 1.1× (1.0 = charge de base, >2 = intense). TSB -34 pts (CTL 61.0 / ATL 95.3). • HRV 40.1 ms (-1 ms vs S-1) • Sommeil 8.2h/nuit • Body Battery : 37%"
     },
     {
-      "type": "warning",
+      "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "📊 manque de Zone 1-2 (31% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (29%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (40%) — surveille la fatigue accumulée\n📈 Charge semaine +96% au-dessus de la moyenne — risque de surcharge\n⚖️ Poids -4.5 kg — apport protéiné : 119g/j"
+      "text": "📊 manque de Zone 1-2 (33% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (28%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (39%) — surveille la fatigue accumulée\n⚖️ Poids -4.5 kg — apport protéiné : 119g/j"
     },
     {
       "type": "goal",
       "icon": "📋",
       "title": "Prescription : Récupération active",
-      "text": "Hier : Speed (hockey). [Body Battery 37% · TSB -32] Réserves très basses. 20-30 min marche, mobilité ou yoga uniquement. (note : perte de poids rapide — veille à l'apport calorique autour de la séance) — Z1 — FC < 120 bpm"
+      "text": "Hier : Récupération (strength). [Body Battery 37% · TSB -34] Réserves très basses. 20-30 min marche, mobilité ou yoga uniquement. (note : perte de poids rapide — veille à l'apport calorique autour de la séance) — Z1 — FC < 120 bpm"
     }
   ]
 }
