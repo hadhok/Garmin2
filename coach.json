@@ -1,18 +1,18 @@
 {
-  "updated_at": "2026-11-20T17:35:44",
+  "updated_at": "2026-11-21T16:38:07",
   "coach": "Claude",
   "stats_snapshot": {
-    "phase": "maintien",
+    "phase": "vigilance",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 59.4,
-    "atl": 77.9,
-    "tsb": -18.6,
+    "ctl": 63.2,
+    "atl": 94.6,
+    "tsb": -31.4,
     "effort_idx": 1.06,
-    "body_battery": 47,
+    "body_battery": 42,
     "training_readiness": null,
-    "niveau": "Sportif",
-    "total_activites": 322,
+    "niveau": "Athlète",
+    "total_activites": 323,
     "total_km": 724
   },
   "items": [
@@ -20,19 +20,19 @@
       "type": "warning",
       "icon": "🟡",
       "title": "Sous tension",
-      "text": "Effort pondéré 7j : 1.1× (1.0 = charge de base, >2 = intense). TSB -19 pts (CTL 59.4 / ATL 77.9). • HRV 40.1 ms (-2 ms vs S-1) • Sommeil 7.9h/nuit • Body Battery : 47%"
+      "text": "Effort pondéré 7j : 1.1× (1.0 = charge de base, >2 = intense). TSB -31 pts (CTL 63.2 / ATL 94.6). • HRV 39.1 ms (-4 ms vs S-1) • Sommeil 8.2h/nuit • Body Battery : 42%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "📊 manque de Zone 1-2 (37% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (26%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (38%) — surveille la fatigue accumulée"
+      "text": "📊 manque de Zone 1-2 (33% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (28%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (38%) — surveille la fatigue accumulée"
     },
     {
       "type": "goal",
       "icon": "📋",
-      "title": "Prescription : Séance légère — Zone 2",
-      "text": "[Body Battery 47% · TSB -19] Fatigue accumulée malgré une BB correcte. 45-60 min à allure conversationnelle. — Z2 — 60-70% FCmax"
+      "title": "Prescription : Récupération active",
+      "text": "Hier : Récupération (bike). [Body Battery 42% · TSB -31] Réserves très basses. 20-30 min marche, mobilité ou yoga uniquement. — Z1 — FC < 120 bpm"
     }
   ]
 }
