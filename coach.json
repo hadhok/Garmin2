@@ -1,18 +1,18 @@
 {
-  "updated_at": "2026-11-22T16:55:49",
+  "updated_at": "2026-11-23T20:55:17",
   "coach": "Claude",
   "stats_snapshot": {
     "phase": "maintien",
     "fatigue_level": "tired",
     "garmin_status": null,
-    "ctl": 61.7,
-    "atl": 81.1,
-    "tsb": -19.4,
+    "ctl": 61.9,
+    "atl": 79.8,
+    "tsb": -17.8,
     "effort_idx": 1.06,
-    "body_battery": 74,
+    "body_battery": 57,
     "training_readiness": null,
     "niveau": "Athlète",
-    "total_activites": 323,
+    "total_activites": 324,
     "total_km": 724
   },
   "items": [
@@ -20,19 +20,19 @@
       "type": "warning",
       "icon": "🟡",
       "title": "Sous tension",
-      "text": "Effort pondéré 7j : 1.1× (1.0 = charge de base, >2 = intense). TSB -19 pts (CTL 61.7 / ATL 81.1). • HRV 39.8 ms (-2 ms vs S-1) • Sommeil 8.2h/nuit • Body Battery : 74%"
+      "text": "Effort pondéré 7j : 1.1× (1.0 = charge de base, >2 = intense). TSB -18 pts (CTL 61.9 / ATL 79.8). • HRV 41.5 ms (+2 ms vs S-1) • Sommeil 8.3h/nuit • Body Battery : 57%"
     },
     {
       "type": "tip",
       "icon": "🔍",
       "title": "Points de vigilance",
-      "text": "📊 manque de Zone 1-2 (33% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (28%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (38%) — surveille la fatigue accumulée"
+      "text": "📊 manque de Zone 1-2 (36% vs ≥75% recommandé) — cardio de base sous-développé\n📊 Zone 3 trop présente (29%) — zone piège : trop dure pour récupérer, trop facile pour progresser\n📊 Zone 4-5 élevée (36%) — surveille la fatigue accumulée"
     },
     {
       "type": "goal",
       "icon": "📋",
-      "title": "Prescription : Séance longue — Endurance fondamentale",
-      "text": "[Body Battery 74% · TSB -19] Bonne forme, mise sur le volume. 60-90 min à allure modérée. — Z2 — 65-75% FCmax"
+      "title": "Prescription : Séance modérée — Tempo",
+      "text": "[Body Battery 57% · TSB -18] Forme correcte. 50 min : 10 min Z2 + 25 min tempo + 15 min retour au calme. — Z3 → Z4"
     }
   ]
 }
